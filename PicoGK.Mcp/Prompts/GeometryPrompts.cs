@@ -45,8 +45,8 @@ Each returns an object ID that you'll use in subsequent operations.
 - `smooth`: Round sharp edges
 - `fillet`: Round specific edges
 - `shell`: Create hollow parts
-- `transform_voxels`: Translate, rotate, scale (uses efficient SDF re-rasterization)
-- `circular_pattern`: Create polar arrays (e.g. bolt hole patterns)
+- `transform_voxels`: Translate, rotate, scale (SDF-based, no mesh round-trip). Note: rotations are around the world origin (0,0,0), not the object center. To rotate in place, translate to origin first.
+- `circular_pattern`: Create polar arrays (e.g. bolt hole patterns around a center)
 
 ## Step 5: Inspect and Export
 - `get_volume`: Check volume
@@ -213,7 +213,7 @@ point_inside(objectId, x, y, z)      # Is point inside?
 closest_point(objectId, x, y, z)     # Nearest surface point
 surface_normal(objectId, x, y, z)    # Normal vector at surface
 ray_cast(objectId, x, y, z, dirX, dirY, dirZ)  # Ray hit point + distance
-measure_thickness(objectId, x, y, z, dirX, dirY, dirZ)  # Wall thickness both directions
+measure_thickness(objectId, x, y, z, dirX, dirY, dirZ)  # Through-thickness (surface to surface, may cross cavities)
 ```
 
 ## Object Comparison
@@ -242,7 +242,7 @@ delete_objects(['keepMe'], keepOnly=True)  # Delete everything except listed
 ## Debugging Tips
 1. Always use `list_objects()` to see what's available
 2. Check bounding boxes before boolean operations
-3. Use `measure_thickness` to verify wall thickness after shelling/booleans
+3. Use `measure_thickness` to verify through-thickness after shelling/booleans (note: measures surface-to-surface, which includes internal cavities)
 4. Use `voxels_is_empty` to detect failed operations (e.g. non-overlapping intersections)
 5. Use `render_to_image` frequently to verify shapes — now with Lambertian shading
 6. Use `delete_objects(keepOnly=True)` to clean up intermediates after a complex build

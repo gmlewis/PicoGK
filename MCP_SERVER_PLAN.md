@@ -68,45 +68,50 @@ PicoGK/
 
 ## Tool Catalog
 
-### Session Management
+### Session Management (3)
 
 | Tool | Description |
 |------|-------------|
 | `picogk_init` | Initialize PicoGK with a voxel size (mm). Required before any other tool. |
-| `picogk_info` | Return library version, memory usage, voxel size. |
+| `picogk_info` | Return library version, memory usage, voxel size, object counts. |
 | `picogk_shutdown` | Shut down session and release all resources. |
 
-### Primitive Creation
+### Primitive Creation (5)
 
 | Tool | Description |
 |------|-------------|
 | `create_sphere` | Create a sphere at (x,y,z) with radius. Returns object ID. |
 | `create_box` | Create a box from min/max corners. Returns object ID. |
-| `create_cylinder` | Create a cylinder along Z axis. Returns object ID. |
+| `create_cylinder` | Create a cylinder with optional axis direction (dirX/dirY/dirZ, default +Z). Flat end caps. Returns object ID. |
 | `create_capsule` | Create a capsule (sphere-swept line segment). Returns object ID. |
 | `create_torus` | Create a torus (donut shape) by revolving a circle. Returns object ID. |
 
-### Boolean Operations
+### Boolean Operations (5)
 
 | Tool | Description |
 |------|-------------|
 | `boolean_add` | Union two voxel objects. Returns new object ID. |
 | `boolean_subtract` | Subtract second from first. Returns new object ID. |
 | `boolean_intersect` | Intersect two voxel objects. Returns new object ID. |
-| `boolean_add_all` | Combine multiple voxel objects into one. Returns new object ID. |
+| `boolean_add_all` | Combine multiple voxel objects into one. Returns new object ID. Empty-list guarded. |
+| `boolean_subtract_all` | Subtract multiple voxel objects from one in a single call. Returns new object ID. Empty-list guarded. |
 
-### Transforms
+### Transforms (10)
 
 | Tool | Description |
 |------|-------------|
 | `offset` | Offset surface by distance (mm). Returns new object ID. |
-| `smooth` | Smooth/round surface. Returns new object ID. |
+| `double_offset` | Offset twice with independent distances — enables precise morphological operations. Returns new object ID. |
+| `over_offset` | Offset then settle surface at a target final distance from original. Returns new object ID. |
+| `smooth` | Smooth/round surface by triple offset. Returns new object ID. |
 | `trim` | Trim to bounding box. Returns new object ID. |
 | `shell` | Create hollow shell. Returns new object ID. |
 | `fillet` | Round edges (same as smooth, semantically for rounding). Returns new object ID. |
 | `project_z_slice` | Project voxels onto Z-plane (top-down silhouette). Returns new object ID. |
+| `transform_voxels` | Translate/rotate/scale voxels via SDF re-rasterization (no mesh round-trip). Rotations are around world origin. Returns new object ID. |
+| `circular_pattern` | Create a polar array: rotate copies around an axis and union them. Uses SDF. Returns new object ID. |
 
-### Lattice
+### Lattice (4)
 
 | Tool | Description |
 |------|-------------|
@@ -115,7 +120,7 @@ PicoGK/
 | `lattice_add_sphere` | Add sphere node at point. |
 | `lattice_to_voxels` | Render lattice to voxels. Returns object ID. |
 
-### Mesh
+### Mesh (11)
 
 | Tool | Description |
 |------|-------------|
@@ -123,42 +128,51 @@ PicoGK/
 | `mesh_add_vertex` | Add vertex to mesh, return index. |
 | `mesh_add_triangle` | Add triangle by vertex indices. |
 | `mesh_add_triangle_vertices` | Add triangle by specifying three vertex positions directly. |
+| `mesh_add_quad` | Add a quad (4 vertices → 2 triangles) with optional winding flip. |
 | `voxels_to_mesh` | Convert voxels to mesh (marching cubes). Returns object ID. |
 | `mesh_to_voxels` | Convert mesh to voxels. Returns object ID. |
 | `mesh_from_stl` | Load mesh from STL file path. Returns object ID. |
 | `mesh_transform` | Apply uniform scale and/or translation. Returns new object ID. |
 | `mesh_mirror` | Mirror mesh across a plane. Returns new object ID. |
-| `mesh_append` | Append one mesh to another. |
+| `mesh_append` | Append one mesh to another (self-reference guarded). |
 
-### Query / Inspection
+### Query / Inspection (16)
 
 | Tool | Description |
 |------|-------------|
-| `get_bounding_box` | Get axis-aligned bounding box of any object. |
-| `get_volume` | Get volume (mm³) of voxel objects. |
+| `get_bounding_box` | Get axis-aligned bounding box of any object. Retries with exponential backoff on transient failures. |
+| `get_volume` | Get volume (mm³) of voxel objects. Retries with exponential backoff. |
 | `get_mesh_info` | Get vertex/triangle counts, bounding box. |
 | `get_voxel_dimensions` | Get voxel grid dimensions (sx x sy x sz). |
 | `point_inside` | Check if a point is inside a voxel field. |
 | `surface_normal` | Get surface normal at a point. |
 | `closest_point` | Find closest point on surface. |
+| `ray_cast` | Cast a ray and find surface intersection. Returns hit point + distance. |
+| `measure_thickness` | Cast rays in both +dir and -dir, report through-thickness span (surface to surface through interior). |
+| `voxels_is_empty` | Check if a voxel object has no volume (detects failed operations). |
+| `voxels_mem_usage` | Get memory usage of a voxel object in MB. |
+| `voxels_is_equal` | Compare two voxel objects for content equality. |
 | `list_objects` | List all registered objects with types and summary. |
 | `delete_object` | Remove an object from the registry. |
+| `delete_objects` | Delete multiple objects (batch), or keep-only mode. |
+| `duplicate_object` | Deep-copy an object (voxels or meshes). |
 
-### Import / Export
+### Import / Export (6)
 
 | Tool | Description |
 |------|-------------|
 | `save_stl` | Save a mesh to STL file. |
-| `mesh_from_stl` | Load mesh from STL file. Returns object ID. |
-| `save_vdb` | Save voxels to VDB file. |
-| `load_vdb` | Load voxels from VDB file. Returns object ID. |
-| `save_svg` | Vectorize voxels and save 2D slice contours to SVG. |
+| `save_vdb` | Save voxels to VDB file (optional field name). |
+| `load_vdb` | Load voxels from VDB file (optional field name). Returns object ID. |
+| `list_vdb_fields` | List all fields in a VDB file with names, types, and PicoGK compatibility. |
+| `save_svg` | Vectorize voxels and save all N slice contours as numbered files (`<stem>.NNNN.svg`). |
+| `save_cli` | Save voxels to CLI (Common Layer Interface) file for 3D printing. |
 
-### Rendering
+### Rendering (2)
 
 | Tool | Description |
 |------|-------------|
-| `render_to_image` | Render object(s) to PNG using isometric projection. Returns file path. |
+| `render_to_image` | Render object to PNG using Lambertian-shaded isometric projection. Returns file path. |
 | `render_slice` | Render Z-slice of voxels to PNG. Returns file path. |
 
 ---

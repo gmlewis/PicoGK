@@ -161,9 +161,10 @@ public static class TransformTools
 
     [McpServerTool]
     [Description("Transform a voxel object by translating, rotating, and/or scaling it. " +
-        "Rotations are applied first (around the object's origin), then translation. " +
-        "Uses native PicoGK signed-distance-field re-rasterization (no expensive mesh " +
-        "round-trip), so it is efficient for large voxel fields. " +
+        "Rotations are applied first (around the world origin 0,0,0 — not the object's center), " +
+        "then translation. To rotate an object in place, first translate it to the origin, " +
+        "rotate, then translate back. Uses native PicoGK signed-distance-field re-rasterization " +
+        "(no expensive mesh round-trip), so it is efficient for large voxel fields. " +
         "Returns a new object ID.")]
     public static string TransformVoxels(
         PicoGkSession session,

@@ -295,9 +295,10 @@ public static class QueryTools
 
     [McpServerTool]
     [Description("Cast a ray from a point in both +direction and -direction and report both " +
-        "hit points and the total span between them. Ideal for measuring wall thickness: " +
-        "place the origin inside the wall and shoot in any direction; the tool reports how " +
-        "far the surface is in each direction and the total thickness.")]
+        "hit points and the total span between them. Measures the through-thickness of the " +
+        "object along the ray axis (surface to surface through the interior, which may cross " +
+        "internal cavities). For local wall thickness of a shell, place the origin inside the " +
+        "wall material and note that the total span includes all internal voids.")]
     public static string MeasureThickness(
         PicoGkSession session,
         [Description("ID of the voxel object")] string objectId,
