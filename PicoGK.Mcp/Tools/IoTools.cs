@@ -96,6 +96,46 @@ public static class IoTools
     }
 
     [McpServerTool]
+    [Description("List all fields in a VDB file with their names, types, and indices. " +
+        "Useful for inspecting multi-field VDB files before loading a specific field with load_vdb. " +
+        "Returns field count and a table of index, name, type, and PicoGK compatibility.")]
+    public static string ListVdbFields(
+        PicoGkSession session,
+        [Description("Full path to the VDB file")] string path)
+    {
+        if (!File.Exists(path))
+            return $"Error: File not found: {path}";
+
+        var vdb = new OpenVdbFile(session.Library, path);
+        int n = vdb.nFieldCount();
+        if (n == 0)
+            return $"VDB file '{Path.GetFileName(path)}' contains no fields.";
+
+        bool compatible = vdb.bIsPicoGKCompatible();
+        float voxelSize = vdb.fPicoGKVoxelSizeMM();
+
+        var lines = new List<string>
+        {
+            $"VDB file: {path}",
+            $"  Fields: {n}",
+            $"  PicoGK compatible: {compatible}",
+            $"  Voxel size: {voxelSize}mm",
+            "",
+            "  Idx  Name                            Type",
+            "  ---  ----                            ----"
+        };
+
+        for (int i = 0; i < n; i++)
+        {
+            string name = vdb.strFieldName(i);
+            string type = vdb.strFieldType(i);
+            lines.Add($"  {i,3}  {name,-30}  {type}");
+        }
+
+        return string.Join("\n", lines);
+    }
+
+    [McpServerTool]
     [Description("Vectorize voxels into 2D slice contours and save as SVG. " +
         "Each slice is written to its own file: <path>.NNNN.svg (zero-padded 4 digits). " +
         "Useful for 2D manufacturing or visualization. Returns the count of files written.")]

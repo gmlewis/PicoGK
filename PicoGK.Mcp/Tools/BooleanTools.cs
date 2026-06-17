@@ -88,4 +88,30 @@ public static class BooleanTools
             first = first + voxels[i];
         return session.Register(first, id, $"CombineAll({string.Join(", ", objectIds)})");
     }
+
+    [McpServerTool]
+    [Description("Subtract multiple voxel objects from a single object in one call. " +
+        "Equivalent to calling boolean_subtract repeatedly, but more efficient for multi-hole " +
+        "drilling or multi-cutout operations. Returns a new object ID.")]
+    public static string BooleanSubtractAll(
+        PicoGkSession session,
+        [Description("ID of the object to subtract FROM")] string a,
+        [Description("List of object IDs to subtract from A")] string[] subtractIds,
+        [Description("Optional ID for the result")] string? id = null)
+    {
+        var (voxA, errA) = session.SafeGet<Voxels>(a);
+        if (errA != null) return $"Error: {errA}";
+
+        if (subtractIds == null || subtractIds.Length == 0)
+            return "Error: subtractIds list is empty. Provide at least one voxel object ID to subtract.";
+
+        var result = voxA.voxDuplicate();
+        foreach (var sid in subtractIds)
+        {
+            var (voxB, errB) = session.SafeGet<Voxels>(sid);
+            if (errB != null) return $"Error: {errB}";
+            result.BoolSubtract(voxB);
+        }
+        return session.Register(result, id, $"SubtractAll({a}, [{string.Join(", ", subtractIds)}])");
+    }
 }

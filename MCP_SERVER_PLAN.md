@@ -373,8 +373,60 @@ Server: ✓ Rendered to /output/preview.png
 | Phase 3 | Mesh & lattice | ✅ Complete |
 | Phase 4 | I/O & rendering | ✅ Complete |
 | Phase 5 | Polish & docs | ✅ Complete |
+| Phase 6 | Agent-usability improvements | ✅ Complete |
+| Phase 7 | Library-completeness expansion | ✅ Complete |
 
-### Additional Improvements
+### Phase 6: Agent-Usability Improvements
+
+- **SDF-based `transform_voxels`**: Translates/rotates/scales voxels using native
+  PicoGK signed-distance-field re-rasterization — no expensive mesh round-trips.
+  Uses `ScalarField` + `IImplicit` callback with inverse matrix.
+- **`circular_pattern`**: Polar array — rotates copies of a voxel object around an
+  arbitrary axis through a center point and unions them via SDF. Example: 4 bolt
+  holes around a flange center at 90° intervals.
+- **`create_cylinder` orientation**: Added `dirX/dirY/dirZ` parameters so cylinders
+  can point in any direction, not just +Z.
+- **`save_cli`**: CLI (Common Layer Interface) export for 3D printing, using the
+  native `Voxels.SaveToCliFile`.
+- **`save_svg` multi-slice fix**: Bug fix — was writing only slice 0 but claiming N
+  slices. Now writes all N slices as `<stem>.NNNN.svg` with a shared bounding box.
+- **Lambertian shading**: `render_to_image` now computes per-triangle face normals
+  and applies directional lighting with ambient floor. Back-face culling added.
+- **Retry with exponential backoff**: `get_bounding_box` and `get_volume` retry
+  internally (configurable: `RetryMaxAttempts`, `RetryInitialDelayMs`,
+  `RetryBackoffMultiplier`) to handle transient mesh-conversion races on
+  freshly-created/transformed voxel objects.
+- **Per-type auto-ID counters**: `load_vdb` and `mesh_from_stl` no longer share a
+  single counter; IDs are per-type (`voxels_0001`, `mesh_0001`).
+- **`duplicate_object`**: Deep-copies voxels (`voxDuplicate`) or meshes
+  (triangle-by-triangle rebuild).
+- **`ray_cast` + `measure_thickness`**: Exposes native `bRayCastToSurface`.
+  `measure_thickness` casts in both directions and reports total wall thickness.
+- **`delete_objects` batch**: Two modes — delete a list of IDs, or `keepOnly=true`
+  to delete everything except the listed IDs. Solves intermediate-object cleanup.
+- **`boolean_add_all` empty-list guard**: Returns graceful error instead of
+  `ArgumentOutOfRangeException`.
+
+### Phase 7: Library-Completeness Expansion
+
+- **`mesh_add_quad`**: Adds a quad (4 vertices → 2 triangles) directly, halving
+  call count vs. two triangle calls. Supports `flipped` for winding control.
+- **`double_offset`**: Offsets twice with independent distances — enables precise
+  morphological operations (e.g. offset out 2mm then back 1.5mm to remove thin
+  features while preserving wall thickness).
+- **`over_offset`**: Offsets then settles surface at a specified final distance from
+  the original — more precise than `fillet` for controlled material removal.
+- **`boolean_subtract_all`**: Subtracts multiple objects from one in a single call.
+  Symmetrical with `boolean_add_all`. Useful for multi-hole drilling.
+- **`voxels_is_empty`**: Checks if a voxel field has no volume — detects failed
+  operations (e.g. non-overlapping intersection).
+- **`voxels_mem_usage`**: Reports memory consumption of a voxel object in MB.
+- **`voxels_is_equal`**: Compares two voxel fields for content equality — verifies
+  that transforms or round-trips preserved shape.
+- **`list_vdb_fields`**: Lists all fields in a VDB file with names, types, indices,
+  and PicoGK compatibility info. For inspecting multi-field VDB files.
+
+### Additional Improvements (Phase 5)
 
 - **Thread Safety**: Added `volatile` + locks for concurrent tool call safety
 - **Error Handling**: All tools wrapped in try-catch, returning graceful string errors
@@ -392,15 +444,36 @@ Server: ✓ Rendered to /output/preview.png
   `targetId == sourceId` (appending a mesh to itself). Added a guard that returns an error message
   instead. (MeshTools.cs:172)
 
+- **`save_svg` multi-slice bug**: `IoTools.cs` called `stack.oSliceAt(0).SaveToSvgFile(path, true)`,
+  writing only slice 0 but claiming N slices in the return string. Fixed to write all non-empty
+  slices as numbered files with a shared bounding box.
+
+- **`mshCreateTransformed(Vector3, Vector3)` base-library bug** (Base/Mesh.cs:75):
+  The `Vector3` overload scales each triangle vertex by only ONE component of `vecScale`
+  (A *= vecScale.X, B *= vecScale.Y, C *= vecScale.Z) instead of component-wise scaling
+  all vertices. A non-uniform `vecScale` (e.g. `(2,1,1)`) produces a garbled mesh. The
+  `Matrix4x4` overload (`mshCreateTransformed(Matrix4x4)`) is correct. Documented in the
+  source; the MCP server avoids this overload.
+
 - **Native library path**: When publishing as a self-contained binary, the MCP server binary must
   reside in the same directory as `picogk.26.2.dylib` and its Boost dependencies. The config path
   must point to `picogk-mcp/PicoGK.Mcp`, not just `PicoGK.Mcp`, otherwise `dlopen` fails to find
   `libboost_iostreams.dylib`.
 
-### Tools Not Implemented (from original plan)
+### Build Script
 
-- `save_cli` — CLI format for 3D printing (can be added later)
-- `vectorize_and_save` — Use `save_svg` instead
+The `scripts/build-mcp-and-install.py` script automates building, installing, and testing:
+
+```bash
+./scripts/build-mcp-and-install.py                  # build + install + test
+./scripts/build-mcp-and-install.py --skip-test      # build + install only
+./scripts/build-mcp-and-install.py --verbose         # full command output
+./scripts/build-mcp-and-install.py --install-dir DIR  # custom install location
+```
+
+It detects the platform, publishes a self-contained .NET binary, copies native
+libraries, runs a smoke test (MCP initialize handshake), and executes the full
+96-test E2E suite.
 
 ---
 
@@ -412,13 +485,11 @@ It uses the `mcp` Python package to connect to the server over stdio and exercis
 ### Running the Tests
 
 ```bash
-# Install the MCP Python client
+# Easiest: build, install, and test in one step
+./scripts/build-mcp-and-install.py
+
+# Or run tests against an already-installed binary
 pip install mcp
-
-# Publish the server (if not already done)
-dotnet publish PicoGK.Mcp -c Release -r osx-arm64 -o ~/.local/bin/picogk-mcp/
-
-# Run the tests
 python3 PicoGK.Mcp/Tests/e2e_test.py
 
 # Or with custom paths
@@ -427,29 +498,45 @@ python3 PicoGK.Mcp/Tests/e2e_test.py /path/to/PicoGK.Mcp /tmp/output_dir
 
 ### Test Coverage
 
-The test suite exercises all 49 tools across every category:
+The test suite exercises all 62 tools across every category (96 test cases):
 
 | Category | Tools Tested |
 |----------|-------------|
 | Session | `picogk_init`, `picogk_info`, `picogk_shutdown` |
-| Primitives | `create_sphere`, `create_box`, `create_cylinder`, `create_capsule`, `create_torus` |
-| Booleans | `boolean_add`, `boolean_subtract`, `boolean_intersect`, `boolean_add_all` |
-| Transforms | `offset`, `smooth`, `trim`, `shell`, `fillet`, `project_z_slice` |
+| Primitives | `create_sphere`, `create_box`, `create_cylinder` (Z + arbitrary axis), `create_capsule`, `create_torus` |
+| Booleans | `boolean_add`, `boolean_subtract`, `boolean_intersect`, `boolean_add_all` (incl. empty-list guard), `boolean_subtract_all` (incl. empty-list guard) |
+| Transforms | `offset`, `double_offset`, `over_offset`, `smooth`, `trim`, `shell`, `fillet`, `project_z_slice`, `transform_voxels` (translate+rotate, identity, negative-scale guard), `circular_pattern` (4 copies, count=1, count=0 guard) |
 | Lattice | `create_lattice`, `lattice_add_beam`, `lattice_add_sphere`, `lattice_to_voxels` |
-| Mesh | `create_mesh`, `mesh_add_vertex`, `mesh_add_triangle`, `mesh_add_triangle_vertices`, `voxels_to_mesh`, `mesh_to_voxels`, `mesh_transform`, `mesh_mirror`, `mesh_append` |
-| Query | `get_bounding_box`, `get_volume`, `get_voxel_dimensions`, `point_inside`, `closest_point`, `surface_normal`, `get_mesh_info`, `list_objects`, `delete_object` |
-| I/O | `save_stl`, `save_vdb`, `save_svg` |
-| Render | `render_to_image`, `render_slice` |
+| Mesh | `create_mesh`, `mesh_add_vertex`, `mesh_add_triangle`, `mesh_add_triangle_vertices`, `mesh_add_quad`, `voxels_to_mesh`, `mesh_to_voxels`, `mesh_transform`, `mesh_mirror`, `mesh_append` (incl. self-ref guard) |
+| Query | `get_bounding_box` (incl. retry on fresh transform), `get_volume`, `get_voxel_dimensions`, `point_inside` (inside + outside), `closest_point`, `surface_normal`, `ray_cast`, `measure_thickness` (incl. value verification), `get_mesh_info`, `voxels_is_empty` (empty + non-empty), `voxels_mem_usage`, `voxels_is_equal` (equal + not-equal), `list_objects`, `delete_object`, `delete_objects` (batch + keepOnly), `duplicate_object` (voxels + mesh + nonexistent guard) |
+| I/O | `save_stl`, `save_vdb` (with field name), `list_vdb_fields`, `save_svg` (multi-slice verification), `save_cli` |
+| Render | `render_to_image` (Lambertian-shaded), `render_slice` |
 
 The test also validates:
 - `point_inside` returns correct INSIDE/OUTSIDE results
+- `measure_thickness` returns correct total thickness (~60mm for r=30 sphere)
 - `mesh_append` self-reference guard returns an error
-- Output files are generated (PNG, STL, VDB, SVG)
+- `mesh_add_quad` produces exactly 2 triangles
+- `transform_voxels` translate moves bbox to correct position
+- `circular_pattern` 4 copies produce ~4x the source volume
+- `boolean_add_all` / `boolean_subtract_all` empty-list guards return errors
+- `circular_pattern` count=0 guard returns an error
+- `transform_voxels` negative scale guard returns an error
+- `duplicate_object` nonexistent guard returns an error
+- `delete_objects` keepOnly mode leaves exactly the kept objects
+- `voxels_is_empty` correctly detects empty intersection result
+- `voxels_is_equal` correctly identifies equal and not-equal objects
+- `get_bounding_box` works on freshly-transformed objects (retry backoff)
+- `save_svg` writes all N slices as numbered files (not just slice 0)
+- `list_vdb_fields` shows named field from a saved VDB file
+- Output files are generated (PNG, STL, VDB, SVG, CLI)
 
 ### Last Test Results
 
 ```
-49 passed, 0 failed out of 49 tests — ALL TESTS PASSED
-Output files: sphere.png (79KB), slice_z0.png (870B),
-              sphere.stl (13.5MB), sphere.vdb (1.2MB), sphere.svg (2.2KB)
+96 passed, 0 failed out of 96 tests — ALL TESTS PASSED
+Output files: sphere.png (76KB), slice_z0.png (870B), sphere.stl (13.5MB),
+              sphere.vdb (1.2MB), sphere.cli (202KB),
+              sphere.0001.svg–sphere.0030.svg (30 files),
+              sphere_fields.vdb (1.2MB)
 ```

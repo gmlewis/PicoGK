@@ -38,7 +38,18 @@ dotnet build PicoGK.Mcp/PicoGK.Mcp.csproj -c Release
 
 ## Installing (Self-Contained)
 
-To create a standalone binary that doesn't require .NET to be installed:
+The easiest way to build and install is the included build script:
+
+```bash
+# Build, install, and test in one step (detects platform automatically)
+./scripts/build-mcp-and-install.py
+```
+
+This publishes a self-contained binary, copies native libraries, runs a smoke
+test, and executes the full end-to-end test suite. Use `--skip-test` to skip
+tests, `--install-dir DIR` for a custom location, `--verbose` for full output.
+
+Alternatively, do it manually:
 
 ```bash
 # Publish as self-contained for your platform
@@ -54,21 +65,33 @@ Replace `osx-arm64` with your platform identifier:
 - Windows: `win-x64`
 - Linux: `linux-x64`
 
-## Available Tools (49)
+## Available Tools (62)
 
 The MCP server exposes these tool categories:
 
 | Category | Tools |
 |----------|-------|
 | **Session** | `picogk_init`, `picogk_info`, `picogk_shutdown` |
-| **Primitives** | `create_sphere`, `create_box`, `create_cylinder`, `create_capsule`, `create_torus` |
-| **Booleans** | `boolean_add`, `boolean_subtract`, `boolean_intersect`, `boolean_add_all` |
-| **Transforms** | `offset`, `smooth`, `trim`, `shell`, `fillet`, `project_z_slice` |
-| **Mesh** | `create_mesh`, `mesh_add_vertex`, `mesh_add_triangle`, `mesh_add_triangle_vertices`, `voxels_to_mesh`, `mesh_to_voxels`, `mesh_from_stl`, `mesh_transform`, `mesh_mirror`, `mesh_append` |
+| **Primitives** | `create_sphere`, `create_box`, `create_cylinder` (arbitrary axis), `create_capsule`, `create_torus` |
+| **Booleans** | `boolean_add`, `boolean_subtract`, `boolean_intersect`, `boolean_add_all`, `boolean_subtract_all` |
+| **Transforms** | `offset`, `double_offset`, `over_offset`, `smooth`, `trim`, `shell`, `fillet`, `project_z_slice`, `transform_voxels` (translate/rotate/scale via SDF), `circular_pattern` (polar array) |
+| **Mesh** | `create_mesh`, `mesh_add_vertex`, `mesh_add_triangle`, `mesh_add_triangle_vertices`, `mesh_add_quad`, `voxels_to_mesh`, `mesh_to_voxels`, `mesh_from_stl`, `mesh_transform`, `mesh_mirror`, `mesh_append` |
 | **Lattice** | `create_lattice`, `lattice_add_beam`, `lattice_add_sphere`, `lattice_to_voxels` |
-| **I/O** | `save_stl`, `load_stl`, `save_vdb`, `load_vdb`, `save_svg`, `save_slice_image` |
-| **Query** | `get_bounding_box`, `get_volume`, `get_mesh_info`, `point_inside`, `surface_normal`, `closest_point`, `get_voxel_dimensions`, `list_objects`, `delete_object` |
-| **Render** | `render_to_image` (isometric PNG), `render_slice` (Z-slice PNG) |
+| **I/O** | `save_stl`, `save_vdb`, `load_vdb`, `list_vdb_fields`, `save_svg` (multi-slice), `save_cli` |
+| **Query** | `get_bounding_box` (retry-backed), `get_volume` (retry-backed), `get_mesh_info`, `point_inside`, `surface_normal`, `closest_point`, `ray_cast`, `measure_thickness`, `get_voxel_dimensions`, `voxels_is_empty`, `voxels_mem_usage`, `voxels_is_equal`, `list_objects`, `delete_object`, `delete_objects` (batch + keep-only), `duplicate_object` |
+| **Render** | `render_to_image` (Lambertian-shaded PNG), `render_slice` (Z-slice PNG) |
+
+### Key Design Decisions
+
+- **SDF-based transforms**: `transform_voxels` and `circular_pattern` use native
+  PicoGK signed-distance-field re-rasterization — no expensive mesh round-trips.
+- **Retry with backoff**: `get_bounding_box` and `get_volume` retry internally
+  with exponential backoff (configurable via session) to handle transient
+  mesh-conversion races on freshly-created objects.
+- **Functional style**: Every operation returns a new object ID; objects are
+  never mutated in place (except `mesh_append`).
+- **Per-type auto-IDs**: When no `id` is provided, IDs are auto-generated per
+  type (`voxels_0001`, `mesh_0001`, etc.) so they don't share a counter.
 
 ## Configuring AI Agents
 
@@ -152,22 +175,22 @@ Once configured, an agent can build geometry like this:
 3. `create_box(minX=-10, minY=-10, minZ=-40, maxX=10, maxY=10, maxZ=40, id="cutout")` — Create a box
 4. `boolean_subtract(a="body", b="cutout", id="result")` — Subtract box from sphere
 5. `smooth(objectId="result", distance=2.0, id="smoothed")` — Smooth the result
-6. `voxels_to_mesh(voxelsId="smoothed", id="mesh")` — Convert to mesh
-7. `save_stl(meshId="mesh", path="part.stl")` — Export as STL
-8. `render_to_image(objectId="mesh", path="preview.png")` — Render preview image
+6. `circular_pattern(objectId="boltHole", count=4, centerX=0, centerY=0, centerZ=0, id="bolts")` — Pattern 4 bolt holes around center
+7. `voxels_to_mesh(voxelsId="smoothed", id="mesh")` — Convert to mesh
+8. `save_stl(meshId="mesh", path="part.stl")` — Export as STL
+9. `render_to_image(objectId="mesh", path="preview.png")` — Render preview image (Lambertian-shaded)
+10. `measure_thickness(objectId="smoothed", x=20, y=0, z=0, dirX=1, dirY=0, dirZ=0)` — Check wall thickness
 
 ## Running Tests
 
-A comprehensive Python-based end-to-end test is included in `PicoGK.Mcp/Tests/e2e_test.py`. It exercises all 49 tools and validates output files, error guards, and query correctness.
+A comprehensive Python-based end-to-end test is included in `PicoGK.Mcp/Tests/e2e_test.py`. It exercises all 62 tools and validates output files, error guards, and query correctness.
 
 ```bash
-# Install the MCP Python client
+# Build, install, and test in one step
+./scripts/build-mcp-and-install.py
+
+# Or run tests against an already-installed binary
 pip install mcp
-
-# Publish the server (if not already done)
-dotnet publish PicoGK.Mcp -c Release -r osx-arm64 -o ~/.local/bin/picogk-mcp/
-
-# Run the tests
 python3 PicoGK.Mcp/Tests/e2e_test.py
 
 # Or with custom paths

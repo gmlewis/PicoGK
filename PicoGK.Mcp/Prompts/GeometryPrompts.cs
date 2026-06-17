@@ -28,25 +28,38 @@ Always call `picogk_init` first with your desired voxel size:
 
 ## Step 2: Create Primitives
 Use `create_sphere`, `create_box`, `create_cylinder`, `create_capsule`, or `create_torus`.
+`create_cylinder` supports arbitrary axis direction via dirX/dirY/dirZ.
 Each returns an object ID that you'll use in subsequent operations.
 
 ## Step 3: Combine with Booleans
 - `boolean_add`: Union (merge volumes)
 - `boolean_subtract`: Cut one shape from another
 - `boolean_intersect`: Keep only overlapping regions
+- `boolean_add_all`: Union multiple objects at once
+- `boolean_subtract_all`: Subtract multiple objects from one at once
 
 ## Step 4: Refine Your Shape
 - `offset`: Thicken or thin walls
+- `double_offset`: Offset twice (e.g. expand then shrink to remove thin features)
+- `over_offset`: Offset then settle at a target distance from original surface
 - `smooth`: Round sharp edges
 - `fillet`: Round specific edges
 - `shell`: Create hollow parts
+- `transform_voxels`: Translate, rotate, scale (uses efficient SDF re-rasterization)
+- `circular_pattern`: Create polar arrays (e.g. bolt hole patterns)
 
 ## Step 5: Inspect and Export
 - `get_volume`: Check volume
-- `get_bounding_box`: Get dimensions
-- `render_to_image`: Visual preview
+- `get_bounding_box`: Get dimensions (auto-retries on transient failures)
+- `measure_thickness`: Measure wall thickness at any point
+- `ray_cast`: Probe internal geometry
+- `voxels_is_empty`: Check if an operation produced no volume
+- `render_to_image`: Lambertian-shaded visual preview
 - `voxels_to_mesh`: Convert to mesh
 - `save_stl`: Export for 3D printing
+- `save_cli`: Export CLI for 3D printing
+- `save_vdb`: Export voxel field
+- `save_svg`: Export sliced contours
 
 ## Example Workflow
 ```
@@ -57,6 +70,7 @@ result = boolean_subtract(body, hole)
 smoothed = smooth(result, 2)
 mesh = voxels_to_mesh(smoothed)
 save_stl(mesh, '/output/part.stl')
+render_to_image(smoothed, '/output/preview.png')
 ```";
     }
 
@@ -151,10 +165,14 @@ mesh_add_triangle(mesh, v0, v1, v2)
 ## Or Use Direct Triangle Creation
 ```
 mesh = create_mesh()
-mesh_add_triangle_vertices(mesh, 
-    0, 0, 0,    # Vertex 1
-    10, 0, 0,   # Vertex 2
-    0, 10, 0)   # Vertex 3
+mesh_add_triangle_vertices(mesh, 0, 0, 0, 10, 0, 0, 0, 10, 0)
+```
+
+## Or Use Quads (2 triangles from 4 vertices)
+```
+mesh = create_mesh()
+mesh_add_quad(mesh, 0, 0, 0, 10, 0, 0, 10, 10, 0, 0, 10, 0)
+# Creates 2 triangles automatically. Use flipped=true to reverse winding.
 ```
 
 ## Transforming Meshes
@@ -183,9 +201,10 @@ get_mesh_info(mesh)  # Shows vertex count, triangle count, bounding box
 
 ## Check Object Dimensions
 ```
-get_bounding_box(objectId)  # Returns min/max corners and size
-get_volume(objectId)        # Returns volume in mm³
+get_bounding_box(objectId)  # Returns min/max corners and size (auto-retries)
+get_volume(objectId)        # Returns volume in mm³ (auto-retries)
 get_voxel_dimensions(objectId)  # Returns grid dimensions
+voxels_mem_usage(objectId)     # Returns memory usage in MB
 ```
 
 ## Point Queries
@@ -193,27 +212,40 @@ get_voxel_dimensions(objectId)  # Returns grid dimensions
 point_inside(objectId, x, y, z)      # Is point inside?
 closest_point(objectId, x, y, z)     # Nearest surface point
 surface_normal(objectId, x, y, z)    # Normal vector at surface
+ray_cast(objectId, x, y, z, dirX, dirY, dirZ)  # Ray hit point + distance
+measure_thickness(objectId, x, y, z, dirX, dirY, dirZ)  # Wall thickness both directions
+```
+
+## Object Comparison
+```
+voxels_is_equal(objectIdA, objectIdB)  # Compare two voxel fields for equality
+voxels_is_empty(objectId)             # Check if object has no volume
 ```
 
 ## Visual Inspection
 ```
-render_to_image(objectId, '/output/preview.png')
+render_to_image(objectId, '/output/preview.png')  # Lambertian-shaded isometric view
 # Options: width, height, backgroundColor, objectColor
 
-render_slice(voxelsId, zPosition, '/output/slice.png')
-# Shows cross-section at Z height
+render_slice(voxelsId, zPosition, '/output/slice.png')  # Cross-section at Z height
 ```
 
-## List All Objects
+## Session Management
 ```
-list_objects()  # Shows all objects with IDs, types, descriptions
+list_objects()         # Show all objects with IDs, types, descriptions
+duplicate_object(objectId, id='copy')  # Deep-copy an object
+delete_object(objectId)                 # Delete one object
+delete_objects(['id1','id2'])            # Delete multiple objects
+delete_objects(['keepMe'], keepOnly=True)  # Delete everything except listed
 ```
 
 ## Debugging Tips
 1. Always use `list_objects()` to see what's available
 2. Check bounding boxes before boolean operations
-3. Use `render_to_image` frequently to verify shapes
-4. Start with larger voxel sizes (2.0mm) for faster iteration
-5. Reduce to smaller sizes (0.5mm) for final output";
+3. Use `measure_thickness` to verify wall thickness after shelling/booleans
+4. Use `voxels_is_empty` to detect failed operations (e.g. non-overlapping intersections)
+5. Use `render_to_image` frequently to verify shapes — now with Lambertian shading
+6. Use `delete_objects(keepOnly=True)` to clean up intermediates after a complex build
+7. Start with larger voxel sizes (2.0mm) for faster iteration, reduce for final output";
     }
 }

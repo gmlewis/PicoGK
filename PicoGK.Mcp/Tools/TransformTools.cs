@@ -32,6 +32,45 @@ public static class TransformTools
     }
 
     [McpServerTool]
+    [Description("Offset a voxel surface twice: first by offset1, then by offset2. " +
+        "Enables precise morphological operations not possible with a single offset — e.g. " +
+        "offset out by 2mm then back by 1.5mm to remove thin features while preserving wall thickness. " +
+        "Returns a new object ID.")]
+    public static string DoubleOffset(
+        PicoGkSession session,
+        [Description("ID of the source object")] string objectId,
+        [Description("First offset distance in mm (positive = expand, negative = shrink)")] float offset1,
+        [Description("Second offset distance in mm (applied after the first offset)")] float offset2,
+        [Description("Optional ID for the result")] string? id = null)
+    {
+        var (vox, err) = session.SafeGet<Voxels>(objectId);
+        if (err != null) return $"Error: {err}";
+
+        var result = vox.voxDoubleOffset(offset1, offset2);
+        return session.Register(result, id, $"DoubleOffset({objectId}, {offset1}mm + {offset2}mm)");
+    }
+
+    [McpServerTool]
+    [Description("Offset a voxel surface by a first distance, then settle the surface at a specified " +
+        "final distance from the original. More precise than fillet: lets you say 'offset by 3mm, " +
+        "then move the surface to exactly 0.5mm from where it started.' " +
+        "Useful for controlled material removal. Returns a new object ID.")]
+    public static string OverOffset(
+        PicoGkSession session,
+        [Description("ID of the source object")] string objectId,
+        [Description("First offset distance in mm (positive = expand)")] float firstOffset,
+        [Description("Final surface distance from the original surface in mm (default 0 = settle back to original)")] float finalSurfaceDist = 0,
+        [Description("Optional ID for the result")] string? id = null)
+    {
+        var (vox, err) = session.SafeGet<Voxels>(objectId);
+        if (err != null) return $"Error: {err}";
+
+        var result = vox.voxOverOffset(firstOffset, finalSurfaceDist);
+        return session.Register(result, id,
+            $"OverOffset({objectId}, {firstOffset}mm → {finalSurfaceDist}mm from original)");
+    }
+
+    [McpServerTool]
     [Description("Smooth/round a voxel surface by applying triple offset. " +
         "Good for removing sharp edges. Returns a new object ID.")]
     public static string Smooth(

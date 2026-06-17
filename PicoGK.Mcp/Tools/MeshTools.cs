@@ -78,6 +78,33 @@ public static class MeshTools
     }
 
     [McpServerTool]
+    [Description("Add a quad to a mesh by specifying four vertex positions directly. " +
+        "The vertices are added automatically and two triangles are created. " +
+        "Use bFlipped=true to reverse the winding order. Returns the starting triangle index.")]
+    public static string MeshAddQuad(
+        PicoGkSession session,
+        [Description("ID of the mesh")] string meshId,
+        [Description("Vertex 0 X")] float x0, [Description("Vertex 0 Y")] float y0, [Description("Vertex 0 Z")] float z0,
+        [Description("Vertex 1 X")] float x1, [Description("Vertex 1 Y")] float y1, [Description("Vertex 1 Z")] float z1,
+        [Description("Vertex 2 X")] float x2, [Description("Vertex 2 Y")] float y2, [Description("Vertex 2 Z")] float z2,
+        [Description("Vertex 3 X")] float x3, [Description("Vertex 3 Y")] float y3, [Description("Vertex 3 Z")] float z3,
+        [Description("If true, reverse the winding order of the two triangles")] bool flipped = false)
+    {
+        var (mesh, err) = session.SafeGet<Mesh>(meshId);
+        if (err != null) return $"Error: {err}";
+
+        int before = mesh.nTriangleCount();
+        mesh.AddQuad(
+            new Vector3(x0, y0, z0),
+            new Vector3(x1, y1, z1),
+            new Vector3(x2, y2, z2),
+            new Vector3(x3, y3, z3),
+            flipped);
+        int after = mesh.nTriangleCount();
+        return $"Quad added to '{meshId}' as triangles {before}–{after - 1} (flipped={flipped}).";
+    }
+
+    [McpServerTool]
     [Description("Convert a voxel object to a mesh using marching cubes. Returns a new mesh object ID.")]
     public static string VoxelsToMesh(
         PicoGkSession session,

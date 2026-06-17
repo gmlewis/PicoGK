@@ -207,6 +207,56 @@ public static class QueryTools
     }
 
     [McpServerTool]
+    [Description("Check if a voxel object is empty (contains no volume). " +
+        "Useful for detecting failed operations — e.g. an intersection that produced no overlap, " +
+        "or a subtraction that removed all material.")]
+    public static string VoxelsIsEmpty(
+        PicoGkSession session,
+        [Description("ID of the voxel object")] string objectId)
+    {
+        var (vox, err) = session.SafeGet<Voxels>(objectId);
+        if (err != null) return $"Error: {err}";
+
+        bool empty = vox.bIsEmpty();
+        return empty
+            ? $"Voxel object '{objectId}' is EMPTY (no volume)."
+            : $"Voxel object '{objectId}' contains volume.";
+    }
+
+    [McpServerTool]
+    [Description("Get the memory usage of a voxel object in bytes. " +
+        "Useful for monitoring memory consumption when building complex models.")]
+    public static string VoxelsMemUsage(
+        PicoGkSession session,
+        [Description("ID of the voxel object")] string objectId)
+    {
+        var (vox, err) = session.SafeGet<Voxels>(objectId);
+        if (err != null) return $"Error: {err}";
+
+        long bytes = vox.nMemUsage();
+        return $"Memory usage of '{objectId}': {bytes / 1024.0 / 1024.0:F2} MB ({bytes:N0} bytes)";
+    }
+
+    [McpServerTool]
+    [Description("Compare two voxel objects for equality. Returns true if they contain the same " +
+        "voxel data. Useful for verifying that a transform or round-trip preserved the shape.")]
+    public static string VoxelsIsEqual(
+        PicoGkSession session,
+        [Description("ID of the first voxel object")] string objectIdA,
+        [Description("ID of the second voxel object")] string objectIdB)
+    {
+        var (voxA, errA) = session.SafeGet<Voxels>(objectIdA);
+        if (errA != null) return $"Error: {errA}";
+        var (voxB, errB) = session.SafeGet<Voxels>(objectIdB);
+        if (errB != null) return $"Error: {errB}";
+
+        bool equal = voxA.bIsEqual(voxB);
+        return equal
+            ? $"Voxel objects '{objectIdA}' and '{objectIdB}' are EQUAL (same content)."
+            : $"Voxel objects '{objectIdA}' and '{objectIdB}' are NOT equal (different content).";
+    }
+
+    [McpServerTool]
     [Description("Cast a ray from a point in a given direction and find where it hits the " +
         "surface of a voxel object. Useful for measuring wall thickness, checking bore " +
         "clearance, and probing internal geometry. Returns the hit point and the distance " +

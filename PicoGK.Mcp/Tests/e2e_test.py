@@ -585,6 +585,171 @@ async def run_tests():
             )
             check("retry test (bbox on fresh transform)", r)
 
+            # ── 11.7. Library-Completeness Tools ────────────────
+            # mesh_add_quad: add a quad (4 vertices -> 2 triangles)
+            r = await session.call_tool(
+                "create_mesh", {"id": "quadMesh"}
+            )
+            check("mesh_add_quad (create mesh)", r)
+            r = await session.call_tool(
+                "mesh_add_quad",
+                {"meshId": "quadMesh",
+                 "x0": 0, "y0": 0, "z0": 0,
+                 "x1": 10, "y1": 0, "z1": 0,
+                 "x2": 10, "y2": 10, "z2": 0,
+                 "x3": 0, "y3": 10, "z3": 0},
+            )
+            txt, ok_ = check("mesh_add_quad", r)
+            if ok_ and "triangles" not in txt:
+                results[-1] = f"  FAIL: mesh_add_quad -> Expected triangles, got: {txt[:100]}"
+                fail_count += 1
+                pass_count -= 1
+            # Verify the mesh now has 2 triangles
+            r = await session.call_tool("get_mesh_info", {"objectId": "quadMesh"})
+            txt, ok_ = check("mesh_add_quad (verify 2 triangles)", r)
+            if ok_:
+                import re as _re
+                m = _re.search(r"Triangles:\s*(\d+)", txt)
+                if m and int(m.group(1)) != 2:
+                    results[-1] = f"  FAIL: mesh_add_quad -> Expected 2 triangles, got {m.group(1)}"
+                    fail_count += 1
+                    pass_count -= 1
+
+            # double_offset: offset out 4mm then back 3mm
+            r = await session.call_tool(
+                "double_offset",
+                {"objectId": "sphere1", "offset1": 4, "offset2": -3, "id": "doubledOffset"},
+            )
+            check("double_offset", r)
+            # Verify the result is bigger than original (net +1mm)
+            r = await session.call_tool(
+                "get_bounding_box", {"objectId": "doubledOffset"}
+            )
+            check("double_offset (verify bbox)", r)
+
+            # over_offset: offset 3mm then settle to 0.5mm from original
+            r = await session.call_tool(
+                "over_offset",
+                {"objectId": "sphere1", "firstOffset": 3, "finalSurfaceDist": 0.5, "id": "overOffset"},
+            )
+            check("over_offset", r)
+
+            # boolean_subtract_all: subtract 3 objects from sphere1 at once
+            r = await session.call_tool(
+                "create_cylinder",
+                {"x": 0, "y": 0, "z": -50, "radius": 5, "height": 100, "id": "sub1"},
+            )
+            check("boolean_subtract_all (create sub1)", r)
+            r = await session.call_tool(
+                "create_cylinder",
+                {"x": 20, "y": 20, "z": -50, "radius": 3, "height": 100, "id": "sub2"},
+            )
+            check("boolean_subtract_all (create sub2)", r)
+            r = await session.call_tool(
+                "create_cylinder",
+                {"x": -20, "y": -20, "z": -50, "radius": 3, "height": 100, "id": "sub3"},
+            )
+            check("boolean_subtract_all (create sub3)", r)
+            r = await session.call_tool(
+                "boolean_subtract_all",
+                {"a": "sphere1", "subtractIds": ["sub1", "sub2", "sub3"], "id": "multiDrilled"},
+            )
+            check("boolean_subtract_all", r)
+
+            # boolean_subtract_all: empty list should error
+            r = await session.call_tool(
+                "boolean_subtract_all",
+                {"a": "sphere1", "subtractIds": []},
+            )
+            txt, ok_ = check("boolean_subtract_all (empty-list guard)", r)
+            if ok_ and "Error" not in txt:
+                results[-1] = f"  FAIL: boolean_subtract_all (empty-list guard) -> Expected error, got: {txt[:100]}"
+                fail_count += 1
+                pass_count -= 1
+
+            # voxels_is_empty: sphere should not be empty
+            r = await session.call_tool(
+                "voxels_is_empty", {"objectId": "sphere1"},
+            )
+            txt, ok_ = check("voxels_is_empty (non-empty)", r)
+            if ok_ and "EMPTY" in txt and "not" not in txt.lower():
+                results[-1] = f"  FAIL: voxels_is_empty -> sphere1 should not be empty, got: {txt[:100]}"
+                fail_count += 1
+                pass_count -= 1
+
+            # voxels_is_empty: create an empty voxel field via intersection of non-overlapping
+            r = await session.call_tool(
+                "create_box", {"minX": 100, "minY": 100, "minZ": 100,
+                               "maxX": 110, "maxY": 110, "maxZ": 110, "id": "farBox"},
+            )
+            check("voxels_is_empty (create far box)", r)
+            r = await session.call_tool(
+                "boolean_intersect", {"a": "sphere1", "b": "farBox", "id": "emptyResult"},
+            )
+            check("voxels_is_empty (intersect non-overlapping)", r)
+            r = await session.call_tool(
+                "voxels_is_empty", {"objectId": "emptyResult"},
+            )
+            txt, ok_ = check("voxels_is_empty (empty result)", r)
+            if ok_ and "EMPTY" not in txt:
+                results[-1] = f"  FAIL: voxels_is_empty -> Expected EMPTY, got: {txt[:100]}"
+                fail_count += 1
+                pass_count -= 1
+
+            # voxels_mem_usage
+            r = await session.call_tool(
+                "voxels_mem_usage", {"objectId": "sphere1"},
+            )
+            txt, ok_ = check("voxels_mem_usage", r)
+            if ok_ and "MB" not in txt:
+                results[-1] = f"  FAIL: voxels_mem_usage -> Expected MB, got: {txt[:100]}"
+                fail_count += 1
+                pass_count -= 1
+
+            # voxels_is_equal: duplicate sphere1 and compare
+            r = await session.call_tool(
+                "duplicate_object", {"objectId": "sphere1", "id": "sphereEq"},
+            )
+            check("voxels_is_equal (duplicate)", r)
+            r = await session.call_tool(
+                "voxels_is_equal", {"objectIdA": "sphere1", "objectIdB": "sphereEq"},
+            )
+            txt, ok_ = check("voxels_is_equal (equal)", r)
+            if ok_ and "EQUAL" not in txt:
+                results[-1] = f"  FAIL: voxels_is_equal -> Expected EQUAL, got: {txt[:100]}"
+                fail_count += 1
+                pass_count -= 1
+            # Compare different objects (box1 was deleted, create a fresh one)
+            r = await session.call_tool(
+                "create_box",
+                {"minX": -5, "minY": -5, "minZ": -5, "maxX": 5, "maxY": 5, "maxZ": 5, "id": "diffBox"},
+            )
+            check("voxels_is_equal (create diff box)", r)
+            r = await session.call_tool(
+                "voxels_is_equal", {"objectIdA": "sphere1", "objectIdB": "diffBox"},
+            )
+            txt, ok_ = check("voxels_is_equal (not equal)", r)
+            if ok_ and "NOT equal" not in txt:
+                results[-1] = f"  FAIL: voxels_is_equal -> Expected NOT equal, got: {txt[:100]}"
+                fail_count += 1
+                pass_count -= 1
+
+            # list_vdb_fields: save a VDB, then list its fields
+            r = await session.call_tool(
+                "save_vdb",
+                {"voxelsId": "sphere1", "path": f"{OUTDIR}/sphere_fields.vdb",
+                 "fieldName": "myField"},
+            )
+            check("list_vdb_fields (save)", r)
+            r = await session.call_tool(
+                "list_vdb_fields", {"path": f"{OUTDIR}/sphere_fields.vdb"},
+            )
+            txt, ok_ = check("list_vdb_fields", r)
+            if ok_ and "myField" not in txt:
+                results[-1] = f"  FAIL: list_vdb_fields -> Expected 'myField' in output, got: {txt[:200]}"
+                fail_count += 1
+                pass_count -= 1
+
             # ── 12. Info & Cleanup ──────────────────────────────
             r = await session.call_tool("picogk_info", {})
             check("picogk_info", r)
@@ -605,7 +770,7 @@ async def run_tests():
     print(f"\n{'=' * 80}")
     print("OUTPUT FILES:")
     for f in ["sphere.png", "slice_z0.png", "sphere.stl", "sphere.vdb",
-              "sphere.cli", "sphere.0001.svg", "sphere.0002.svg"]:
+              "sphere.cli", "sphere.0001.svg", "sphere.0002.svg", "sphere_fields.vdb"]:
         fp = os.path.join(OUTDIR, f)
         if os.path.exists(fp):
             sz = os.path.getsize(fp)
