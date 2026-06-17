@@ -1,8 +1,0 @@
-{
-  "name": "leap71/mbtpicogk",
-  "version": "1.0.0",
-  "description": "MoonBit SDK for the PicoGK MCP geometry kernel server",
-  "readme": "README.md",
-  "repository": "https://github.com/leap71/PicoGK",
-  "license": "Apache-2.0"
-}

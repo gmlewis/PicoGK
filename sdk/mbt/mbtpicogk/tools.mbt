@@ -52,9 +52,9 @@ pub fn Client::BooleanIntersect(self : Client, a : String, b : String, id : Stri
 /// boolean_add_all — boolean_add_all
 /// Combine multiple voxel objects into one. All volumes are merged. Returns a new object ID.
 ///
-pub fn Client::BooleanAddAll(self : Client, objectIds : String, id : String?) -> String!String {
+pub fn Client::BooleanAddAll(self : Client, objectIds : Array[String], id : String?) -> String!String {
   let args : Map[String, JsonValue] = {}
-  args.set("objectIds", JsonValue::String(objectIds))
+  args.set("objectIds", JsonValue::Array(objectIds.map(fn(s) { JsonValue::String(s) })))
   match id {
     Some(v) => args.set("id", JsonValue::String(v))
     None => ()
@@ -66,10 +66,10 @@ pub fn Client::BooleanAddAll(self : Client, objectIds : String, id : String?) ->
 /// boolean_subtract_all — boolean_subtract_all
 /// Subtract multiple voxel objects from a single object in one call. Equivalent to calling boolean_subtract repeatedly, but more efficient for multi-hole drilling or multi-cutout operations. Returns a new object ID.
 ///
-pub fn Client::BooleanSubtractAll(self : Client, a : String, subtractIds : String, id : String?) -> String!String {
+pub fn Client::BooleanSubtractAll(self : Client, a : String, subtractIds : Array[String], id : String?) -> String!String {
   let args : Map[String, JsonValue] = {}
   args.set("a", JsonValue::String(a))
-  args.set("subtractIds", JsonValue::String(subtractIds))
+  args.set("subtractIds", JsonValue::Array(subtractIds.map(fn(s) { JsonValue::String(s) })))
   match id {
     Some(v) => args.set("id", JsonValue::String(v))
     None => ()
@@ -725,9 +725,9 @@ pub fn Client::DuplicateObject(self : Client, objectId : String, id : String?) -
 /// delete_objects — delete_objects
 /// Delete multiple objects from the session in one call. Useful for cleaning up intermediate objects after a complex build. Returns the count of objects actually deleted.
 ///
-pub fn Client::DeleteObjects(self : Client, objectIds : String, keepOnly : Bool?) -> String!String {
+pub fn Client::DeleteObjects(self : Client, objectIds : Array[String], keepOnly : Bool?) -> String!String {
   let args : Map[String, JsonValue] = {}
-  args.set("objectIds", JsonValue::String(objectIds))
+  args.set("objectIds", JsonValue::Array(objectIds.map(fn(s) { JsonValue::String(s) })))
   match keepOnly {
     Some(v) => args.set("keepOnly", JsonValue::Bool(v))
     None => ()

@@ -8,7 +8,7 @@ lattice design, mesh manipulation, rendering, and 3D-printing export.
 ## Quick Start
 
 ```bash
-go get github.com/leap71/PicoGK/sdk/go/gopicogk
+go get github.com/gmlewis/PicoGK/sdk/go/gopicogk
 ```
 
 ```go
@@ -19,14 +19,14 @@ import (
     "fmt"
     "log"
 
-    "github.com/leap71/PicoGK/sdk/go/gopicogk"
+    "github.com/gmlewis/PicoGK/sdk/go/gopicogk"
 )
 
 func main() {
     ctx := context.Background()
 
-    // Launch the PicoGK MCP server
-    client, err := gopicogk.NewClient(ctx, "/path/to/PicoGK.Mcp")
+    // Launch the PicoGK MCP server (default path: $HOME/.local/bin/picogk-mcp/PicoGK.Mcp)
+    client, err := gopicogk.NewClient(ctx, "")
     if err != nil {
         log.Fatal(err)
     }

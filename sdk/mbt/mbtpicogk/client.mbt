@@ -6,7 +6,10 @@
 /// It launches the server as a subprocess and communicates via JSON-RPC over stdio.
 ///
 /// Usage:
-///   let client = @mbtpicogk.new_client("/path/to/PicoGK.Mcp")!
+///   // Uses default server at $HOME/.local/bin/picogk-mcp/PicoGK.Mcp
+///   let client = @mbtpicogk.new_client("")!
+///   // Or specify a custom path:
+///   let client = @mbtpicogk.new_client("/custom/path/to/PicoGK.Mcp")!
 ///   client.picogk_init(0.5)!
 ///   client.create_sphere(0.0, 0.0, 0.0, 30.0, Some("body"))!
 ///   client.close!
@@ -19,12 +22,20 @@ pub struct Client {
 }
 
 ///
+/// default_server_bin returns the default path to the PicoGK MCP server binary.
+///
+pub const default_server_bin : String = "~/.local/bin/picogk-mcp/PicoGK.Mcp"
+
+///
 /// new_client launches the PicoGK MCP server binary and returns a Client.
-/// The server_bin path should point to the self-contained PicoGK.Mcp executable.
+/// If server_bin is empty, uses default_server_bin ($HOME/.local/bin/picogk-mcp/PicoGK.Mcp).
 ///
 pub fn new_client(server_bin : String) -> Client! {
+  let bin = if server_bin == "" { default_server_bin } else { server_bin }
+  // Expand ~ to home directory
+  let path = expand_path(bin)
   // Launch the server process
-  let proc = @process.start(server_bin, [])!
+  let proc = @process.start(path, [])!
   let client = Client{
     process: proc,
     stdin: Buffer::new(),
@@ -41,6 +52,18 @@ pub fn new_client(server_bin : String) -> Client! {
 ///
 pub fn Client::close(self : Client) -> Unit {
   self.process.kill()
+}
+
+///
+/// expand_path expands a leading ~ to the user's home directory.
+///
+fn expand_path(path : String) -> String {
+  if path.starts_with("~") {
+    let home = @os.home_dir()
+    home + path.substring(from=1)
+  } else {
+    path
+  }
 }
 
 // --- JSON-RPC internals ---

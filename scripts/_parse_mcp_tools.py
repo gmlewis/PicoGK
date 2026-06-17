@@ -172,26 +172,38 @@ def _parse_tool_block(lines: list[str], start_idx: int) -> tuple[str, str, list[
     params: list[Param] = []
 
     # Split by comma, but be careful about commas inside [Description("...")]
-    # Strategy: parse character by character, tracking string state
+    # Strategy: parse character by character, tracking string and bracket state.
+    # We need to distinguish [] (type array suffix, e.g. string[]) from
+    # [Description("...")] (attribute). The key heuristic: [] immediately
+    # following a word character is a type suffix, not an attribute.
     parts: list[str] = []
     current = ""
     in_string = False
     in_attr = 0  # bracket depth for [...]
+    prev_ch = ""
     for ch in param_text:
         if ch == '"' and (not current.endswith("\\")):
             in_string = not in_string
             current += ch
         elif ch == '[' and not in_string:
-            in_attr += 1
-            current += ch
+            # Check if this is a type suffix [] (preceded by a word char)
+            # vs an attribute [Description(...)]
+            if prev_ch.isalnum() or prev_ch == ']':
+                # This is a type suffix like string[] — don't treat as attribute
+                current += ch
+            else:
+                in_attr += 1
+                current += ch
         elif ch == ']' and not in_string:
-            in_attr -= 1
+            if in_attr > 0:
+                in_attr -= 1
             current += ch
         elif ch == ',' and not in_string and in_attr == 0:
             parts.append(current.strip())
             current = ""
         else:
             current += ch
+        prev_ch = ch
     if current.strip():
         parts.append(current.strip())
 
@@ -213,8 +225,8 @@ def _parse_tool_block(lines: list[str], start_idx: int) -> tuple[str, str, list[
             param_desc = ""
             part_clean = part
 
-        # Remove any remaining attributes
-        part_clean = re.sub(r'\[.*?\]', '', part_clean).strip()
+        # Remove any remaining attribute brackets, but NOT type-suffix [] (empty brackets)
+        part_clean = re.sub(r'\[[^\]]+\]', '', part_clean).strip()
 
         # Parse: type name [= default]
         # Handle types like: float, int, bool, string, string?, string[]

@@ -110,9 +110,12 @@ def gen_client_mbt(tools: list[ToolDef]) -> str:
     lines.append("/// It launches the server as a subprocess and communicates via JSON-RPC over stdio.")
     lines.append("///")
     lines.append("/// Usage:")
-    lines.append("///   let client = @mbtpicogk.new_client(\"/path/to/PicoGK.Mcp\")!")
+    lines.append('///   // Uses default server at $HOME/.local/bin/picogk-mcp/PicoGK.Mcp')
+    lines.append('///   let client = @mbtpicogk.new_client("")!')
+    lines.append('///   // Or specify a custom path:')
+    lines.append('///   let client = @mbtpicogk.new_client("/custom/path/to/PicoGK.Mcp")!')
     lines.append("///   client.picogk_init(0.5)!")
-    lines.append("///   client.create_sphere(0.0, 0.0, 0.0, 30.0, Some(\"body\"))!")
+    lines.append('///   client.create_sphere(0.0, 0.0, 0.0, 30.0, Some("body"))!')
     lines.append("///   client.close!")
     lines.append("///")
     lines.append("pub struct Client {")
@@ -123,12 +126,20 @@ def gen_client_mbt(tools: list[ToolDef]) -> str:
     lines.append("}")
     lines.append("")
     lines.append("///")
+    lines.append("/// default_server_bin returns the default path to the PicoGK MCP server binary.")
+    lines.append("///")
+    lines.append('pub const default_server_bin : String = "~/.local/bin/picogk-mcp/PicoGK.Mcp"')
+    lines.append("")
+    lines.append("///")
     lines.append("/// new_client launches the PicoGK MCP server binary and returns a Client.")
-    lines.append("/// The server_bin path should point to the self-contained PicoGK.Mcp executable.")
+    lines.append("/// If server_bin is empty, uses default_server_bin ($HOME/.local/bin/picogk-mcp/PicoGK.Mcp).")
     lines.append("///")
     lines.append("pub fn new_client(server_bin : String) -> Client! {")
+    lines.append("  let bin = if server_bin == \"\" { default_server_bin } else { server_bin }")
+    lines.append("  // Expand ~ to home directory")
+    lines.append("  let path = expand_path(bin)")
     lines.append("  // Launch the server process")
-    lines.append("  let proc = @process.start(server_bin, [])!")
+    lines.append("  let proc = @process.start(path, [])!")
     lines.append("  let client = Client{")
     lines.append("    process: proc,")
     lines.append("    stdin: Buffer::new(),")
@@ -145,6 +156,18 @@ def gen_client_mbt(tools: list[ToolDef]) -> str:
     lines.append("///")
     lines.append("pub fn Client::close(self : Client) -> Unit {")
     lines.append("  self.process.kill()")
+    lines.append("}")
+    lines.append("")
+    lines.append("///")
+    lines.append("/// expand_path expands a leading ~ to the user's home directory.")
+    lines.append("///")
+    lines.append("fn expand_path(path : String) -> String {")
+    lines.append('  if path.starts_with("~") {')
+    lines.append('    let home = @os.home_dir()')
+    lines.append('    home + path.substring(from=1)')
+    lines.append("  } else {")
+    lines.append("    path")
+    lines.append("  }")
     lines.append("}")
     lines.append("")
     lines.append("// --- JSON-RPC internals ---")
@@ -333,30 +356,37 @@ def gen_tools_mbt(tools: list[ToolDef]) -> str:
     return "\n".join(lines)
 
 
-def gen_moon_mod_json() -> str:
-    """Generate moon.mod.json."""
-    return """{
-  "name": "leap71/mbtpicogk",
-  "version": "1.0.0",
-  "description": "MoonBit SDK for the PicoGK MCP geometry kernel server",
-  "readme": "README.md",
-  "repository": "https://github.com/leap71/PicoGK",
-  "license": "Apache-2.0"
-}
+def gen_moon_mod() -> str:
+    """Generate moon.mod (new format, not JSON)."""
+    return """// mbtpicogk: PicoGK MCP SDK for MoonBit
+// To regenerate, run: ./scripts/generate-mbt-mcp-sdk.py
+// DO NOT EDIT — this file is auto-generated.
+
+name = "gmlewis/mbtpicogk"
+
+version = "1.0.0"
+
+readme = "README.md"
+
+repository = "https://github.com/gmlewis/PicoGK"
+
+license = "Apache-2.0"
+
+keywords = []
+
+description = "MoonBit SDK for the PicoGK MCP geometry kernel server"
 """
 
 
-def gen_moon_pkg_json() -> str:
-    """Generate moon.pkg.json."""
-    return """{
-  "import": [
-    "moonbitlang/core/json",
-    "moonbitlang/core/process"
-  ],
-  "link": {
-    "wasm": {}
-  }
-}
+def gen_moon_pkg() -> str:
+    """Generate moon.pkg (new format, not JSON)."""
+    return """// mbtpicogk package configuration
+// DO NOT EDIT — this file is auto-generated.
+
+// import {
+//   "moonbitlang/core/json",
+//   "moonbitlang/core/process",
+// }
 """
 
 
@@ -383,14 +413,14 @@ primitives to boolean operations, lattice design, mesh manipulation, rendering, 
 ## Quick Start
 
 ```bash
-moon add leap71/mbtpicogk
+moon add gmlewis/mbtpicogk
 ```
 
 ```moonbit
 ///|
 fn main {{
-  // Launch the PicoGK MCP server
-  let client = @mbtpicogk.new_client("/path/to/PicoGK.Mcp")!
+  // Launch the PicoGK MCP server (default: $HOME/.local/bin/picogk-mcp/PicoGK.Mcp)
+  let client = @mbtpicogk.new_client("")!
 
   // Initialize the geometry kernel (0.5mm voxels)
   let _ = client.picogk_init!(0.5)
@@ -482,22 +512,41 @@ def main():
     # Generate files
     client_mbt = gen_client_mbt(tools)
     tools_mbt = gen_tools_mbt(tools)
-    moon_mod = gen_moon_mod_json()
-    moon_pkg = gen_moon_pkg_json()
+    moon_mod = gen_moon_mod()
+    moon_pkg = gen_moon_pkg()
     readme_md = gen_readme_md(tools)
+
+    # Remove old-format files if they exist
+    for old_file in ["moon.mod.json", "moon.pkg.json"]:
+        old_path = pkg_dir / old_file
+        if old_path.exists():
+            old_path.unlink()
 
     (pkg_dir / "client.mbt").write_text(client_mbt)
     (pkg_dir / "tools.mbt").write_text(tools_mbt)
-    (pkg_dir / "moon.mod.json").write_text(moon_mod)
-    (pkg_dir / "moon.pkg.json").write_text(moon_pkg)
+    (pkg_dir / "moon.mod").write_text(moon_mod)
+    (pkg_dir / "moon.pkg").write_text(moon_pkg)
     (pkg_dir / "README.md").write_text(readme_md)
 
+    # Run moon fmt on generated source files
+    import subprocess
+    try:
+        subprocess.run(["moon", "fmt", str(pkg_dir)],
+                       check=False, capture_output=True, timeout=30)
+    except Exception:
+        pass  # moon fmt may not be available or may warn — non-fatal
+
+    # Re-read formatted files for accurate line count
+    client_lines = len((pkg_dir / "client.mbt").read_text().splitlines())
+    tools_lines = len((pkg_dir / "tools.mbt").read_text().splitlines())
+    readme_lines = len((pkg_dir / "README.md").read_text().splitlines())
+
     print(f"Generated MoonBit SDK in {pkg_dir}:")
-    print(f"  client.mbt      ({len(client_mbt.splitlines()):>5} lines)")
-    print(f"  tools.mbt       ({len(tools_mbt.splitlines()):>5} lines)")
-    print(f"  moon.mod.json")
-    print(f"  moon.pkg.json")
-    print(f"  README.md       ({len(readme_md.splitlines()):>5} lines)")
+    print(f"  client.mbt      ({client_lines:>5} lines)")
+    print(f"  tools.mbt       ({tools_lines:>5} lines)")
+    print(f"  moon.mod")
+    print(f"  moon.pkg")
+    print(f"  README.md       ({readme_lines:>5} lines)")
     print(f"\n  Total: {len(tools)} tools across {len(set(t.category for t in tools))} categories")
 
 

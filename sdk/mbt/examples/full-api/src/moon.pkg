@@ -1,0 +1,10 @@
+// full-api example package
+// DO NOT EDIT — auto-generated
+
+import {
+  "gmlewis/mbtpicogk" @mbtpicogk,
+}
+
+options(
+  "is-main": true,
+)

@@ -1,0 +1,8 @@
+// MoonBit workspace for PicoGK SDK development
+// Contains the mbtpicogk library and example programs
+// DO NOT EDIT — auto-generated
+
+members = [
+  "mbtpicogk",
+  "examples/full-api/src",
+]

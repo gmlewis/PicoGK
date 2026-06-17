@@ -217,11 +217,11 @@ scripts, so they stay in sync when the MCP API is updated.
 A fully typed, idiomatic Go SDK with builder-pattern request structs.
 
 ```bash
-go get github.com/leap71/PicoGK/sdk/go/gopicogk
+go get github.com/gmlewis/PicoGK/sdk/go/gopicogk
 ```
 
 ```go
-client, _ := gopicogk.NewClient(ctx, "/path/to/PicoGK.Mcp")
+client, _ := gopicogk.NewClient(ctx, "") // default: $HOME/.local/bin/picogk-mcp/PicoGK.Mcp
 defer client.Close(ctx)
 client.PicogkInit(ctx, gopicogk.PicogkInitRequest{VoxelSizeMM: pFloat(0.5)})
 client.CreateSphere(ctx, gopicogk.CreateSphereRequest{X: 0, Y: 0, Z: 0, Radius: 30, Id: pStr("body")})
@@ -236,11 +236,11 @@ See `sdk/go/gopicogk/README.md` for full documentation.
 A fully typed MoonBit SDK with method functions and `Option[T]` for optional params.
 
 ```bash
-moon add leap71/mbtpicogk
+moon add gmlewis/mbtpicogk
 ```
 
 ```moonbit
-let client = @mbtpicogk.new_client("/path/to/PicoGK.Mcp")!
+let client = @mbtpicogk.new_client("")! // default: $HOME/.local/bin/picogk-mcp/PicoGK.Mcp
 client.picogk_init!(0.5)
 client.create_sphere!(0.0, 0.0, 0.0, 30.0, Some("body"))
 client.boolean_subtract!("body", "cutout", Some("result"))

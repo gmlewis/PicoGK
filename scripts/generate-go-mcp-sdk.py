@@ -109,7 +109,10 @@ def gen_client_go(tools: list[ToolDef]) -> str:
     lines.append('\t"encoding/json"')
     lines.append('\t"fmt"')
     lines.append('\t"io"')
+    lines.append('\t"os"')
     lines.append('\t"os/exec"')
+    lines.append('\t"path/filepath"')
+    lines.append('\t"strings"')
     lines.append('\t"sync"')
     lines.append(")")
     lines.append("")
@@ -117,8 +120,11 @@ def gen_client_go(tools: list[ToolDef]) -> str:
     lines.append("// It launches the server as a subprocess and communicates via JSON-RPC over stdio.")
     lines.append("//")
     lines.append("// Usage:")
-    lines.append("//\tclient, err := gopicogk.NewClient(ctx, \"/path/to/PicoGK.Mcp\")")
+    lines.append("//\t// Uses default server at $HOME/.local/bin/picogk-mcp/PicoGK.Mcp")
+    lines.append("//\tclient, err := gopicogk.NewClient(ctx, \"\")")
     lines.append("//\tdefer client.Close(ctx)")
+    lines.append("//\t// Or specify a custom path:")
+    lines.append("//\tclient, err := gopicogk.NewClient(ctx, \"/custom/path/to/PicoGK.Mcp\")")
     lines.append("//\t// Initialize the geometry kernel")
     lines.append("//\tres, err := client.PicogkInit(ctx, gopicogk.PicogkInitRequest{VoxelSizeMM: 0.5})")
     lines.append("//\t// Create a sphere, subtract a box, export STL...")
@@ -131,9 +137,18 @@ def gen_client_go(tools: list[ToolDef]) -> str:
     lines.append("\tserverBin string")
     lines.append("}")
     lines.append("")
+    lines.append("// DefaultServerBin is the default path to the PicoGK MCP server binary.")
+    lines.append("// It can be overridden by passing a non-empty path to NewClient.")
+    lines.append("const DefaultServerBin = \"~/.local/bin/picogk-mcp/PicoGK.Mcp\"")
+    lines.append("")
     lines.append("// NewClient launches the PicoGK MCP server binary and returns a Client.")
-    lines.append("// The serverBin path should point to the self-contained PicoGK.Mcp executable.")
+    lines.append("// If serverBin is empty, uses DefaultServerBin ($HOME/.local/bin/picogk-mcp/PicoGK.Mcp).")
+    lines.append("// Expand ~ to the user's home directory automatically.")
     lines.append("func NewClient(ctx context.Context, serverBin string) (*Client, error) {")
+    lines.append("\tif serverBin == \"\" {")
+    lines.append("\t\tserverBin = DefaultServerBin")
+    lines.append("\t}")
+    lines.append("\tserverBin = expandPath(serverBin)")
     lines.append("\tcmd := exec.CommandContext(ctx, serverBin)")
     lines.append("\tstdin, err := cmd.StdinPipe()")
     lines.append("\tif err != nil {")
@@ -181,6 +196,18 @@ def gen_client_go(tools: list[ToolDef]) -> str:
     lines.append("\t\t}")
     lines.append("\t}")
     lines.append("\treturn nil")
+    lines.append("}")
+    lines.append("")
+    lines.append("")
+    lines.append("// expandPath expands a leading ~ to the user's home directory.")
+    lines.append("func expandPath(path string) string {")
+    lines.append('\tif strings.HasPrefix(path, "~") {')
+    lines.append('\t\thome, err := os.UserHomeDir()')
+    lines.append('\t\tif err == nil {')
+    lines.append('\t\t\tpath = filepath.Join(home, path[1:])')
+    lines.append('\t\t}')
+    lines.append('\t}')
+    lines.append('\treturn path')
     lines.append("}")
     lines.append("")
     lines.append("// --- JSON-RPC internals ---")
@@ -396,7 +423,7 @@ def gen_tools_go(tools: list[ToolDef]) -> str:
 
 def gen_go_mod(version: str = "1.0.0") -> str:
     """Generate go.mod."""
-    return f"""module github.com/leap71/PicoGK/sdk/go/gopicogk
+    return f"""module github.com/gmlewis/PicoGK/sdk/go/gopicogk
 
 go 1.22
 
@@ -427,7 +454,7 @@ lattice design, mesh manipulation, rendering, and 3D-printing export.
 ## Quick Start
 
 ```bash
-go get github.com/leap71/PicoGK/sdk/go/gopicogk
+go get github.com/gmlewis/PicoGK/sdk/go/gopicogk
 ```
 
 ```go
@@ -438,14 +465,14 @@ import (
     "fmt"
     "log"
 
-    "github.com/leap71/PicoGK/sdk/go/gopicogk"
+    "github.com/gmlewis/PicoGK/sdk/go/gopicogk"
 )
 
 func main() {{
     ctx := context.Background()
 
-    // Launch the PicoGK MCP server
-    client, err := gopicogk.NewClient(ctx, "/path/to/PicoGK.Mcp")
+    // Launch the PicoGK MCP server (default path: $HOME/.local/bin/picogk-mcp/PicoGK.Mcp)
+    client, err := gopicogk.NewClient(ctx, "")
     if err != nil {{
         log.Fatal(err)
     }}
@@ -604,16 +631,25 @@ def main():
     (pkg_dir / "go.mod").write_text(go_mod)
     (pkg_dir / "README.md").write_text(readme_md)
 
+    # Run go fmt on generated source files
+    import subprocess
+    try:
+        subprocess.run(["go", "fmt", str(pkg_dir / "client.go"), str(pkg_dir / "tools.go")],
+                       check=True, capture_output=True, timeout=30)
+    except Exception as e:
+        print(f"  Warning: go fmt failed: {e}")
+
+    # Re-read formatted files for accurate line count
+    client_lines = len((pkg_dir / "client.go").read_text().splitlines())
+    tools_lines = len((pkg_dir / "tools.go").read_text().splitlines())
+    readme_lines = len((pkg_dir / "README.md").read_text().splitlines())
+
     print(f"Generated Go SDK in {pkg_dir}:")
-    print(f"  client.go   ({len(client_go):>5} lines)")
-    print(f"  tools.go    ({len(tools_go):>5} lines)")
+    print(f"  client.go   ({client_lines:>5} lines)")
+    print(f"  tools.go    ({tools_lines:>5} lines)")
     print(f"  go.mod")
-    print(f"  README.md   ({len(readme_md):>5} lines)")
-    print(f"\n  Total: {tool_count(tools)} tools across {len(set(t.category for t in tools))} categories")
-
-
-def tool_count(tools: list[ToolDef]) -> int:
-    return len(tools)
+    print(f"  README.md   ({readme_lines:>5} lines)")
+    print(f"\n  Total: {len(tools)} tools across {len(set(t.category for t in tools))} categories")
 
 
 if __name__ == "__main__":

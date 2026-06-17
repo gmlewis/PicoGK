@@ -500,3 +500,5 @@ xcuserdata/
 *.out
 *.app
 
+# MoonBit
+_build

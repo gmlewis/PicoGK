@@ -9,14 +9,14 @@ primitives to boolean operations, lattice design, mesh manipulation, rendering, 
 ## Quick Start
 
 ```bash
-moon add leap71/mbtpicogk
+moon add gmlewis/mbtpicogk
 ```
 
 ```moonbit
 ///|
 fn main {
-  // Launch the PicoGK MCP server
-  let client = @mbtpicogk.new_client("/path/to/PicoGK.Mcp")!
+  // Launch the PicoGK MCP server (default: $HOME/.local/bin/picogk-mcp/PicoGK.Mcp)
+  let client = @mbtpicogk.new_client("")!
 
   // Initialize the geometry kernel (0.5mm voxels)
   let _ = client.picogk_init!(0.5)
