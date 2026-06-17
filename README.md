@@ -203,3 +203,63 @@ The original C# E2E test is also available:
 dotnet run --project PicoGK.Mcp/Tests/PicoGK.Mcp.Tests.csproj -c Release -- /path/to/PicoGK
 ```
 
+---
+
+# SDKs for Other Programming Languages
+
+The PicoGK MCP server speaks standard JSON-RPC over stdio, so any programming
+language can connect to it. To make this easy, two auto-generated SDKs are
+included in this repo. Both are generated from the C# tool definitions by
+scripts, so they stay in sync when the MCP API is updated.
+
+## gopicogk — Go SDK
+
+A fully typed, idiomatic Go SDK with builder-pattern request structs.
+
+```bash
+go get github.com/leap71/PicoGK/sdk/go/gopicogk
+```
+
+```go
+client, _ := gopicogk.NewClient(ctx, "/path/to/PicoGK.Mcp")
+defer client.Close(ctx)
+client.PicogkInit(ctx, gopicogk.PicogkInitRequest{VoxelSizeMM: pFloat(0.5)})
+client.CreateSphere(ctx, gopicogk.CreateSphereRequest{X: 0, Y: 0, Z: 0, Radius: 30, Id: pStr("body")})
+client.BooleanSubtract(ctx, gopicogk.BooleanSubtractRequest{A: "body", B: "cutout", Id: pStr("result")})
+client.SaveStl(ctx, gopicogk.SaveStlRequest{MeshId: "mesh", Path: "/tmp/part.stl"})
+```
+
+See `sdk/go/gopicogk/README.md` for full documentation.
+
+## mbtpicogk — MoonBit SDK
+
+A fully typed MoonBit SDK with method functions and `Option[T]` for optional params.
+
+```bash
+moon add leap71/mbtpicogk
+```
+
+```moonbit
+let client = @mbtpicogk.new_client("/path/to/PicoGK.Mcp")!
+client.picogk_init!(0.5)
+client.create_sphere!(0.0, 0.0, 0.0, 30.0, Some("body"))
+client.boolean_subtract!("body", "cutout", Some("result"))
+client.save_stl!("mesh", "/tmp/part.stl")
+client.close()
+```
+
+See `sdk/mbt/mbtpicogk/README.md` for full documentation.
+
+## Regenerating the SDKs
+
+When the MCP tools change (new tools added, params modified), regenerate both SDKs:
+
+```bash
+./scripts/generate-go-mcp-sdk.py --verbose
+./scripts/generate-mbt-mcp-sdk.py --verbose
+```
+
+Both scripts parse `PicoGK.Mcp/Tools/*.cs` to extract tool names, parameter types,
+and descriptions, then emit idiomatic code. The generated files include a
+`DO NOT EDIT` header — always edit the C# source and regenerate.
+

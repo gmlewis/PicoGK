@@ -1,0 +1,158 @@
+# gopicogk — Go SDK for the PicoGK MCP Server
+
+`gopicogk` is an auto-generated Go SDK for the [PicoGK](https://picogk.org) geometry
+kernel's MCP (Model Context Protocol) server. It provides a fully typed, idiomatic Go
+interface to all 62 PicoGK tools — from creating primitives to boolean operations,
+lattice design, mesh manipulation, rendering, and 3D-printing export.
+
+## Quick Start
+
+```bash
+go get github.com/leap71/PicoGK/sdk/go/gopicogk
+```
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "log"
+
+    "github.com/leap71/PicoGK/sdk/go/gopicogk"
+)
+
+func main() {
+    ctx := context.Background()
+
+    // Launch the PicoGK MCP server
+    client, err := gopicogk.NewClient(ctx, "/path/to/PicoGK.Mcp")
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer client.Close(ctx)
+
+    // Initialize the geometry kernel (0.5mm voxels)
+    _, err = client.PicogkInit(ctx, gopicogk.PicogkInitRequest{
+        VoxelSizeMM: float64Ptr(0.5),
+    })
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    // Create a sphere
+    res, err := client.CreateSphere(ctx, gopicogk.CreateSphereRequest{
+        X:      0,
+        Y:      0,
+        Z:      0,
+        Radius: 30,
+        Id:     stringPtr("body"),
+    })
+    if err != nil {
+        log.Fatal(err)
+    }
+    fmt.Println(res)
+
+    // Create a box cutout
+    _, err = client.CreateBox(ctx, gopicogk.CreateBoxRequest{
+        MinX: -10, MinY: -10, MinZ: -40,
+        MaxX:  10, MaxY:  10, MaxZ: 40,
+        Id:   stringPtr("cutout"),
+    })
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    // Subtract box from sphere
+    _, err = client.BooleanSubtract(ctx, gopicogk.BooleanSubtractRequest{
+        A:  "body",
+        B:  "cutout",
+        Id: stringPtr("result"),
+    })
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    // Smooth the result
+    _, err = client.Smooth(ctx, gopicogk.SmoothRequest{
+        ObjectId: "result",
+        Distance: 2.0,
+        Id:       stringPtr("smoothed"),
+    })
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    // Convert to mesh and export STL
+    _, err = client.VoxelsToMesh(ctx, gopicogk.VoxelsToMeshRequest{
+        VoxelsId: "smoothed",
+        Id:       stringPtr("mesh"),
+    })
+    if err != nil {
+        log.Fatal(err)
+    }
+    _, err = client.SaveStl(ctx, gopicogk.SaveStlRequest{
+        MeshId: "mesh",
+        Path:   "/tmp/part.stl",
+    })
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    // Render a preview
+    _, err = client.RenderToImage(ctx, gopicogk.RenderToImageRequest{
+        ObjectId: "smoothed",
+        Path:     "/tmp/preview.png",
+    })
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    fmt.Println("Done! Part exported to /tmp/part.stl")
+}
+
+// Helper: create a float64 pointer
+func float64Ptr(v float64) *float64 { return &v }
+
+// Helper: create a string pointer
+func stringPtr(v string) *string { return &v }
+```
+
+## API Overview
+
+The SDK exposes all 62 PicoGK MCP tools via builder-pattern request structs:
+
+| Category | Tools |
+|----------|-------|
+| **Booleans** | boolean_add, boolean_subtract, boolean_intersect, boolean_add_all, boolean_subtract_all |
+| **IO** | save_stl, save_vdb, load_vdb, list_vdb_fields, save_svg, save_cli |
+| **Lattice** | create_lattice, lattice_add_beam, lattice_add_sphere, lattice_to_voxels |
+| **Mesh** | create_mesh, mesh_add_vertex, mesh_add_triangle, mesh_add_triangle_vertices, mesh_add_quad, voxels_to_mesh, mesh_to_voxels, mesh_from_stl, mesh_transform, mesh_mirror, mesh_append |
+| **Primitives** | create_sphere, create_box, create_cylinder, create_capsule, create_torus |
+| **Query** | get_bounding_box, get_volume, get_mesh_info, point_inside, surface_normal, closest_point, list_objects, delete_object, get_voxel_dimensions, voxels_is_empty, voxels_mem_usage, voxels_is_equal, ray_cast, measure_thickness, duplicate_object, delete_objects |
+| **Render** | render_to_image, render_slice |
+| **Session** | picogk_init, picogk_info, picogk_shutdown |
+| **Transforms** | offset, double_offset, over_offset, smooth, trim, shell, fillet, project_z_slice, transform_voxels, circular_pattern |
+
+Each tool has:
+- A `XxxRequest` struct with typed fields (optional params are pointers)
+- A `Client.Xxx(ctx, req)` method returning `(string, error)`
+- Full doc comments
+
+## Architecture
+
+The SDK launches the PicoGK MCP server as a subprocess and communicates via
+JSON-RPC over stdio. No network connection is needed. The server binary must
+be installed separately (see the main PicoGK README for build instructions).
+
+## Auto-Generation
+
+This SDK is auto-generated from the PicoGK C# MCP tool definitions by
+`scripts/generate-go-mcp-sdk.py`. To regenerate:
+
+```bash
+./scripts/generate-go-mcp-sdk.py --verbose
+```
+
+**DO NOT EDIT** the generated files — changes will be overwritten. Edit the
+C# tool definitions in `PicoGK.Mcp/Tools/*.cs` instead, then regenerate.
