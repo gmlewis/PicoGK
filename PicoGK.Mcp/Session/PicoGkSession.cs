@@ -47,6 +47,7 @@ namespace PicoGK.Mcp
                     "PicoGK is already initialized.");
 
             _library = new Library(voxelSizeMM);
+            Library.RegisterGlobalLibrary(_library);
         }
 
         public string Register(object obj, string? id = null, string description = "")
@@ -119,8 +120,12 @@ namespace PicoGK.Mcp
         public void Dispose()
         {
             _objects.Clear();
-            _library?.Dispose();
-            _library = null;
+            if (_library != null)
+            {
+                Library.UnregisterGlobalLibrary();
+                _library.Dispose();
+                _library = null;
+            }
         }
 
         private record ManagedObject(object Value, string Type, string Description);
