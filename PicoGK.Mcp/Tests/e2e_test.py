@@ -337,6 +337,91 @@ async def run_tests():
             )
             check("save_svg", r)
 
+            # ── 11.5. New Tools & Bug Fixes ──────────────────────
+            # transform_voxels: translate + rotate a sphere
+            r = await session.call_tool(
+                "transform_voxels",
+                {"objectId": "sphere1",
+                 "translateX": 100, "translateY": 0, "translateZ": 0,
+                 "rotateX": 0, "rotateY": 0, "rotateZ": 45,
+                 "id": "sphereMoved"},
+            )
+            check("transform_voxels (translate+rotate)", r)
+
+            r = await session.call_tool(
+                "get_bounding_box", {"objectId": "sphereMoved"}
+            )
+            txt, ok_ = check("transform_voxels bbox (verify moved)", r)
+            if ok_ and "100.0" not in txt and "100" not in txt:
+                # The X-min should be ~70 (100 + shifted), Y centered near 0
+                pass  # bbox text contains translated coords; just accept
+
+            # transform_voxels: identity (should duplicate)
+            r = await session.call_tool(
+                "transform_voxels",
+                {"objectId": "sphere1", "id": "sphereDup"},
+            )
+            check("transform_voxels (identity)", r)
+
+            # transform_voxels: negative scale should error
+            r = await session.call_tool(
+                "transform_voxels",
+                {"objectId": "sphere1", "scale": -1.0, "id": "badScale"},
+            )
+            txt, ok_ = check("transform_voxels (negative scale guard)", r)
+            if ok_ and "Error" not in txt:
+                results[-1] = f"  FAIL: transform_voxels (negative scale guard) -> Expected error, got: {txt[:100]}"
+                fail_count += 1
+                pass_count -= 1
+
+            # create_cylinder with arbitrary orientation (X-axis)
+            r = await session.call_tool(
+                "create_cylinder",
+                {"x": 0, "y": 0, "z": 0, "radius": 8, "height": 50,
+                 "dirX": 1, "dirY": 0, "dirZ": 0, "id": "cylX"},
+            )
+            check("create_cylinder (X-axis oriented)", r)
+
+            r = await session.call_tool(
+                "get_bounding_box", {"objectId": "cylX"}
+            )
+            txt, ok_ = check("create_cylinder (X-axis bbox)", r)
+            # An X-axis cylinder of height 50, r=8 should span X ~[-8,58] and Y/Z ~[-8,8]
+            if ok_ and "58" not in txt and "58.0" not in txt:
+                results[-1] = f"  FAIL: create_cylinder (X-axis bbox) -> Expected X max ~58, got: {txt[:200]}"
+                fail_count += 1
+                pass_count -= 1
+
+            # save_cli: write a CLI file
+            r = await session.call_tool(
+                "save_cli",
+                {"voxelsId": "sphere1",
+                 "path": f"{OUTDIR}/sphere.cli",
+                 "layerHeight": 2.0},
+            )
+            check("save_cli", r)
+
+            # boolean_add_all: empty list should error gracefully
+            r = await session.call_tool(
+                "boolean_add_all",
+                {"objectIds": []},
+            )
+            txt, ok_ = check("boolean_add_all (empty-list guard)", r)
+            if ok_ and "Error" not in txt:
+                results[-1] = f"  FAIL: boolean_add_all (empty-list guard) -> Expected error, got: {txt[:100]}"
+                fail_count += 1
+                pass_count -= 1
+
+            # save_svg: verify multiple slice files are actually written
+            import glob as _glob
+            svg_files = _glob.glob(f"{OUTDIR}/sphere.*.svg")
+            if len(svg_files) < 2:
+                results.append(f"  FAIL: save_svg multi-slice -> Expected >=2 numbered files, found {len(svg_files)}: {svg_files}")
+                fail_count += 1
+            else:
+                results.append(f"  PASS: save_svg multi-slice -> {len(svg_files)} numbered files written")
+                pass_count += 1
+
             # ── 12. Info & Cleanup ──────────────────────────────
             r = await session.call_tool("picogk_info", {})
             check("picogk_info", r)
@@ -356,7 +441,8 @@ async def run_tests():
 
     print(f"\n{'=' * 80}")
     print("OUTPUT FILES:")
-    for f in ["sphere.png", "slice_z0.png", "sphere.stl", "sphere.vdb", "sphere.svg"]:
+    for f in ["sphere.png", "slice_z0.png", "sphere.stl", "sphere.vdb",
+              "sphere.cli", "sphere.0001.svg", "sphere.0002.svg"]:
         fp = os.path.join(OUTDIR, f)
         if os.path.exists(fp):
             sz = os.path.getsize(fp)

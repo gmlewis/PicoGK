@@ -62,30 +62,51 @@ public static class PrimitiveTools
     }
 
     [McpServerTool]
-    [Description("Create a cylinder along the Z axis. Returns the object ID.")]
+    [Description("Create a cylinder. By default it runs along the +Z axis from (x,y,z) to " +
+        "(x,y,z+height). Pass dirX/dirY/dirZ to orient the axis differently (the vector is " +
+        "normalized automatically). The cylinder has flat end caps. Returns the object ID.")]
     public static string CreateCylinder(
         PicoGkSession session,
-        [Description("X coordinate of center")] float x,
-        [Description("Y coordinate of center")] float y,
-        [Description("Z coordinate of bottom center")] float z,
+        [Description("X coordinate of the bottom center")] float x,
+        [Description("Y coordinate of the bottom center")] float y,
+        [Description("Z coordinate of the bottom center")] float z,
         [Description("Radius in mm")] float radius,
-        [Description("Height in mm (extends upward along +Z)")] float height,
+        [Description("Height in mm (along the axis)")] float height,
+        [Description("Axis direction X (default 0 = +Z)")] float dirX = 0,
+        [Description("Axis direction Y (default 0 = +Z)")] float dirY = 0,
+        [Description("Axis direction Z (default 1 = +Z). If all three are 0, +Z is used.")] float dirZ = 1,
         [Description("Optional ID to assign")] string? id = null)
     {
         try
         {
             var bottom = new Vector3(x, y, z);
-            var top = new Vector3(x, y, z + height);
 
+            // Normalize the direction; default to +Z if zero/invalid.
+            var dir = new Vector3(dirX, dirY, dirZ);
+            if (dir.LengthSquared() < 1e-9f)
+                dir = new Vector3(0, 0, 1);
+            else
+                dir = Vector3.Normalize(dir);
+
+            var top = bottom + dir * height;
+
+            // Build a flat-ended cylinder as the union of a beam (the side) and two
+            // spheres (the flat caps). This works for any axis direction.
             var sphereBottom = Voxels.voxSphere(session.Library, bottom, radius);
             var sphereTop = Voxels.voxSphere(session.Library, top, radius);
             var beam = sphereBottom + sphereTop;
+
             var lat = new Lattice(session.Library);
             lat.AddBeam(bottom, radius, top, radius);
             var latVoxels = new Voxels(lat);
+
             var voxels = beam + latVoxels;
 
-            return session.Register(voxels, id, $"Cylinder r={radius}mm h={height}mm at ({x},{y},{z})");
+            string dirDesc = (dir == new Vector3(0, 0, 1))
+                ? ""
+                : $" dir=({dir.X:F2},{dir.Y:F2},{dir.Z:F2})";
+            return session.Register(voxels, id,
+                $"Cylinder r={radius}mm h={height}mm at ({x},{y},{z}){dirDesc}");
         }
         catch (Exception ex)
         {

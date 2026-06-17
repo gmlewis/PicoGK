@@ -72,6 +72,9 @@ public static class BooleanTools
         [Description("List of object IDs to combine")] string[] objectIds,
         [Description("Optional ID for the result")] string? id = null)
     {
+        if (objectIds == null || objectIds.Length == 0)
+            return "Error: objectIds list is empty. Provide at least one voxel object ID.";
+
         var voxels = new List<Voxels>();
         foreach (var oid in objectIds)
         {

@@ -31,7 +31,7 @@ namespace PicoGK.Mcp
         private volatile Library? _library;
         private readonly object _initLock = new();
         private readonly ConcurrentDictionary<string, ManagedObject> _objects = new();
-        private int _autoIdCounter;
+        private readonly ConcurrentDictionary<string, int> _typeCounters = new();
 
         public bool IsInitialized
         {
@@ -146,7 +146,9 @@ namespace PicoGK.Mcp
                 OpenVdbFile => "vdb",
                 _ => "obj"
             };
-            return $"{prefix}_{Interlocked.Increment(ref _autoIdCounter):D4}";
+            // Per-type counter so IDs are independent (mesh_0001 vs voxels_0001).
+            int n = _typeCounters.AddOrUpdate(prefix, 1, (_, v) => v + 1);
+            return $"{prefix}_{n:D4}";
         }
 
         public void Dispose()
