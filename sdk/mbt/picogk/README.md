@@ -1,50 +1,55 @@
-# mbtpicogk — MoonBit SDK for the PicoGK MCP Server
+# picogk — MoonBit SDK for the PicoGK MCP Server
 
-`mbtpicogk` is an auto-generated MoonBit SDK for the [PicoGK](https://picogk.org)
+`picogk` is an auto-generated MoonBit SDK for the [PicoGK](https://picogk.org)
 geometry kernel's MCP (Model Context Protocol) server. It provides a fully typed,
 idiomatic MoonBit interface to all 62 PicoGK tools — from creating
 primitives to boolean operations, lattice design, mesh manipulation, rendering, and
 3D-printing export.
 
+All tool methods are **async** and use `moonbitlang/async` for subprocess management.
+They must be called within an `@async.run()` block.
+
 ## Quick Start
 
 ```bash
-moon add gmlewis/mbtpicogk
+moon add gmlewis/picogk
 ```
 
 ```moonbit
 ///|
 fn main {
-  // Launch the PicoGK MCP server (default: $HOME/.local/bin/picogk-mcp/PicoGK.Mcp)
-  let client = @mbtpicogk.new_client("")!
+  @async.run() {
+    // Launch the PicoGK MCP server (default: $HOME/.local/bin/picogk-mcp/PicoGK.Mcp)
+    let client = @picogk.new_client("").await!()
 
-  // Initialize the geometry kernel (0.5mm voxels)
-  let _ = client.picogk_init!(0.5)
+    // Initialize the geometry kernel (0.5mm voxels)
+    let _ = client.picogk_init(0.5).await!()
 
-  // Create a sphere
-  let res = client.create_sphere!(0.0, 0.0, 0.0, 30.0, Some("body"))
-  println(res)
+    // Create a sphere
+    let res = client.create_sphere(0.0, 0.0, 0.0, 30.0, Some("body")).await!()
+    println(res)
 
-  // Create a box cutout
-  let _ = client.create_box!(-10.0, -10.0, -40.0, 10.0, 10.0, 40.0, Some("cutout"))
+    // Create a box cutout
+    let _ = client.create_box(-10.0, -10.0, -40.0, 10.0, 10.0, 40.0, Some("cutout")).await!()
 
-  // Subtract box from sphere
-  let _ = client.boolean_subtract!("body", "cutout", Some("result"))
+    // Subtract box from sphere
+    let _ = client.boolean_subtract("body", "cutout", Some("result")).await!()
 
-  // Smooth the result
-  let _ = client.smooth!("result", 2.0, Some("smoothed"))
+    // Smooth the result
+    let _ = client.smooth("result", 2.0, Some("smoothed")).await!()
 
-  // Convert to mesh and export STL
-  let _ = client.voxels_to_mesh!("smoothed", Some("mesh"))
-  let _ = client.save_stl!("mesh", "/tmp/part.stl")
+    // Convert to mesh and export STL
+    let _ = client.voxels_to_mesh("smoothed", Some("mesh")).await!()
+    let _ = client.save_stl("mesh", "/tmp/part.stl").await!()
 
-  // Render a preview
-  let _ = client.render_to_image!("smoothed", "/tmp/preview.png")
+    // Render a preview
+    let _ = client.render_to_image("smoothed", "/tmp/preview.png").await!()
 
-  // Clean up
-  client.close()
+    // Clean up
+    client.close()
 
-  println("Done! Part exported to /tmp/part.stl")
+    println("Done! Part exported to /tmp/part.stl")
+  }
 }
 ```
 

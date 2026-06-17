@@ -2,48 +2,67 @@
 
 
 ///
+/// ClientError represents errors from the PicoGK MCP client.
+///
+pub(err) struct ClientError(String) derive(Debug, ToJson)
+
+/// Show implementation for ClientError
+pub impl Show for ClientError with fn to_string(self) {
+  "ClientError(" + self.0 + ")"
+}
+
+///
 /// Client manages a connection to the PicoGK MCP server.
 /// It launches the server as a subprocess and communicates via JSON-RPC over stdio.
+/// All tool methods are async and must be called within an `@async.run` block.
 ///
 /// Usage:
-///   // Uses default server at $HOME/.local/bin/picogk-mcp/PicoGK.Mcp
-///   let client = @mbtpicogk.new_client("")!
-///   // Or specify a custom path:
-///   let client = @mbtpicogk.new_client("/custom/path/to/PicoGK.Mcp")!
-///   client.picogk_init(0.5)!
-///   client.create_sphere(0.0, 0.0, 0.0, 30.0, Some("body"))!
-///   client.close!
+///   @async.run() {
+///     // Uses default server at $HOME/.local/bin/picogk-mcp/PicoGK.Mcp
+///     let client = @picogk.new_client("").await!()
+///     // Or specify a custom path:
+///     // let client = @picogk.new_client("/custom/path/to/PicoGK.Mcp").await!()
+///     client.picogk_init(0.5).await!()
+///     client.create_sphere(0.0, 0.0, 0.0, 30.0, Some("body")).await!()
+///     client.close()
+///   }
 ///
 pub struct Client {
-  process : Process
-  stdin : Buffer
-  stdout : Buffer
+  proc : @process.Process
+  stdin : @process.WriteToProcess
+  stdout : @process.ReadFromProcess
   mut msg_id : Int
 }
 
 ///
 /// default_server_bin returns the default path to the PicoGK MCP server binary.
 ///
-pub const default_server_bin : String = "~/.local/bin/picogk-mcp/PicoGK.Mcp"
+let default_server_bin : String = "~/.local/bin/picogk-mcp/PicoGK.Mcp"
 
 ///
 /// new_client launches the PicoGK MCP server binary and returns a Client.
-/// If server_bin is empty, uses default_server_bin ($HOME/.local/bin/picogk-mcp/PicoGK.Mcp).
+/// If server_bin is empty, uses default_server_bin.
+/// Must be called within @async.run().
 ///
-pub fn new_client(server_bin : String) -> Client! {
+pub async fn new_client(server_bin : String) -> Client raise {
   let bin = if server_bin == "" { default_server_bin } else { server_bin }
-  // Expand ~ to home directory
   let path = expand_path(bin)
-  // Launch the server process
-  let proc = @process.start(path, [])!
-  let client = Client{
-    process: proc,
-    stdin: Buffer::new(),
-    stdout: Buffer::new(),
+  // Create pipes for stdin/stdout
+  let (stdin_read, stdin_write) = @process.write_to_process()
+  let (stdout_read, stdout_write) = @process.read_from_process()
+  // Spawn the server process within a task group
+  let proc = @async.with_task_group() <| group => {
+    let p = @process.spawn(group, path, [], stdin=stdin_read, stdout=stdout_write, no_wait=true)
+    p
+  }
+  let client = Client::{
+    proc: proc,
+    stdin: stdin_write,
+    stdout: stdout_read,
     msg_id: 0,
   }
   // Perform MCP initialize handshake
-  client.initialize!()
+  client.initialize()
   client
 }
 
@@ -51,16 +70,18 @@ pub fn new_client(server_bin : String) -> Client! {
 /// close shuts down the MCP server process.
 ///
 pub fn Client::close(self : Client) -> Unit {
-  self.process.kill()
+  self.proc.cancel()
+  self.stdin.close()
+  self.stdout.close()
 }
 
 ///
 /// expand_path expands a leading ~ to the user's home directory.
 ///
 fn expand_path(path : String) -> String {
-  if path.starts_with("~") {
-    let home = @os.home_dir()
-    home + path.substring(from=1)
+  if path.has_prefix("~") {
+    let home = @env.get_env_var("HOME").unwrap_or("")
+    home + path[1:].to_owned()
   } else {
     path
   }
@@ -77,9 +98,27 @@ fn Client::next_id(self : Client) -> Int {
 }
 
 ///
+/// send_line writes a JSON-RPC message to the server's stdin.
+///
+async fn Client::send_line(self : Client, json_str : String) -> Unit raise {
+  let data = @utf8.encode(json_str + "\n")
+  let _ = self.stdin.write_once(data, offset=0, len=data.length())
+}
+
+///
+/// read_line reads a JSON-RPC response line from the server's stdout.
+///
+async fn Client::read_line(self : Client) -> String raise {
+  match self.stdout.read_until("\n") {
+    Some(line) => line
+    None => raise "EOF: no more data from server"
+  }
+}
+
+///
 /// call_tool invokes an MCP tool by name and returns the text response.
 ///
-pub fn Client::call_tool(self : Client, tool_name : String, args : Map[String, JsonValue]) -> String!String {
+pub async fn Client::call_tool(self : Client, tool_name : String, args : Map[String, JsonValue]) -> String raise {
   let id = self.next_id()
   let req = JsonValue::Object([
     ("jsonrpc", JsonValue::String("2.0")),
@@ -90,17 +129,16 @@ pub fn Client::call_tool(self : Client, tool_name : String, args : Map[String, J
       ("arguments", JsonValue::Object(args.iter().to_array())),
     ])),
   ])
-  let json_str = req.stringify()
-  self.process.write_line!(json_str)
-  let response = self.process.read_line!()
+  self.send_line(req.stringify())
+  let response = self.read_line()
   // Parse response and extract text content
-  let resp = JsonValue::from_string!(response)
+  let resp = @json.parse(response)
   match resp {
     JsonValue::Object(fields) => {
-      let result = fields.get("result").or_panic!()
+      let result = fields.get("result").unwrap()
       match result {
         JsonValue::Object(result_fields) => {
-          let content = result_fields.get("content").or_panic!()
+          let content = result_fields.get("content").unwrap()
           match content {
             JsonValue::Array(items) => {
               let mut text = ""
@@ -117,20 +155,20 @@ pub fn Client::call_tool(self : Client, tool_name : String, args : Map[String, J
               }
               text
             }
-            _ => abort("unexpected content format")
+            _ => raise "unexpected content format"
           }
         }
-        _ => abort("unexpected result format")
+        _ => raise "unexpected result format"
       }
     }
-    _ => abort("unexpected response format")
+    _ => raise "unexpected response format"
   }
 }
 
 ///
 /// initialize performs the MCP initialize handshake.
 ///
-fn Client::initialize(self : Client) -> Unit!String {
+async fn Client::initialize(self : Client) -> Unit raise {
   let id = self.next_id()
   let req = JsonValue::Object([
     ("jsonrpc", JsonValue::String("2.0")),
@@ -140,17 +178,17 @@ fn Client::initialize(self : Client) -> Unit!String {
       ("protocolVersion", JsonValue::String("2024-11-05")),
       ("capabilities", JsonValue::Object([])),
       ("clientInfo", JsonValue::Object([
-        ("name", JsonValue::String("mbtpicogk")),
-        ("version", JsonValue::String("1.0.0")),
+        ("name", JsonValue::String("picogk")),
+        ("version", JsonValue::String("0.1.0")),
       ])),
     ])),
   ])
-  self.process.write_line!(req.stringify())
-  let _ = self.process.read_line!()
+  self.send_line(req.stringify())
+  let _ = self.read_line()
   // Send initialized notification
   let notif = JsonValue::Object([
     ("jsonrpc", JsonValue::String("2.0")),
     ("method", JsonValue::String("notifications/initialized")),
   ])
-  self.process.write_line!(notif.stringify())
+  self.send_line(notif.stringify())
 }

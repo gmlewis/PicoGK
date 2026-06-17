@@ -1,6 +1,6 @@
-# gopicogk — Go SDK for the PicoGK MCP Server
+# picogk — Go SDK for the PicoGK MCP Server
 
-`gopicogk` is an auto-generated Go SDK for the [PicoGK](https://picogk.org) geometry
+`picogk` is an auto-generated Go SDK for the [PicoGK](https://picogk.org) geometry
 kernel's MCP (Model Context Protocol) server. It provides a fully typed, idiomatic Go
 interface to all 62 PicoGK tools — from creating primitives to boolean operations,
 lattice design, mesh manipulation, rendering, and 3D-printing export.
@@ -8,7 +8,7 @@ lattice design, mesh manipulation, rendering, and 3D-printing export.
 ## Quick Start
 
 ```bash
-go get github.com/gmlewis/PicoGK/sdk/go/gopicogk
+go get github.com/gmlewis/PicoGK/sdk/go/picogk
 ```
 
 ```go
@@ -19,21 +19,21 @@ import (
     "fmt"
     "log"
 
-    "github.com/gmlewis/PicoGK/sdk/go/gopicogk"
+    "github.com/gmlewis/PicoGK/sdk/go/picogk"
 )
 
 func main() {
     ctx := context.Background()
 
     // Launch the PicoGK MCP server (default path: $HOME/.local/bin/picogk-mcp/PicoGK.Mcp)
-    client, err := gopicogk.NewClient(ctx, "")
+    client, err := picogk.NewClient(ctx, "")
     if err != nil {
         log.Fatal(err)
     }
     defer client.Close(ctx)
 
     // Initialize the geometry kernel (0.5mm voxels)
-    _, err = client.PicogkInit(ctx, gopicogk.PicogkInitRequest{
+    _, err = client.PicogkInit(ctx, picogk.PicogkInitRequest{
         VoxelSizeMM: float64Ptr(0.5),
     })
     if err != nil {
@@ -41,7 +41,7 @@ func main() {
     }
 
     // Create a sphere
-    res, err := client.CreateSphere(ctx, gopicogk.CreateSphereRequest{
+    res, err := client.CreateSphere(ctx, picogk.CreateSphereRequest{
         X:      0,
         Y:      0,
         Z:      0,
@@ -54,7 +54,7 @@ func main() {
     fmt.Println(res)
 
     // Create a box cutout
-    _, err = client.CreateBox(ctx, gopicogk.CreateBoxRequest{
+    _, err = client.CreateBox(ctx, picogk.CreateBoxRequest{
         MinX: -10, MinY: -10, MinZ: -40,
         MaxX:  10, MaxY:  10, MaxZ: 40,
         Id:   stringPtr("cutout"),
@@ -64,7 +64,7 @@ func main() {
     }
 
     // Subtract box from sphere
-    _, err = client.BooleanSubtract(ctx, gopicogk.BooleanSubtractRequest{
+    _, err = client.BooleanSubtract(ctx, picogk.BooleanSubtractRequest{
         A:  "body",
         B:  "cutout",
         Id: stringPtr("result"),
@@ -74,7 +74,7 @@ func main() {
     }
 
     // Smooth the result
-    _, err = client.Smooth(ctx, gopicogk.SmoothRequest{
+    _, err = client.Smooth(ctx, picogk.SmoothRequest{
         ObjectId: "result",
         Distance: 2.0,
         Id:       stringPtr("smoothed"),
@@ -84,14 +84,14 @@ func main() {
     }
 
     // Convert to mesh and export STL
-    _, err = client.VoxelsToMesh(ctx, gopicogk.VoxelsToMeshRequest{
+    _, err = client.VoxelsToMesh(ctx, picogk.VoxelsToMeshRequest{
         VoxelsId: "smoothed",
         Id:       stringPtr("mesh"),
     })
     if err != nil {
         log.Fatal(err)
     }
-    _, err = client.SaveStl(ctx, gopicogk.SaveStlRequest{
+    _, err = client.SaveStl(ctx, picogk.SaveStlRequest{
         MeshId: "mesh",
         Path:   "/tmp/part.stl",
     })
@@ -100,7 +100,7 @@ func main() {
     }
 
     // Render a preview
-    _, err = client.RenderToImage(ctx, gopicogk.RenderToImageRequest{
+    _, err = client.RenderToImage(ctx, picogk.RenderToImageRequest{
         ObjectId: "smoothed",
         Path:     "/tmp/preview.png",
     })

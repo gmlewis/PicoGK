@@ -212,43 +212,45 @@ language can connect to it. To make this easy, two auto-generated SDKs are
 included in this repo. Both are generated from the C# tool definitions by
 scripts, so they stay in sync when the MCP API is updated.
 
-## gopicogk — Go SDK
+## picogk — Go SDK
 
 A fully typed, idiomatic Go SDK with builder-pattern request structs.
 
 ```bash
-go get github.com/gmlewis/PicoGK/sdk/go/gopicogk
+go get github.com/gmlewis/PicoGK/sdk/go/picogk
 ```
 
 ```go
-client, _ := gopicogk.NewClient(ctx, "") // default: $HOME/.local/bin/picogk-mcp/PicoGK.Mcp
+client, _ := picogk.NewClient(ctx, "") // default: $HOME/.local/bin/picogk-mcp/PicoGK.Mcp
 defer client.Close(ctx)
-client.PicogkInit(ctx, gopicogk.PicogkInitRequest{VoxelSizeMM: pFloat(0.5)})
-client.CreateSphere(ctx, gopicogk.CreateSphereRequest{X: 0, Y: 0, Z: 0, Radius: 30, Id: pStr("body")})
-client.BooleanSubtract(ctx, gopicogk.BooleanSubtractRequest{A: "body", B: "cutout", Id: pStr("result")})
-client.SaveStl(ctx, gopicogk.SaveStlRequest{MeshId: "mesh", Path: "/tmp/part.stl"})
+client.PicogkInit(ctx, picogk.PicogkInitRequest{VoxelSizeMM: pFloat(0.5)})
+client.CreateSphere(ctx, picogk.CreateSphereRequest{X: 0, Y: 0, Z: 0, Radius: 30, Id: pStr("body")})
+client.BooleanSubtract(ctx, picogk.BooleanSubtractRequest{A: "body", B: "cutout", Id: pStr("result")})
+client.SaveStl(ctx, picogk.SaveStlRequest{MeshId: "mesh", Path: "/tmp/part.stl"})
 ```
 
-See `sdk/go/gopicogk/README.md` for full documentation.
+See `sdk/go/picogk/README.md` for full documentation.
 
-## mbtpicogk — MoonBit SDK
+## picogk — MoonBit SDK
 
-A fully typed MoonBit SDK with method functions and `Option[T]` for optional params.
+A fully typed MoonBit SDK with async method functions and `Option[T]` for optional params. Uses `moonbitlang/async` for subprocess management.
 
 ```bash
-moon add gmlewis/mbtpicogk
+moon add gmlewis/picogk
 ```
 
 ```moonbit
-let client = @mbtpicogk.new_client("")! // default: $HOME/.local/bin/picogk-mcp/PicoGK.Mcp
-client.picogk_init!(0.5)
-client.create_sphere!(0.0, 0.0, 0.0, 30.0, Some("body"))
-client.boolean_subtract!("body", "cutout", Some("result"))
-client.save_stl!("mesh", "/tmp/part.stl")
-client.close()
+@async.run() {
+  let client = @picogk.new_client("").await!() // default: $HOME/.local/bin/picogk-mcp/PicoGK.Mcp
+  client.picogk_init(0.5).await!()
+  client.create_sphere(0.0, 0.0, 0.0, 30.0, Some("body")).await!()
+  client.boolean_subtract("body", "cutout", Some("result")).await!()
+  client.save_stl("mesh", "/tmp/part.stl").await!()
+  client.close()
+}
 ```
 
-See `sdk/mbt/mbtpicogk/README.md` for full documentation.
+See `sdk/mbt/picogk/README.md` for full documentation.
 
 ## Regenerating the SDKs
 

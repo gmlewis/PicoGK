@@ -2,7 +2,7 @@
 // DO NOT EDIT — auto-generated
 
 import {
-  "gmlewis/mbtpicogk" @mbtpicogk,
+  "gmlewis/picogk" @picogk,
 }
 
 options(

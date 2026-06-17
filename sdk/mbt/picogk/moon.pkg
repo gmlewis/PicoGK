@@ -1,7 +1,11 @@
-// mbtpicogk package configuration
+// picogk package configuration
 // DO NOT EDIT — this file is auto-generated.
 
-// import {
-//   "moonbitlang/core/json",
-//   "moonbitlang/core/process",
-// }
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/process",
+  "moonbitlang/async/io",
+  "moonbitlang/core/json",
+  "moonbitlang/core/env",
+  "moonbitlang/core/encoding/utf8" @utf8,
+}

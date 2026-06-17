@@ -2,7 +2,7 @@
 """Generate an idiomatic MoonBit SDK for the PicoGK MCP server.
 
 Parses all MCP tool definitions from PicoGK.Mcp/Tools/*.cs and emits
-a complete MoonBit package (mbtpicogk) with:
+a complete MoonBit package (picogk) with:
   - A Client type that manages the MCP stdio subprocess
   - Builder-pattern method functions for all 62 tools
   - Full doc comments on every function
@@ -101,53 +101,72 @@ def mbt_method_name(tool_name: str) -> str:
 # ---------------------------------------------------------------------------
 
 def gen_client_mbt(tools: list[ToolDef]) -> str:
-    """Generate the core client.mbt file."""
+    """Generate the core client.mbt file using moonbitlang/async for process I/O."""
     lines: list[str] = []
     lines.append(GENERATED_HEADER)
     lines.append("")
     lines.append("///")
+    lines.append("/// ClientError represents errors from the PicoGK MCP client.")
+    lines.append("///")
+    lines.append('pub(err) struct ClientError(String) derive(Debug, ToJson)')
+    lines.append("")
+    lines.append("/// Show implementation for ClientError")
+    lines.append("pub impl Show for ClientError with fn to_string(self) {")
+    lines.append('  "ClientError(" + self.0 + ")"')
+    lines.append("}")
+    lines.append("")
+    lines.append("///")
     lines.append("/// Client manages a connection to the PicoGK MCP server.")
     lines.append("/// It launches the server as a subprocess and communicates via JSON-RPC over stdio.")
+    lines.append("/// All tool methods are async and must be called within an `@async.run` block.")
     lines.append("///")
     lines.append("/// Usage:")
-    lines.append('///   // Uses default server at $HOME/.local/bin/picogk-mcp/PicoGK.Mcp')
-    lines.append('///   let client = @mbtpicogk.new_client("")!')
-    lines.append('///   // Or specify a custom path:')
-    lines.append('///   let client = @mbtpicogk.new_client("/custom/path/to/PicoGK.Mcp")!')
-    lines.append("///   client.picogk_init(0.5)!")
-    lines.append('///   client.create_sphere(0.0, 0.0, 0.0, 30.0, Some("body"))!')
-    lines.append("///   client.close!")
+    lines.append('///   @async.run() {')
+    lines.append('///     // Uses default server at $HOME/.local/bin/picogk-mcp/PicoGK.Mcp')
+    lines.append('///     let client = @picogk.new_client("").await!()')
+    lines.append('///     // Or specify a custom path:')
+    lines.append('///     // let client = @picogk.new_client("/custom/path/to/PicoGK.Mcp").await!()')
+    lines.append('///     client.picogk_init(0.5).await!()')
+    lines.append('///     client.create_sphere(0.0, 0.0, 0.0, 30.0, Some("body")).await!()')
+    lines.append('///     client.close()')
+    lines.append('///   }')
     lines.append("///")
     lines.append("pub struct Client {")
-    lines.append("  process : Process")
-    lines.append("  stdin : Buffer")
-    lines.append("  stdout : Buffer")
+    lines.append("  proc : @process.Process")
+    lines.append("  stdin : @process.WriteToProcess")
+    lines.append("  stdout : @process.ReadFromProcess")
     lines.append("  mut msg_id : Int")
     lines.append("}")
     lines.append("")
     lines.append("///")
     lines.append("/// default_server_bin returns the default path to the PicoGK MCP server binary.")
     lines.append("///")
-    lines.append('pub const default_server_bin : String = "~/.local/bin/picogk-mcp/PicoGK.Mcp"')
+    lines.append('let default_server_bin : String = "~/.local/bin/picogk-mcp/PicoGK.Mcp"')
     lines.append("")
     lines.append("///")
     lines.append("/// new_client launches the PicoGK MCP server binary and returns a Client.")
-    lines.append("/// If server_bin is empty, uses default_server_bin ($HOME/.local/bin/picogk-mcp/PicoGK.Mcp).")
+    lines.append("/// If server_bin is empty, uses default_server_bin.")
+    lines.append("/// Must be called within @async.run().")
     lines.append("///")
-    lines.append("pub fn new_client(server_bin : String) -> Client! {")
-    lines.append("  let bin = if server_bin == \"\" { default_server_bin } else { server_bin }")
-    lines.append("  // Expand ~ to home directory")
+    lines.append("pub async fn new_client(server_bin : String) -> Client raise {")
+    lines.append('  let bin = if server_bin == "" { default_server_bin } else { server_bin }')
     lines.append("  let path = expand_path(bin)")
-    lines.append("  // Launch the server process")
-    lines.append("  let proc = @process.start(path, [])!")
-    lines.append("  let client = Client{")
-    lines.append("    process: proc,")
-    lines.append("    stdin: Buffer::new(),")
-    lines.append("    stdout: Buffer::new(),")
+    lines.append("  // Create pipes for stdin/stdout")
+    lines.append("  let (stdin_read, stdin_write) = @process.write_to_process()")
+    lines.append("  let (stdout_read, stdout_write) = @process.read_from_process()")
+    lines.append("  // Spawn the server process within a task group")
+    lines.append("  let proc = @async.with_task_group() <| group => {")
+    lines.append("    let p = @process.spawn(group, path, [], stdin=stdin_read, stdout=stdout_write, no_wait=true)")
+    lines.append("    p")
+    lines.append("  }")
+    lines.append("  let client = Client::{")
+    lines.append("    proc: proc,")
+    lines.append("    stdin: stdin_write,")
+    lines.append("    stdout: stdout_read,")
     lines.append("    msg_id: 0,")
     lines.append("  }")
     lines.append("  // Perform MCP initialize handshake")
-    lines.append("  client.initialize!()")
+    lines.append("  client.initialize()")
     lines.append("  client")
     lines.append("}")
     lines.append("")
@@ -155,16 +174,18 @@ def gen_client_mbt(tools: list[ToolDef]) -> str:
     lines.append("/// close shuts down the MCP server process.")
     lines.append("///")
     lines.append("pub fn Client::close(self : Client) -> Unit {")
-    lines.append("  self.process.kill()")
+    lines.append("  self.proc.cancel()")
+    lines.append("  self.stdin.close()")
+    lines.append("  self.stdout.close()")
     lines.append("}")
     lines.append("")
     lines.append("///")
     lines.append("/// expand_path expands a leading ~ to the user's home directory.")
     lines.append("///")
     lines.append("fn expand_path(path : String) -> String {")
-    lines.append('  if path.starts_with("~") {')
-    lines.append('    let home = @os.home_dir()')
-    lines.append('    home + path.substring(from=1)')
+    lines.append('  if path.has_prefix("~") {')
+    lines.append('    let home = @env.get_env_var("HOME").unwrap_or("")')
+    lines.append('    home + path[1:].to_owned()')
     lines.append("  } else {")
     lines.append("    path")
     lines.append("  }")
@@ -181,9 +202,27 @@ def gen_client_mbt(tools: list[ToolDef]) -> str:
     lines.append("}")
     lines.append("")
     lines.append("///")
+    lines.append("/// send_line writes a JSON-RPC message to the server's stdin.")
+    lines.append("///")
+    lines.append("async fn Client::send_line(self : Client, json_str : String) -> Unit raise {")
+    lines.append('  let data = @utf8.encode(json_str + "\\n")')
+    lines.append("  let _ = self.stdin.write_once(data, offset=0, len=data.length())")
+    lines.append("}")
+    lines.append("")
+    lines.append("///")
+    lines.append("/// read_line reads a JSON-RPC response line from the server's stdout.")
+    lines.append("///")
+    lines.append("async fn Client::read_line(self : Client) -> String raise {")
+    lines.append("  match self.stdout.read_until(\"\\n\") {")
+    lines.append("    Some(line) => line")
+    lines.append("    None => raise \"EOF: no more data from server\"")
+    lines.append("  }")
+    lines.append("}")
+    lines.append("")
+    lines.append("///")
     lines.append("/// call_tool invokes an MCP tool by name and returns the text response.")
     lines.append("///")
-    lines.append("pub fn Client::call_tool(self : Client, tool_name : String, args : Map[String, JsonValue]) -> String!String {")
+    lines.append("pub async fn Client::call_tool(self : Client, tool_name : String, args : Map[String, JsonValue]) -> String raise {")
     lines.append("  let id = self.next_id()")
     lines.append("  let req = JsonValue::Object([")
     lines.append("    (\"jsonrpc\", JsonValue::String(\"2.0\")),")
@@ -194,17 +233,16 @@ def gen_client_mbt(tools: list[ToolDef]) -> str:
     lines.append("      (\"arguments\", JsonValue::Object(args.iter().to_array())),")
     lines.append("    ])),")
     lines.append("  ])")
-    lines.append("  let json_str = req.stringify()")
-    lines.append("  self.process.write_line!(json_str)")
-    lines.append("  let response = self.process.read_line!()")
+    lines.append("  self.send_line(req.stringify())")
+    lines.append("  let response = self.read_line()")
     lines.append("  // Parse response and extract text content")
-    lines.append("  let resp = JsonValue::from_string!(response)")
+    lines.append("  let resp = @json.parse(response)")
     lines.append("  match resp {")
     lines.append("    JsonValue::Object(fields) => {")
-    lines.append("      let result = fields.get(\"result\").or_panic!()")
+    lines.append("      let result = fields.get(\"result\").unwrap()")
     lines.append("      match result {")
     lines.append("        JsonValue::Object(result_fields) => {")
-    lines.append("          let content = result_fields.get(\"content\").or_panic!()")
+    lines.append("          let content = result_fields.get(\"content\").unwrap()")
     lines.append("          match content {")
     lines.append("            JsonValue::Array(items) => {")
     lines.append("              let mut text = \"\"")
@@ -221,20 +259,20 @@ def gen_client_mbt(tools: list[ToolDef]) -> str:
     lines.append("              }")
     lines.append("              text")
     lines.append("            }")
-    lines.append("            _ => abort(\"unexpected content format\")")
+    lines.append("            _ => raise \"unexpected content format\"")
     lines.append("          }")
     lines.append("        }")
-    lines.append("        _ => abort(\"unexpected result format\")")
+    lines.append("        _ => raise \"unexpected result format\"")
     lines.append("      }")
     lines.append("    }")
-    lines.append("    _ => abort(\"unexpected response format\")")
+    lines.append("    _ => raise \"unexpected response format\"")
     lines.append("  }")
     lines.append("}")
     lines.append("")
     lines.append("///")
     lines.append("/// initialize performs the MCP initialize handshake.")
     lines.append("///")
-    lines.append("fn Client::initialize(self : Client) -> Unit!String {")
+    lines.append("async fn Client::initialize(self : Client) -> Unit raise {")
     lines.append("  let id = self.next_id()")
     lines.append("  let req = JsonValue::Object([")
     lines.append("    (\"jsonrpc\", JsonValue::String(\"2.0\")),")
@@ -244,19 +282,19 @@ def gen_client_mbt(tools: list[ToolDef]) -> str:
     lines.append("      (\"protocolVersion\", JsonValue::String(\"2024-11-05\")),")
     lines.append("      (\"capabilities\", JsonValue::Object([])),")
     lines.append("      (\"clientInfo\", JsonValue::Object([")
-    lines.append("        (\"name\", JsonValue::String(\"mbtpicogk\")),")
-    lines.append("        (\"version\", JsonValue::String(\"1.0.0\")),")
+    lines.append("        (\"name\", JsonValue::String(\"picogk\")),")
+    lines.append("        (\"version\", JsonValue::String(\"0.1.0\")),")
     lines.append("      ])),")
     lines.append("    ])),")
     lines.append("  ])")
-    lines.append("  self.process.write_line!(req.stringify())")
-    lines.append("  let _ = self.process.read_line!()")
+    lines.append("  self.send_line(req.stringify())")
+    lines.append("  let _ = self.read_line()")
     lines.append("  // Send initialized notification")
     lines.append("  let notif = JsonValue::Object([")
     lines.append("    (\"jsonrpc\", JsonValue::String(\"2.0\")),")
     lines.append("    (\"method\", JsonValue::String(\"notifications/initialized\")),")
     lines.append("  ])")
-    lines.append("  self.process.write_line!(notif.stringify())")
+    lines.append("  self.send_line(notif.stringify())")
     lines.append("}")
     lines.append("")
     return "\n".join(lines)
@@ -340,16 +378,16 @@ def gen_tools_mbt(tools: list[ToolDef]) -> str:
             lines.append(f"/// {desc}")
             lines.append(f"///")
 
-            # Function signature
+            # Function signature — all tools are async
             if params_str:
-                lines.append(f"pub fn Client::{tool.name}(self : Client, {params_str}) -> String!String {{")
+                lines.append(f"pub async fn Client::{tool.name}(self : Client, {params_str}) -> String raise {{")
             else:
-                lines.append(f"pub fn Client::{tool.name}(self : Client) -> String!String {{")
+                lines.append(f"pub async fn Client::{tool.name}(self : Client) -> String raise {{")
 
             lines.append(f"  let args : Map[String, JsonValue] = {{}}")
             if args_lines:
                 lines.extend(args_lines)
-            lines.append(f"  self.call_tool!(\"{tool.snake_name}\", args)")
+            lines.append(f"  self.call_tool(\"{tool.snake_name}\", args)")
             lines.append("}")
             lines.append("")
 
@@ -358,13 +396,13 @@ def gen_tools_mbt(tools: list[ToolDef]) -> str:
 
 def gen_moon_mod() -> str:
     """Generate moon.mod (new format, not JSON)."""
-    return """// mbtpicogk: PicoGK MCP SDK for MoonBit
+    return """// picogk: PicoGK MCP SDK for MoonBit
 // To regenerate, run: ./scripts/generate-mbt-mcp-sdk.py
 // DO NOT EDIT — this file is auto-generated.
 
-name = "gmlewis/mbtpicogk"
+name = "gmlewis/picogk"
 
-version = "1.0.0"
+version = "0.1.0"
 
 readme = "README.md"
 
@@ -375,18 +413,30 @@ license = "Apache-2.0"
 keywords = []
 
 description = "MoonBit SDK for the PicoGK MCP geometry kernel server"
+
+preferred_target = "native"
+
+supported_targets = "+native"
+
+import {
+  "moonbitlang/async@0.19.2"
+}
 """
 
 
 def gen_moon_pkg() -> str:
     """Generate moon.pkg (new format, not JSON)."""
-    return """// mbtpicogk package configuration
+    return """// picogk package configuration
 // DO NOT EDIT — this file is auto-generated.
 
-// import {
-//   "moonbitlang/core/json",
-//   "moonbitlang/core/process",
-// }
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/process",
+  "moonbitlang/async/io",
+  "moonbitlang/core/json",
+  "moonbitlang/core/env",
+  "moonbitlang/core/encoding/utf8" @utf8,
+}
 """
 
 
@@ -402,53 +452,58 @@ def gen_readme_md(tools: list[ToolDef]) -> str:
         for cat, names in sorted(category_list.items())
     )
 
-    return f"""# mbtpicogk — MoonBit SDK for the PicoGK MCP Server
+    return f"""# picogk — MoonBit SDK for the PicoGK MCP Server
 
-`mbtpicogk` is an auto-generated MoonBit SDK for the [PicoGK](https://picogk.org)
+`picogk` is an auto-generated MoonBit SDK for the [PicoGK](https://picogk.org)
 geometry kernel's MCP (Model Context Protocol) server. It provides a fully typed,
 idiomatic MoonBit interface to all {tool_count} PicoGK tools — from creating
 primitives to boolean operations, lattice design, mesh manipulation, rendering, and
 3D-printing export.
 
+All tool methods are **async** and use `moonbitlang/async` for subprocess management.
+They must be called within an `@async.run()` block.
+
 ## Quick Start
 
 ```bash
-moon add gmlewis/mbtpicogk
+moon add gmlewis/picogk
 ```
 
 ```moonbit
 ///|
 fn main {{
-  // Launch the PicoGK MCP server (default: $HOME/.local/bin/picogk-mcp/PicoGK.Mcp)
-  let client = @mbtpicogk.new_client("")!
+  @async.run() {{
+    // Launch the PicoGK MCP server (default: $HOME/.local/bin/picogk-mcp/PicoGK.Mcp)
+    let client = @picogk.new_client("").await!()
 
-  // Initialize the geometry kernel (0.5mm voxels)
-  let _ = client.picogk_init!(0.5)
+    // Initialize the geometry kernel (0.5mm voxels)
+    let _ = client.picogk_init(0.5).await!()
 
-  // Create a sphere
-  let res = client.create_sphere!(0.0, 0.0, 0.0, 30.0, Some("body"))
-  println(res)
+    // Create a sphere
+    let res = client.create_sphere(0.0, 0.0, 0.0, 30.0, Some("body")).await!()
+    println(res)
 
-  // Create a box cutout
-  let _ = client.create_box!(-10.0, -10.0, -40.0, 10.0, 10.0, 40.0, Some("cutout"))
+    // Create a box cutout
+    let _ = client.create_box(-10.0, -10.0, -40.0, 10.0, 10.0, 40.0, Some("cutout")).await!()
 
-  // Subtract box from sphere
-  let _ = client.boolean_subtract!("body", "cutout", Some("result"))
+    // Subtract box from sphere
+    let _ = client.boolean_subtract("body", "cutout", Some("result")).await!()
 
-  // Smooth the result
-  let _ = client.smooth!("result", 2.0, Some("smoothed"))
+    // Smooth the result
+    let _ = client.smooth("result", 2.0, Some("smoothed")).await!()
 
-  // Convert to mesh and export STL
-  let _ = client.voxels_to_mesh!("smoothed", Some("mesh"))
-  let _ = client.save_stl!("mesh", "/tmp/part.stl")
+    // Convert to mesh and export STL
+    let _ = client.voxels_to_mesh("smoothed", Some("mesh")).await!()
+    let _ = client.save_stl("mesh", "/tmp/part.stl").await!()
 
-  // Render a preview
-  let _ = client.render_to_image!("smoothed", "/tmp/preview.png")
+    // Render a preview
+    let _ = client.render_to_image("smoothed", "/tmp/preview.png").await!()
 
-  // Clean up
-  client.close()
+    // Clean up
+    client.close()
 
-  println("Done! Part exported to /tmp/part.stl")
+    println("Done! Part exported to /tmp/part.stl")
+  }}
 }}
 ```
 
@@ -492,7 +547,7 @@ C# tool definitions in `PicoGK.Mcp/Tools/*.cs` instead, then regenerate.
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Generate the MoonBit (mbtpicogk) MCP SDK from PicoGK C# tool definitions."
+        description="Generate the MoonBit (picogk) MCP SDK from PicoGK C# tool definitions."
     )
     parser.add_argument(
         "--output", type=Path,
@@ -506,7 +561,7 @@ def main():
     print(f"Parsed {len(tools)} tools from PicoGK.Mcp/Tools/*.cs")
 
     # Create output directories
-    pkg_dir = args.output / "mbtpicogk"
+    pkg_dir = args.output / "picogk"
     pkg_dir.mkdir(parents=True, exist_ok=True)
 
     # Generate files

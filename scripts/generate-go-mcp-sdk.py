@@ -2,7 +2,7 @@
 """Generate an idiomatic Go SDK for the PicoGK MCP server.
 
 Parses all MCP tool definitions from PicoGK.Mcp/Tools/*.cs and emits
-a complete Go package (gopicogk) with:
+a complete Go package (picogk) with:
   - A Client struct that manages the MCP stdio subprocess
   - Builder-pattern method functions for all 62 tools
   - Full doc comments on every function
@@ -101,7 +101,7 @@ def gen_client_go(tools: list[ToolDef]) -> str:
     lines: list[str] = []
     lines.append(GENERATED_HEADER)
     lines.append("")
-    lines.append("package gopicogk")
+    lines.append("package picogk")
     lines.append("")
     lines.append("import (")
     lines.append('\t"bufio"')
@@ -121,12 +121,12 @@ def gen_client_go(tools: list[ToolDef]) -> str:
     lines.append("//")
     lines.append("// Usage:")
     lines.append("//\t// Uses default server at $HOME/.local/bin/picogk-mcp/PicoGK.Mcp")
-    lines.append("//\tclient, err := gopicogk.NewClient(ctx, \"\")")
+    lines.append("//\tclient, err := picogk.NewClient(ctx, \"\")")
     lines.append("//\tdefer client.Close(ctx)")
     lines.append("//\t// Or specify a custom path:")
-    lines.append("//\tclient, err := gopicogk.NewClient(ctx, \"/custom/path/to/PicoGK.Mcp\")")
+    lines.append("//\tclient, err := picogk.NewClient(ctx, \"/custom/path/to/PicoGK.Mcp\")")
     lines.append("//\t// Initialize the geometry kernel")
-    lines.append("//\tres, err := client.PicogkInit(ctx, gopicogk.PicogkInitRequest{VoxelSizeMM: 0.5})")
+    lines.append("//\tres, err := client.PicogkInit(ctx, picogk.PicogkInitRequest{VoxelSizeMM: 0.5})")
     lines.append("//\t// Create a sphere, subtract a box, export STL...")
     lines.append("type Client struct {")
     lines.append("\tcmd       *exec.Cmd")
@@ -248,7 +248,7 @@ def gen_client_go(tools: list[ToolDef]) -> str:
     lines.append('\t\t\t"protocolVersion": "2024-11-05",')
     lines.append('\t\t\t"capabilities":   map[string]interface{}{},')
     lines.append('\t\t\t"clientInfo": map[string]interface{}{')
-    lines.append('\t\t\t\t"name":    "gopicogk",')
+    lines.append('\t\t\t\t"name":    "picogk",')
     lines.append('\t\t\t\t"version": "1.0.0",')
     lines.append('\t\t\t},')
     lines.append('\t\t},')
@@ -341,7 +341,7 @@ def gen_tools_go(tools: list[ToolDef]) -> str:
     lines: list[str] = []
     lines.append(GENERATED_HEADER)
     lines.append("")
-    lines.append("package gopicogk")
+    lines.append("package picogk")
     lines.append("")
     lines.append("import (")
     lines.append('\t"context"')
@@ -423,11 +423,11 @@ def gen_tools_go(tools: list[ToolDef]) -> str:
 
 def gen_go_mod(version: str = "1.0.0") -> str:
     """Generate go.mod."""
-    return f"""module github.com/gmlewis/PicoGK/sdk/go/gopicogk
+    return f"""module github.com/gmlewis/PicoGK/sdk/go/picogk
 
 go 1.22
 
-// gopicogk: PicoGK MCP SDK for Go
+// picogk: PicoGK MCP SDK for Go
 // Version: {version}
 """
 
@@ -444,9 +444,9 @@ def gen_readme_md(tools: list[ToolDef]) -> str:
         for cat, names in sorted(category_list.items())
     )
 
-    return f"""# gopicogk — Go SDK for the PicoGK MCP Server
+    return f"""# picogk — Go SDK for the PicoGK MCP Server
 
-`gopicogk` is an auto-generated Go SDK for the [PicoGK](https://picogk.org) geometry
+`picogk` is an auto-generated Go SDK for the [PicoGK](https://picogk.org) geometry
 kernel's MCP (Model Context Protocol) server. It provides a fully typed, idiomatic Go
 interface to all {tool_count} PicoGK tools — from creating primitives to boolean operations,
 lattice design, mesh manipulation, rendering, and 3D-printing export.
@@ -454,7 +454,7 @@ lattice design, mesh manipulation, rendering, and 3D-printing export.
 ## Quick Start
 
 ```bash
-go get github.com/gmlewis/PicoGK/sdk/go/gopicogk
+go get github.com/gmlewis/PicoGK/sdk/go/picogk
 ```
 
 ```go
@@ -465,21 +465,21 @@ import (
     "fmt"
     "log"
 
-    "github.com/gmlewis/PicoGK/sdk/go/gopicogk"
+    "github.com/gmlewis/PicoGK/sdk/go/picogk"
 )
 
 func main() {{
     ctx := context.Background()
 
     // Launch the PicoGK MCP server (default path: $HOME/.local/bin/picogk-mcp/PicoGK.Mcp)
-    client, err := gopicogk.NewClient(ctx, "")
+    client, err := picogk.NewClient(ctx, "")
     if err != nil {{
         log.Fatal(err)
     }}
     defer client.Close(ctx)
 
     // Initialize the geometry kernel (0.5mm voxels)
-    _, err = client.PicogkInit(ctx, gopicogk.PicogkInitRequest{{
+    _, err = client.PicogkInit(ctx, picogk.PicogkInitRequest{{
         VoxelSizeMM: float64Ptr(0.5),
     }})
     if err != nil {{
@@ -487,7 +487,7 @@ func main() {{
     }}
 
     // Create a sphere
-    res, err := client.CreateSphere(ctx, gopicogk.CreateSphereRequest{{
+    res, err := client.CreateSphere(ctx, picogk.CreateSphereRequest{{
         X:      0,
         Y:      0,
         Z:      0,
@@ -500,7 +500,7 @@ func main() {{
     fmt.Println(res)
 
     // Create a box cutout
-    _, err = client.CreateBox(ctx, gopicogk.CreateBoxRequest{{
+    _, err = client.CreateBox(ctx, picogk.CreateBoxRequest{{
         MinX: -10, MinY: -10, MinZ: -40,
         MaxX:  10, MaxY:  10, MaxZ: 40,
         Id:   stringPtr("cutout"),
@@ -510,7 +510,7 @@ func main() {{
     }}
 
     // Subtract box from sphere
-    _, err = client.BooleanSubtract(ctx, gopicogk.BooleanSubtractRequest{{
+    _, err = client.BooleanSubtract(ctx, picogk.BooleanSubtractRequest{{
         A:  "body",
         B:  "cutout",
         Id: stringPtr("result"),
@@ -520,7 +520,7 @@ func main() {{
     }}
 
     // Smooth the result
-    _, err = client.Smooth(ctx, gopicogk.SmoothRequest{{
+    _, err = client.Smooth(ctx, picogk.SmoothRequest{{
         ObjectId: "result",
         Distance: 2.0,
         Id:       stringPtr("smoothed"),
@@ -530,14 +530,14 @@ func main() {{
     }}
 
     // Convert to mesh and export STL
-    _, err = client.VoxelsToMesh(ctx, gopicogk.VoxelsToMeshRequest{{
+    _, err = client.VoxelsToMesh(ctx, picogk.VoxelsToMeshRequest{{
         VoxelsId: "smoothed",
         Id:       stringPtr("mesh"),
     }})
     if err != nil {{
         log.Fatal(err)
     }}
-    _, err = client.SaveStl(ctx, gopicogk.SaveStlRequest{{
+    _, err = client.SaveStl(ctx, picogk.SaveStlRequest{{
         MeshId: "mesh",
         Path:   "/tmp/part.stl",
     }})
@@ -546,7 +546,7 @@ func main() {{
     }}
 
     // Render a preview
-    _, err = client.RenderToImage(ctx, gopicogk.RenderToImageRequest{{
+    _, err = client.RenderToImage(ctx, picogk.RenderToImageRequest{{
         ObjectId: "smoothed",
         Path:     "/tmp/preview.png",
     }})
@@ -603,7 +603,7 @@ C# tool definitions in `PicoGK.Mcp/Tools/*.cs` instead, then regenerate.
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Generate the Go (gopicogk) MCP SDK from PicoGK C# tool definitions."
+        description="Generate the Go (picogk) MCP SDK from PicoGK C# tool definitions."
     )
     parser.add_argument(
         "--output", type=Path,
@@ -617,7 +617,7 @@ def main():
     print(f"Parsed {len(tools)} tools from PicoGK.Mcp/Tools/*.cs")
 
     # Create output directories
-    pkg_dir = args.output / "gopicogk"
+    pkg_dir = args.output / "picogk"
     pkg_dir.mkdir(parents=True, exist_ok=True)
 
     # Generate files

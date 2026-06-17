@@ -7,7 +7,7 @@
 /// boolean_add — boolean_add
 /// Boolean UNION: combine two voxel objects. Both volumes are kept, overlapping regions are merged. Returns a new object ID.
 ///
-pub fn Client::BooleanAdd(self : Client, a : String, b : String, id : String?) -> String!String {
+pub async fn Client::BooleanAdd(self : Client, a : String, b : String, id : String?) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("a", JsonValue::String(a))
   args.set("b", JsonValue::String(b))
@@ -15,14 +15,14 @@ pub fn Client::BooleanAdd(self : Client, a : String, b : String, id : String?) -
     Some(v) => args.set("id", JsonValue::String(v))
     None => ()
   }
-  self.call_tool!("boolean_add", args)
+  self.call_tool("boolean_add", args)
 }
 
 ///
 /// boolean_subtract — boolean_subtract
 /// Boolean SUBTRACTION: subtract voxels of B from A. Removes the volume of B from A. Returns a new object ID.
 ///
-pub fn Client::BooleanSubtract(self : Client, a : String, b : String, id : String?) -> String!String {
+pub async fn Client::BooleanSubtract(self : Client, a : String, b : String, id : String?) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("a", JsonValue::String(a))
   args.set("b", JsonValue::String(b))
@@ -30,14 +30,14 @@ pub fn Client::BooleanSubtract(self : Client, a : String, b : String, id : Strin
     Some(v) => args.set("id", JsonValue::String(v))
     None => ()
   }
-  self.call_tool!("boolean_subtract", args)
+  self.call_tool("boolean_subtract", args)
 }
 
 ///
 /// boolean_intersect — boolean_intersect
 /// Boolean INTERSECTION: keep only the overlapping volume of two voxel objects. Returns a new object ID.
 ///
-pub fn Client::BooleanIntersect(self : Client, a : String, b : String, id : String?) -> String!String {
+pub async fn Client::BooleanIntersect(self : Client, a : String, b : String, id : String?) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("a", JsonValue::String(a))
   args.set("b", JsonValue::String(b))
@@ -45,28 +45,28 @@ pub fn Client::BooleanIntersect(self : Client, a : String, b : String, id : Stri
     Some(v) => args.set("id", JsonValue::String(v))
     None => ()
   }
-  self.call_tool!("boolean_intersect", args)
+  self.call_tool("boolean_intersect", args)
 }
 
 ///
 /// boolean_add_all — boolean_add_all
 /// Combine multiple voxel objects into one. All volumes are merged. Returns a new object ID.
 ///
-pub fn Client::BooleanAddAll(self : Client, objectIds : Array[String], id : String?) -> String!String {
+pub async fn Client::BooleanAddAll(self : Client, objectIds : Array[String], id : String?) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("objectIds", JsonValue::Array(objectIds.map(fn(s) { JsonValue::String(s) })))
   match id {
     Some(v) => args.set("id", JsonValue::String(v))
     None => ()
   }
-  self.call_tool!("boolean_add_all", args)
+  self.call_tool("boolean_add_all", args)
 }
 
 ///
 /// boolean_subtract_all — boolean_subtract_all
 /// Subtract multiple voxel objects from a single object in one call. Equivalent to calling boolean_subtract repeatedly, but more efficient for multi-hole drilling or multi-cutout operations. Returns a new object ID.
 ///
-pub fn Client::BooleanSubtractAll(self : Client, a : String, subtractIds : Array[String], id : String?) -> String!String {
+pub async fn Client::BooleanSubtractAll(self : Client, a : String, subtractIds : Array[String], id : String?) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("a", JsonValue::String(a))
   args.set("subtractIds", JsonValue::Array(subtractIds.map(fn(s) { JsonValue::String(s) })))
@@ -74,7 +74,7 @@ pub fn Client::BooleanSubtractAll(self : Client, a : String, subtractIds : Array
     Some(v) => args.set("id", JsonValue::String(v))
     None => ()
   }
-  self.call_tool!("boolean_subtract_all", args)
+  self.call_tool("boolean_subtract_all", args)
 }
 
 // === IO ===
@@ -83,7 +83,7 @@ pub fn Client::BooleanSubtractAll(self : Client, a : String, subtractIds : Array
 /// save_stl — save_stl
 /// Save a mesh to an STL file. The mesh is typically obtained from voxels_to_mesh. Units are millimeters by default.
 ///
-pub fn Client::SaveStl(self : Client, meshId : String, path : String, units : String?) -> String!String {
+pub async fn Client::SaveStl(self : Client, meshId : String, path : String, units : String?) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("meshId", JsonValue::String(meshId))
   args.set("path", JsonValue::String(path))
@@ -91,14 +91,14 @@ pub fn Client::SaveStl(self : Client, meshId : String, path : String, units : St
     Some(v) => args.set("units", JsonValue::String(v))
     None => ()
   }
-  self.call_tool!("save_stl", args)
+  self.call_tool("save_stl", args)
 }
 
 ///
 /// save_vdb — save_vdb
 /// Save voxels to an OpenVDB file. VDB files preserve the full voxel field data.
 ///
-pub fn Client::SaveVdb(self : Client, voxelsId : String, path : String, fieldName : String?) -> String!String {
+pub async fn Client::SaveVdb(self : Client, voxelsId : String, path : String, fieldName : String?) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("voxelsId", JsonValue::String(voxelsId))
   args.set("path", JsonValue::String(path))
@@ -106,14 +106,14 @@ pub fn Client::SaveVdb(self : Client, voxelsId : String, path : String, fieldNam
     Some(v) => args.set("fieldName", JsonValue::String(v))
     None => ()
   }
-  self.call_tool!("save_vdb", args)
+  self.call_tool("save_vdb", args)
 }
 
 ///
 /// load_vdb — load_vdb
 /// Load voxels from an OpenVDB file. Returns the object ID.
 ///
-pub fn Client::LoadVdb(self : Client, path : String, fieldName : String?, id : String?) -> String!String {
+pub async fn Client::LoadVdb(self : Client, path : String, fieldName : String?, id : String?) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("path", JsonValue::String(path))
   match fieldName {
@@ -124,24 +124,24 @@ pub fn Client::LoadVdb(self : Client, path : String, fieldName : String?, id : S
     Some(v) => args.set("id", JsonValue::String(v))
     None => ()
   }
-  self.call_tool!("load_vdb", args)
+  self.call_tool("load_vdb", args)
 }
 
 ///
 /// list_vdb_fields — list_vdb_fields
 /// List all fields in a VDB file with their names, types, and indices. Useful for inspecting multi-field VDB files before loading a specific field with load_vdb. Returns field count and a table of index, name, type, and PicoGK compatibility.
 ///
-pub fn Client::ListVdbFields(self : Client, path : String) -> String!String {
+pub async fn Client::ListVdbFields(self : Client, path : String) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("path", JsonValue::String(path))
-  self.call_tool!("list_vdb_fields", args)
+  self.call_tool("list_vdb_fields", args)
 }
 
 ///
 /// save_svg — save_svg
 /// Vectorize voxels into 2D slice contours and save as SVG. Each slice is written to its own file: <path>.NNNN.svg (zero-padded 4 digits). Useful for 2D manufacturing or visualization. Returns the count of files written.
 ///
-pub fn Client::SaveSvg(self : Client, voxelsId : String, path : String, layerHeight : Double?) -> String!String {
+pub async fn Client::SaveSvg(self : Client, voxelsId : String, path : String, layerHeight : Double?) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("voxelsId", JsonValue::String(voxelsId))
   args.set("path", JsonValue::String(path))
@@ -149,14 +149,14 @@ pub fn Client::SaveSvg(self : Client, voxelsId : String, path : String, layerHei
     Some(v) => args.set("layerHeight", JsonValue::Number(v))
     None => ()
   }
-  self.call_tool!("save_svg", args)
+  self.call_tool("save_svg", args)
 }
 
 ///
 /// save_cli — save_cli
 /// Save voxels to a CLI (Common Layer Interface) file for 3D printing. Vectorizes the voxel field into 2D layers and writes the CLI format. Returns the file path and slice count.
 ///
-pub fn Client::SaveCli(self : Client, voxelsId : String, path : String, layerHeight : Double?, format : String?, useAbsXYOrigin : Bool?) -> String!String {
+pub async fn Client::SaveCli(self : Client, voxelsId : String, path : String, layerHeight : Double?, format : String?, useAbsXYOrigin : Bool?) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("voxelsId", JsonValue::String(voxelsId))
   args.set("path", JsonValue::String(path))
@@ -172,7 +172,7 @@ pub fn Client::SaveCli(self : Client, voxelsId : String, path : String, layerHei
     Some(v) => args.set("useAbsXYOrigin", JsonValue::Bool(v))
     None => ()
   }
-  self.call_tool!("save_cli", args)
+  self.call_tool("save_cli", args)
 }
 
 // === Lattice ===
@@ -181,20 +181,20 @@ pub fn Client::SaveCli(self : Client, voxelsId : String, path : String, layerHei
 /// create_lattice — create_lattice
 /// Create an empty lattice structure. Add beams and sphere nodes to build it, then convert to voxels. Returns the object ID.
 ///
-pub fn Client::CreateLattice(self : Client, id : String?) -> String!String {
+pub async fn Client::CreateLattice(self : Client, id : String?) -> String raise {
   let args : Map[String, JsonValue] = {}
   match id {
     Some(v) => args.set("id", JsonValue::String(v))
     None => ()
   }
-  self.call_tool!("create_lattice", args)
+  self.call_tool("create_lattice", args)
 }
 
 ///
 /// lattice_add_beam — lattice_add_beam
 /// Add a tapered beam (strut) between two points in a lattice. Each end has its own radius. Returns a confirmation.
 ///
-pub fn Client::LatticeAddBeam(self : Client, latticeId : String, x1 : Double, y1 : Double, z1 : Double, radius1 : Double, x2 : Double, y2 : Double, z2 : Double, radius2 : Double, roundCap : Bool?) -> String!String {
+pub async fn Client::LatticeAddBeam(self : Client, latticeId : String, x1 : Double, y1 : Double, z1 : Double, radius1 : Double, x2 : Double, y2 : Double, z2 : Double, radius2 : Double, roundCap : Bool?) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("latticeId", JsonValue::String(latticeId))
   args.set("x1", JsonValue::Number(x1))
@@ -209,35 +209,35 @@ pub fn Client::LatticeAddBeam(self : Client, latticeId : String, x1 : Double, y1
     Some(v) => args.set("roundCap", JsonValue::Bool(v))
     None => ()
   }
-  self.call_tool!("lattice_add_beam", args)
+  self.call_tool("lattice_add_beam", args)
 }
 
 ///
 /// lattice_add_sphere — lattice_add_sphere
 /// Add a sphere node at a point in a lattice. Returns a confirmation.
 ///
-pub fn Client::LatticeAddSphere(self : Client, latticeId : String, x : Double, y : Double, z : Double, radius : Double) -> String!String {
+pub async fn Client::LatticeAddSphere(self : Client, latticeId : String, x : Double, y : Double, z : Double, radius : Double) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("latticeId", JsonValue::String(latticeId))
   args.set("x", JsonValue::Number(x))
   args.set("y", JsonValue::Number(y))
   args.set("z", JsonValue::Number(z))
   args.set("radius", JsonValue::Number(radius))
-  self.call_tool!("lattice_add_sphere", args)
+  self.call_tool("lattice_add_sphere", args)
 }
 
 ///
 /// lattice_to_voxels — lattice_to_voxels
 /// Convert a lattice to voxels. Renders the lattice beams and nodes into a voxel field. Returns a new voxel object ID.
 ///
-pub fn Client::LatticeToVoxels(self : Client, latticeId : String, id : String?) -> String!String {
+pub async fn Client::LatticeToVoxels(self : Client, latticeId : String, id : String?) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("latticeId", JsonValue::String(latticeId))
   match id {
     Some(v) => args.set("id", JsonValue::String(v))
     None => ()
   }
-  self.call_tool!("lattice_to_voxels", args)
+  self.call_tool("lattice_to_voxels", args)
 }
 
 // === Mesh ===
@@ -246,46 +246,46 @@ pub fn Client::LatticeToVoxels(self : Client, latticeId : String, id : String?) 
 /// create_mesh — create_mesh
 /// Create an empty mesh. Add vertices and triangles to build geometry. Returns the object ID.
 ///
-pub fn Client::CreateMesh(self : Client, id : String?) -> String!String {
+pub async fn Client::CreateMesh(self : Client, id : String?) -> String raise {
   let args : Map[String, JsonValue] = {}
   match id {
     Some(v) => args.set("id", JsonValue::String(v))
     None => ()
   }
-  self.call_tool!("create_mesh", args)
+  self.call_tool("create_mesh", args)
 }
 
 ///
 /// mesh_add_vertex — mesh_add_vertex
 /// Add a vertex to a mesh. Returns the vertex index (0-based) for use in triangle creation.
 ///
-pub fn Client::MeshAddVertex(self : Client, meshId : String, x : Double, y : Double, z : Double) -> String!String {
+pub async fn Client::MeshAddVertex(self : Client, meshId : String, x : Double, y : Double, z : Double) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("meshId", JsonValue::String(meshId))
   args.set("x", JsonValue::Number(x))
   args.set("y", JsonValue::Number(y))
   args.set("z", JsonValue::Number(z))
-  self.call_tool!("mesh_add_vertex", args)
+  self.call_tool("mesh_add_vertex", args)
 }
 
 ///
 /// mesh_add_triangle — mesh_add_triangle
 /// Add a triangle to a mesh using vertex indices. Returns the triangle index.
 ///
-pub fn Client::MeshAddTriangle(self : Client, meshId : String, a : Int, b : Int, c : Int) -> String!String {
+pub async fn Client::MeshAddTriangle(self : Client, meshId : String, a : Int, b : Int, c : Int) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("meshId", JsonValue::String(meshId))
   args.set("a", JsonValue::Int(a))
   args.set("b", JsonValue::Int(b))
   args.set("c", JsonValue::Int(c))
-  self.call_tool!("mesh_add_triangle", args)
+  self.call_tool("mesh_add_triangle", args)
 }
 
 ///
 /// mesh_add_triangle_vertices — mesh_add_triangle_vertices
 /// Add a triangle to a mesh by specifying three vertex positions directly. The vertices are added automatically. Returns the triangle index.
 ///
-pub fn Client::MeshAddTriangleVertices(self : Client, meshId : String, x1 : Double, y1 : Double, z1 : Double, x2 : Double, y2 : Double, z2 : Double, x3 : Double, y3 : Double, z3 : Double) -> String!String {
+pub async fn Client::MeshAddTriangleVertices(self : Client, meshId : String, x1 : Double, y1 : Double, z1 : Double, x2 : Double, y2 : Double, z2 : Double, x3 : Double, y3 : Double, z3 : Double) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("meshId", JsonValue::String(meshId))
   args.set("x1", JsonValue::Number(x1))
@@ -297,14 +297,14 @@ pub fn Client::MeshAddTriangleVertices(self : Client, meshId : String, x1 : Doub
   args.set("x3", JsonValue::Number(x3))
   args.set("y3", JsonValue::Number(y3))
   args.set("z3", JsonValue::Number(z3))
-  self.call_tool!("mesh_add_triangle_vertices", args)
+  self.call_tool("mesh_add_triangle_vertices", args)
 }
 
 ///
 /// mesh_add_quad — mesh_add_quad
 /// Add a quad to a mesh by specifying four vertex positions directly. The vertices are added automatically and two triangles are created. Use bFlipped=true to reverse the winding order. Returns the starting triangle index.
 ///
-pub fn Client::MeshAddQuad(self : Client, meshId : String, x0 : Double, y0 : Double, z0 : Double, x1 : Double, y1 : Double, z1 : Double, x2 : Double, y2 : Double, z2 : Double, x3 : Double, y3 : Double, z3 : Double, flipped : Bool?) -> String!String {
+pub async fn Client::MeshAddQuad(self : Client, meshId : String, x0 : Double, y0 : Double, z0 : Double, x1 : Double, y1 : Double, z1 : Double, x2 : Double, y2 : Double, z2 : Double, x3 : Double, y3 : Double, z3 : Double, flipped : Bool?) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("meshId", JsonValue::String(meshId))
   args.set("x0", JsonValue::Number(x0))
@@ -323,56 +323,56 @@ pub fn Client::MeshAddQuad(self : Client, meshId : String, x0 : Double, y0 : Dou
     Some(v) => args.set("flipped", JsonValue::Bool(v))
     None => ()
   }
-  self.call_tool!("mesh_add_quad", args)
+  self.call_tool("mesh_add_quad", args)
 }
 
 ///
 /// voxels_to_mesh — voxels_to_mesh
 /// Convert a voxel object to a mesh using marching cubes. Returns a new mesh object ID.
 ///
-pub fn Client::VoxelsToMesh(self : Client, voxelsId : String, id : String?) -> String!String {
+pub async fn Client::VoxelsToMesh(self : Client, voxelsId : String, id : String?) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("voxelsId", JsonValue::String(voxelsId))
   match id {
     Some(v) => args.set("id", JsonValue::String(v))
     None => ()
   }
-  self.call_tool!("voxels_to_mesh", args)
+  self.call_tool("voxels_to_mesh", args)
 }
 
 ///
 /// mesh_to_voxels — mesh_to_voxels
 /// Convert a mesh to voxels. Returns a new voxel object ID.
 ///
-pub fn Client::MeshToVoxels(self : Client, meshId : String, id : String?) -> String!String {
+pub async fn Client::MeshToVoxels(self : Client, meshId : String, id : String?) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("meshId", JsonValue::String(meshId))
   match id {
     Some(v) => args.set("id", JsonValue::String(v))
     None => ()
   }
-  self.call_tool!("mesh_to_voxels", args)
+  self.call_tool("mesh_to_voxels", args)
 }
 
 ///
 /// mesh_from_stl — mesh_from_stl
 /// Load a mesh from an STL file on disk. Returns the object ID.
 ///
-pub fn Client::MeshFromStl(self : Client, path : String, id : String?) -> String!String {
+pub async fn Client::MeshFromStl(self : Client, path : String, id : String?) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("path", JsonValue::String(path))
   match id {
     Some(v) => args.set("id", JsonValue::String(v))
     None => ()
   }
-  self.call_tool!("mesh_from_stl", args)
+  self.call_tool("mesh_from_stl", args)
 }
 
 ///
 /// mesh_transform — mesh_transform
 /// Transform a mesh: apply uniform scale and/or translation. Returns a new mesh object ID.
 ///
-pub fn Client::MeshTransform(self : Client, meshId : String, scale : Double?, translateX : Double?, translateY : Double?, translateZ : Double?, id : String?) -> String!String {
+pub async fn Client::MeshTransform(self : Client, meshId : String, scale : Double?, translateX : Double?, translateY : Double?, translateZ : Double?, id : String?) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("meshId", JsonValue::String(meshId))
   match scale {
@@ -395,14 +395,14 @@ pub fn Client::MeshTransform(self : Client, meshId : String, scale : Double?, tr
     Some(v) => args.set("id", JsonValue::String(v))
     None => ()
   }
-  self.call_tool!("mesh_transform", args)
+  self.call_tool("mesh_transform", args)
 }
 
 ///
 /// mesh_mirror — mesh_mirror
 /// Mirror a mesh across a plane defined by a point and normal. Returns a new mesh object ID.
 ///
-pub fn Client::MeshMirror(self : Client, meshId : String, ptX : Double, ptY : Double, ptZ : Double, nX : Double, nY : Double, nZ : Double, id : String?) -> String!String {
+pub async fn Client::MeshMirror(self : Client, meshId : String, ptX : Double, ptY : Double, ptZ : Double, nX : Double, nY : Double, nZ : Double, id : String?) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("meshId", JsonValue::String(meshId))
   args.set("ptX", JsonValue::Number(ptX))
@@ -415,18 +415,18 @@ pub fn Client::MeshMirror(self : Client, meshId : String, ptX : Double, ptY : Do
     Some(v) => args.set("id", JsonValue::String(v))
     None => ()
   }
-  self.call_tool!("mesh_mirror", args)
+  self.call_tool("mesh_mirror", args)
 }
 
 ///
 /// mesh_append — mesh_append
 /// Append one mesh into another (modifies the target). Returns the target mesh ID.
 ///
-pub fn Client::MeshAppend(self : Client, targetId : String, sourceId : String) -> String!String {
+pub async fn Client::MeshAppend(self : Client, targetId : String, sourceId : String) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("targetId", JsonValue::String(targetId))
   args.set("sourceId", JsonValue::String(sourceId))
-  self.call_tool!("mesh_append", args)
+  self.call_tool("mesh_append", args)
 }
 
 // === Primitives ===
@@ -435,7 +435,7 @@ pub fn Client::MeshAppend(self : Client, targetId : String, sourceId : String) -
 /// create_sphere — create_sphere
 /// Create a sphere voxel object. Returns the object ID.
 ///
-pub fn Client::CreateSphere(self : Client, x : Double, y : Double, z : Double, radius : Double, id : String?) -> String!String {
+pub async fn Client::CreateSphere(self : Client, x : Double, y : Double, z : Double, radius : Double, id : String?) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("x", JsonValue::Number(x))
   args.set("y", JsonValue::Number(y))
@@ -445,14 +445,14 @@ pub fn Client::CreateSphere(self : Client, x : Double, y : Double, z : Double, r
     Some(v) => args.set("id", JsonValue::String(v))
     None => ()
   }
-  self.call_tool!("create_sphere", args)
+  self.call_tool("create_sphere", args)
 }
 
 ///
 /// create_box — create_box
 /// Create a box (axis-aligned cuboid) from minimum and maximum corner coordinates. Returns the object ID.
 ///
-pub fn Client::CreateBox(self : Client, minX : Double, minY : Double, minZ : Double, maxX : Double, maxY : Double, maxZ : Double, id : String?) -> String!String {
+pub async fn Client::CreateBox(self : Client, minX : Double, minY : Double, minZ : Double, maxX : Double, maxY : Double, maxZ : Double, id : String?) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("minX", JsonValue::Number(minX))
   args.set("minY", JsonValue::Number(minY))
@@ -464,14 +464,14 @@ pub fn Client::CreateBox(self : Client, minX : Double, minY : Double, minZ : Dou
     Some(v) => args.set("id", JsonValue::String(v))
     None => ()
   }
-  self.call_tool!("create_box", args)
+  self.call_tool("create_box", args)
 }
 
 ///
 /// create_cylinder — create_cylinder
 /// Create a cylinder. By default it runs along the +Z axis from (x,y,z) to (x,y,z+height). Pass dirX/dirY/dirZ to orient the axis differently (the vector is normalized automatically). The cylinder has flat end caps. Returns the object ID.
 ///
-pub fn Client::CreateCylinder(self : Client, x : Double, y : Double, z : Double, radius : Double, height : Double, dirX : Double?, dirY : Double?, dirZ : Double?, id : String?) -> String!String {
+pub async fn Client::CreateCylinder(self : Client, x : Double, y : Double, z : Double, radius : Double, height : Double, dirX : Double?, dirY : Double?, dirZ : Double?, id : String?) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("x", JsonValue::Number(x))
   args.set("y", JsonValue::Number(y))
@@ -494,14 +494,14 @@ pub fn Client::CreateCylinder(self : Client, x : Double, y : Double, z : Double,
     Some(v) => args.set("id", JsonValue::String(v))
     None => ()
   }
-  self.call_tool!("create_cylinder", args)
+  self.call_tool("create_cylinder", args)
 }
 
 ///
 /// create_capsule — create_capsule
 /// Create a capsule (a sphere-swept line segment). Returns the object ID.
 ///
-pub fn Client::CreateCapsule(self : Client, x1 : Double, y1 : Double, z1 : Double, x2 : Double, y2 : Double, z2 : Double, radius : Double, id : String?) -> String!String {
+pub async fn Client::CreateCapsule(self : Client, x1 : Double, y1 : Double, z1 : Double, x2 : Double, y2 : Double, z2 : Double, radius : Double, id : String?) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("x1", JsonValue::Number(x1))
   args.set("y1", JsonValue::Number(y1))
@@ -514,14 +514,14 @@ pub fn Client::CreateCapsule(self : Client, x1 : Double, y1 : Double, z1 : Doubl
     Some(v) => args.set("id", JsonValue::String(v))
     None => ()
   }
-  self.call_tool!("create_capsule", args)
+  self.call_tool("create_capsule", args)
 }
 
 ///
 /// create_torus — create_torus
 /// Create a torus (donut shape) by revolving a circle around the Z axis. Returns the object ID.
 ///
-pub fn Client::CreateTorus(self : Client, majorRadius : Double, minorRadius : Double, x : Double?, y : Double?, z : Double?, id : String?) -> String!String {
+pub async fn Client::CreateTorus(self : Client, majorRadius : Double, minorRadius : Double, x : Double?, y : Double?, z : Double?, id : String?) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("majorRadius", JsonValue::Number(majorRadius))
   args.set("minorRadius", JsonValue::Number(minorRadius))
@@ -541,7 +541,7 @@ pub fn Client::CreateTorus(self : Client, majorRadius : Double, minorRadius : Do
     Some(v) => args.set("id", JsonValue::String(v))
     None => ()
   }
-  self.call_tool!("create_torus", args)
+  self.call_tool("create_torus", args)
 }
 
 // === Query ===
@@ -550,136 +550,136 @@ pub fn Client::CreateTorus(self : Client, majorRadius : Double, minorRadius : Do
 /// get_bounding_box — get_bounding_box
 /// Get the axis-aligned bounding box of any object. Returns min/max corners in mm. Retries internally with exponential backoff if the object was just created/transformed and the internal mesh conversion is not yet settled.
 ///
-pub fn Client::GetBoundingBox(self : Client, objectId : String) -> String!String {
+pub async fn Client::GetBoundingBox(self : Client, objectId : String) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("objectId", JsonValue::String(objectId))
-  self.call_tool!("get_bounding_box", args)
+  self.call_tool("get_bounding_box", args)
 }
 
 ///
 /// get_volume — get_volume
 /// Calculate the volume and bounding box of a voxel object. Retries internally with exponential backoff if the object was just created/transformed.
 ///
-pub fn Client::GetVolume(self : Client, objectId : String) -> String!String {
+pub async fn Client::GetVolume(self : Client, objectId : String) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("objectId", JsonValue::String(objectId))
-  self.call_tool!("get_volume", args)
+  self.call_tool("get_volume", args)
 }
 
 ///
 /// get_mesh_info — get_mesh_info
 /// Get information about a mesh: vertex count, triangle count, bounding box.
 ///
-pub fn Client::GetMeshInfo(self : Client, objectId : String) -> String!String {
+pub async fn Client::GetMeshInfo(self : Client, objectId : String) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("objectId", JsonValue::String(objectId))
-  self.call_tool!("get_mesh_info", args)
+  self.call_tool("get_mesh_info", args)
 }
 
 ///
 /// point_inside — point_inside
 /// Check if a 3D point is inside a voxel object.
 ///
-pub fn Client::PointInside(self : Client, objectId : String, x : Double, y : Double, z : Double) -> String!String {
+pub async fn Client::PointInside(self : Client, objectId : String, x : Double, y : Double, z : Double) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("objectId", JsonValue::String(objectId))
   args.set("x", JsonValue::Number(x))
   args.set("y", JsonValue::Number(y))
   args.set("z", JsonValue::Number(z))
-  self.call_tool!("point_inside", args)
+  self.call_tool("point_inside", args)
 }
 
 ///
 /// surface_normal — surface_normal
 /// Get the surface normal vector at a point on a voxel object's surface.
 ///
-pub fn Client::SurfaceNormal(self : Client, objectId : String, x : Double, y : Double, z : Double) -> String!String {
+pub async fn Client::SurfaceNormal(self : Client, objectId : String, x : Double, y : Double, z : Double) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("objectId", JsonValue::String(objectId))
   args.set("x", JsonValue::Number(x))
   args.set("y", JsonValue::Number(y))
   args.set("z", JsonValue::Number(z))
-  self.call_tool!("surface_normal", args)
+  self.call_tool("surface_normal", args)
 }
 
 ///
 /// closest_point — closest_point
 /// Find the closest point on a voxel object's surface to a given point.
 ///
-pub fn Client::ClosestPoint(self : Client, objectId : String, x : Double, y : Double, z : Double) -> String!String {
+pub async fn Client::ClosestPoint(self : Client, objectId : String, x : Double, y : Double, z : Double) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("objectId", JsonValue::String(objectId))
   args.set("x", JsonValue::Number(x))
   args.set("y", JsonValue::Number(y))
   args.set("z", JsonValue::Number(z))
-  self.call_tool!("closest_point", args)
+  self.call_tool("closest_point", args)
 }
 
 ///
 /// list_objects — list_objects
 /// List all objects in the current session with their IDs, types, and descriptions.
 ///
-pub fn Client::ListObjects(self : Client) -> String!String {
+pub async fn Client::ListObjects(self : Client) -> String raise {
   let args : Map[String, JsonValue] = {}
-  self.call_tool!("list_objects", args)
+  self.call_tool("list_objects", args)
 }
 
 ///
 /// delete_object — delete_object
 /// Delete an object from the session. Frees memory and removes the object from the registry.
 ///
-pub fn Client::DeleteObject(self : Client, objectId : String) -> String!String {
+pub async fn Client::DeleteObject(self : Client, objectId : String) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("objectId", JsonValue::String(objectId))
-  self.call_tool!("delete_object", args)
+  self.call_tool("delete_object", args)
 }
 
 ///
 /// get_voxel_dimensions — get_voxel_dimensions
 /// Get the voxel dimensions (grid size) of a voxel object.
 ///
-pub fn Client::GetVoxelDimensions(self : Client, objectId : String) -> String!String {
+pub async fn Client::GetVoxelDimensions(self : Client, objectId : String) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("objectId", JsonValue::String(objectId))
-  self.call_tool!("get_voxel_dimensions", args)
+  self.call_tool("get_voxel_dimensions", args)
 }
 
 ///
 /// voxels_is_empty — voxels_is_empty
 /// Check if a voxel object is empty (contains no volume). Useful for detecting failed operations — e.g. an intersection that produced no overlap, or a subtraction that removed all material.
 ///
-pub fn Client::VoxelsIsEmpty(self : Client, objectId : String) -> String!String {
+pub async fn Client::VoxelsIsEmpty(self : Client, objectId : String) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("objectId", JsonValue::String(objectId))
-  self.call_tool!("voxels_is_empty", args)
+  self.call_tool("voxels_is_empty", args)
 }
 
 ///
 /// voxels_mem_usage — voxels_mem_usage
 /// Get the memory usage of a voxel object in bytes. Useful for monitoring memory consumption when building complex models.
 ///
-pub fn Client::VoxelsMemUsage(self : Client, objectId : String) -> String!String {
+pub async fn Client::VoxelsMemUsage(self : Client, objectId : String) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("objectId", JsonValue::String(objectId))
-  self.call_tool!("voxels_mem_usage", args)
+  self.call_tool("voxels_mem_usage", args)
 }
 
 ///
 /// voxels_is_equal — voxels_is_equal
 /// Compare two voxel objects for equality. Returns true if they contain the same voxel data. Useful for verifying that a transform or round-trip preserved the shape.
 ///
-pub fn Client::VoxelsIsEqual(self : Client, objectIdA : String, objectIdB : String) -> String!String {
+pub async fn Client::VoxelsIsEqual(self : Client, objectIdA : String, objectIdB : String) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("objectIdA", JsonValue::String(objectIdA))
   args.set("objectIdB", JsonValue::String(objectIdB))
-  self.call_tool!("voxels_is_equal", args)
+  self.call_tool("voxels_is_equal", args)
 }
 
 ///
 /// ray_cast — ray_cast
 /// Cast a ray from a point in a given direction and find where it hits the surface of a voxel object. Useful for measuring wall thickness, checking bore clearance, and probing internal geometry. Returns the hit point and the distance from the origin, or an error if no intersection is found.
 ///
-pub fn Client::RayCast(self : Client, objectId : String, x : Double, y : Double, z : Double, dirX : Double, dirY : Double, dirZ : Double) -> String!String {
+pub async fn Client::RayCast(self : Client, objectId : String, x : Double, y : Double, z : Double, dirX : Double, dirY : Double, dirZ : Double) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("objectId", JsonValue::String(objectId))
   args.set("x", JsonValue::Number(x))
@@ -688,14 +688,14 @@ pub fn Client::RayCast(self : Client, objectId : String, x : Double, y : Double,
   args.set("dirX", JsonValue::Number(dirX))
   args.set("dirY", JsonValue::Number(dirY))
   args.set("dirZ", JsonValue::Number(dirZ))
-  self.call_tool!("ray_cast", args)
+  self.call_tool("ray_cast", args)
 }
 
 ///
 /// measure_thickness — measure_thickness
 /// Cast a ray from a point in both +direction and -direction and report both hit points and the total span between them. Measures the through-thickness of the object along the ray axis (surface to surface through the interior, which may cross internal cavities). For local wall thickness of a shell, place the origin inside the wall material and note that the total span includes all internal voids.
 ///
-pub fn Client::MeasureThickness(self : Client, objectId : String, x : Double, y : Double, z : Double, dirX : Double, dirY : Double, dirZ : Double) -> String!String {
+pub async fn Client::MeasureThickness(self : Client, objectId : String, x : Double, y : Double, z : Double, dirX : Double, dirY : Double, dirZ : Double) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("objectId", JsonValue::String(objectId))
   args.set("x", JsonValue::Number(x))
@@ -704,35 +704,35 @@ pub fn Client::MeasureThickness(self : Client, objectId : String, x : Double, y 
   args.set("dirX", JsonValue::Number(dirX))
   args.set("dirY", JsonValue::Number(dirY))
   args.set("dirZ", JsonValue::Number(dirZ))
-  self.call_tool!("measure_thickness", args)
+  self.call_tool("measure_thickness", args)
 }
 
 ///
 /// duplicate_object — duplicate_object
 /// Create a duplicate (deep copy) of an existing object. Works with voxel and mesh objects. Returns the new object ID.
 ///
-pub fn Client::DuplicateObject(self : Client, objectId : String, id : String?) -> String!String {
+pub async fn Client::DuplicateObject(self : Client, objectId : String, id : String?) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("objectId", JsonValue::String(objectId))
   match id {
     Some(v) => args.set("id", JsonValue::String(v))
     None => ()
   }
-  self.call_tool!("duplicate_object", args)
+  self.call_tool("duplicate_object", args)
 }
 
 ///
 /// delete_objects — delete_objects
 /// Delete multiple objects from the session in one call. Useful for cleaning up intermediate objects after a complex build. Returns the count of objects actually deleted.
 ///
-pub fn Client::DeleteObjects(self : Client, objectIds : Array[String], keepOnly : Bool?) -> String!String {
+pub async fn Client::DeleteObjects(self : Client, objectIds : Array[String], keepOnly : Bool?) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("objectIds", JsonValue::Array(objectIds.map(fn(s) { JsonValue::String(s) })))
   match keepOnly {
     Some(v) => args.set("keepOnly", JsonValue::Bool(v))
     None => ()
   }
-  self.call_tool!("delete_objects", args)
+  self.call_tool("delete_objects", args)
 }
 
 // === Render ===
@@ -741,7 +741,7 @@ pub fn Client::DeleteObjects(self : Client, objectIds : Array[String], keepOnly 
 /// render_to_image — render_to_image
 /// Render an object to a PNG image using an isometric projection with Lambertian shading. The agent can use this to visually inspect geometry. Returns the file path of the rendered image.
 ///
-pub fn Client::RenderToImage(self : Client, objectId : String, path : String, width : Int?, height : Int?, backgroundColor : String?, objectColor : String?) -> String!String {
+pub async fn Client::RenderToImage(self : Client, objectId : String, path : String, width : Int?, height : Int?, backgroundColor : String?, objectColor : String?) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("objectId", JsonValue::String(objectId))
   args.set("path", JsonValue::String(path))
@@ -761,14 +761,14 @@ pub fn Client::RenderToImage(self : Client, objectId : String, path : String, wi
     Some(v) => args.set("objectColor", JsonValue::String(v))
     None => ()
   }
-  self.call_tool!("render_to_image", args)
+  self.call_tool("render_to_image", args)
 }
 
 ///
 /// render_slice — render_slice
 /// Render a Z-slice of a voxel object to a PNG image. Shows the cross-section at a specific height. Returns the file path.
 ///
-pub fn Client::RenderSlice(self : Client, voxelsId : String, zPosition : Double, path : String, mode : String?) -> String!String {
+pub async fn Client::RenderSlice(self : Client, voxelsId : String, zPosition : Double, path : String, mode : String?) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("voxelsId", JsonValue::String(voxelsId))
   args.set("zPosition", JsonValue::Number(zPosition))
@@ -777,7 +777,7 @@ pub fn Client::RenderSlice(self : Client, voxelsId : String, zPosition : Double,
     Some(v) => args.set("mode", JsonValue::String(v))
     None => ()
   }
-  self.call_tool!("render_slice", args)
+  self.call_tool("render_slice", args)
 }
 
 // === Session ===
@@ -786,31 +786,31 @@ pub fn Client::RenderSlice(self : Client, voxelsId : String, zPosition : Double,
 /// picogk_init — picogk_init
 /// Initialize the PicoGK geometry kernel. Must be called before any other tool. Sets the voxel resolution in millimeters. Smaller values = higher resolution but more memory. Typical range: 0.1mm (fine) to 5.0mm (coarse).
 ///
-pub fn Client::PicogkInit(self : Client, voxelSizeMM : Double?) -> String!String {
+pub async fn Client::PicogkInit(self : Client, voxelSizeMM : Double?) -> String raise {
   let args : Map[String, JsonValue] = {}
   match voxelSizeMM {
     Some(v) => args.set("voxelSizeMM", JsonValue::Number(v))
     None => ()
   }
-  self.call_tool!("picogk_init", args)
+  self.call_tool("picogk_init", args)
 }
 
 ///
 /// picogk_info — picogk_info
 /// Get information about the PicoGK library and current session state. Returns version, memory usage, and counts of allocated objects.
 ///
-pub fn Client::PicogkInfo(self : Client) -> String!String {
+pub async fn Client::PicogkInfo(self : Client) -> String raise {
   let args : Map[String, JsonValue] = {}
-  self.call_tool!("picogk_info", args)
+  self.call_tool("picogk_info", args)
 }
 
 ///
 /// picogk_shutdown — picogk_shutdown
 /// Shut down the PicoGK session and release all resources. All object references become invalid after this call.
 ///
-pub fn Client::PicogkShutdown(self : Client) -> String!String {
+pub async fn Client::PicogkShutdown(self : Client) -> String raise {
   let args : Map[String, JsonValue] = {}
-  self.call_tool!("picogk_shutdown", args)
+  self.call_tool("picogk_shutdown", args)
 }
 
 // === Transforms ===
@@ -819,7 +819,7 @@ pub fn Client::PicogkShutdown(self : Client) -> String!String {
 /// offset — offset
 /// Offset a voxel surface outward (positive) or inward (negative) by a distance. Use for thickening, thinning, or creating clearance. Returns a new object ID.
 ///
-pub fn Client::Offset(self : Client, objectId : String, distance : Double, id : String?) -> String!String {
+pub async fn Client::Offset(self : Client, objectId : String, distance : Double, id : String?) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("objectId", JsonValue::String(objectId))
   args.set("distance", JsonValue::Number(distance))
@@ -827,14 +827,14 @@ pub fn Client::Offset(self : Client, objectId : String, distance : Double, id : 
     Some(v) => args.set("id", JsonValue::String(v))
     None => ()
   }
-  self.call_tool!("offset", args)
+  self.call_tool("offset", args)
 }
 
 ///
 /// double_offset — double_offset
 /// Offset a voxel surface twice: first by offset1, then by offset2. Enables precise morphological operations not possible with a single offset — e.g. offset out by 2mm then back by 1.5mm to remove thin features while preserving wall thickness. Returns a new object ID.
 ///
-pub fn Client::DoubleOffset(self : Client, objectId : String, offset1 : Double, offset2 : Double, id : String?) -> String!String {
+pub async fn Client::DoubleOffset(self : Client, objectId : String, offset1 : Double, offset2 : Double, id : String?) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("objectId", JsonValue::String(objectId))
   args.set("offset1", JsonValue::Number(offset1))
@@ -843,14 +843,14 @@ pub fn Client::DoubleOffset(self : Client, objectId : String, offset1 : Double, 
     Some(v) => args.set("id", JsonValue::String(v))
     None => ()
   }
-  self.call_tool!("double_offset", args)
+  self.call_tool("double_offset", args)
 }
 
 ///
 /// over_offset — over_offset
 /// Offset a voxel surface by a first distance, then settle the surface at a specified final distance from the original. More precise than fillet: lets you say 'offset by 3mm, then move the surface to exactly 0.5mm from where it started.' Useful for controlled material removal. Returns a new object ID.
 ///
-pub fn Client::OverOffset(self : Client, objectId : String, firstOffset : Double, finalSurfaceDist : Double?, id : String?) -> String!String {
+pub async fn Client::OverOffset(self : Client, objectId : String, firstOffset : Double, finalSurfaceDist : Double?, id : String?) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("objectId", JsonValue::String(objectId))
   args.set("firstOffset", JsonValue::Number(firstOffset))
@@ -862,14 +862,14 @@ pub fn Client::OverOffset(self : Client, objectId : String, firstOffset : Double
     Some(v) => args.set("id", JsonValue::String(v))
     None => ()
   }
-  self.call_tool!("over_offset", args)
+  self.call_tool("over_offset", args)
 }
 
 ///
 /// smooth — smooth
 /// Smooth/round a voxel surface by applying triple offset. Good for removing sharp edges. Returns a new object ID.
 ///
-pub fn Client::Smooth(self : Client, objectId : String, distance : Double, id : String?) -> String!String {
+pub async fn Client::Smooth(self : Client, objectId : String, distance : Double, id : String?) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("objectId", JsonValue::String(objectId))
   args.set("distance", JsonValue::Number(distance))
@@ -877,14 +877,14 @@ pub fn Client::Smooth(self : Client, objectId : String, distance : Double, id : 
     Some(v) => args.set("id", JsonValue::String(v))
     None => ()
   }
-  self.call_tool!("smooth", args)
+  self.call_tool("smooth", args)
 }
 
 ///
 /// trim — trim
 /// Trim a voxel object to fit within a bounding box. Everything outside the box is removed. Returns a new object ID.
 ///
-pub fn Client::Trim(self : Client, objectId : String, minX : Double, minY : Double, minZ : Double, maxX : Double, maxY : Double, maxZ : Double, id : String?) -> String!String {
+pub async fn Client::Trim(self : Client, objectId : String, minX : Double, minY : Double, minZ : Double, maxX : Double, maxY : Double, maxZ : Double, id : String?) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("objectId", JsonValue::String(objectId))
   args.set("minX", JsonValue::Number(minX))
@@ -897,14 +897,14 @@ pub fn Client::Trim(self : Client, objectId : String, minX : Double, minY : Doub
     Some(v) => args.set("id", JsonValue::String(v))
     None => ()
   }
-  self.call_tool!("trim", args)
+  self.call_tool("trim", args)
 }
 
 ///
 /// shell — shell
 /// Create a hollow shell from a voxel object. Both positive and negative offsets are applied. Returns a new object ID.
 ///
-pub fn Client::Shell(self : Client, objectId : String, innerOffset : Double, outerOffset : Double, smooth : Double?, id : String?) -> String!String {
+pub async fn Client::Shell(self : Client, objectId : String, innerOffset : Double, outerOffset : Double, smooth : Double?, id : String?) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("objectId", JsonValue::String(objectId))
   args.set("innerOffset", JsonValue::Number(innerOffset))
@@ -917,14 +917,14 @@ pub fn Client::Shell(self : Client, objectId : String, innerOffset : Double, out
     Some(v) => args.set("id", JsonValue::String(v))
     None => ()
   }
-  self.call_tool!("shell", args)
+  self.call_tool("shell", args)
 }
 
 ///
 /// fillet — fillet
 /// Fillets (rounds) the surface of a voxel object. Same as smooth but semantically for rounding edges. Returns a new object ID.
 ///
-pub fn Client::Fillet(self : Client, objectId : String, radius : Double, id : String?) -> String!String {
+pub async fn Client::Fillet(self : Client, objectId : String, radius : Double, id : String?) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("objectId", JsonValue::String(objectId))
   args.set("radius", JsonValue::Number(radius))
@@ -932,14 +932,14 @@ pub fn Client::Fillet(self : Client, objectId : String, radius : Double, id : St
     Some(v) => args.set("id", JsonValue::String(v))
     None => ()
   }
-  self.call_tool!("fillet", args)
+  self.call_tool("fillet", args)
 }
 
 ///
 /// project_z_slice — project_z_slice
 /// Project voxels onto a Z-plane (top-down silhouette). Useful for creating 2D cross-sections. Returns a new object ID.
 ///
-pub fn Client::ProjectZSlice(self : Client, objectId : String, startZ : Double, endZ : Double, id : String?) -> String!String {
+pub async fn Client::ProjectZSlice(self : Client, objectId : String, startZ : Double, endZ : Double, id : String?) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("objectId", JsonValue::String(objectId))
   args.set("startZ", JsonValue::Number(startZ))
@@ -948,14 +948,14 @@ pub fn Client::ProjectZSlice(self : Client, objectId : String, startZ : Double, 
     Some(v) => args.set("id", JsonValue::String(v))
     None => ()
   }
-  self.call_tool!("project_z_slice", args)
+  self.call_tool("project_z_slice", args)
 }
 
 ///
 /// transform_voxels — transform_voxels
 /// Transform a voxel object by translating, rotating, and/or scaling it. Rotations are applied first (around the world origin 0,0,0 — not the object's center), then translation. To rotate an object in place, first translate it to the origin, rotate, then translate back. Uses native PicoGK signed-distance-field re-rasterization (no expensive mesh round-trip), so it is efficient for large voxel fields. Returns a new object ID.
 ///
-pub fn Client::TransformVoxels(self : Client, objectId : String, translateX : Double?, translateY : Double?, translateZ : Double?, rotateX : Double?, rotateY : Double?, rotateZ : Double?, scale : Double?, id : String?) -> String!String {
+pub async fn Client::TransformVoxels(self : Client, objectId : String, translateX : Double?, translateY : Double?, translateZ : Double?, rotateX : Double?, rotateY : Double?, rotateZ : Double?, scale : Double?, id : String?) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("objectId", JsonValue::String(objectId))
   match translateX {
@@ -990,14 +990,14 @@ pub fn Client::TransformVoxels(self : Client, objectId : String, translateX : Do
     Some(v) => args.set("id", JsonValue::String(v))
     None => ()
   }
-  self.call_tool!("transform_voxels", args)
+  self.call_tool("transform_voxels", args)
 }
 
 ///
 /// circular_pattern — circular_pattern
 /// Create a circular (polar) pattern of a voxel object: rotate copies around an axis through a center point and union them into a single result. Uses SDF re-rasterization (no mesh round-trips) for each copy. Returns a new object ID containing all copies combined. Example: 4 bolt holes around a flange center at 90° intervals.
 ///
-pub fn Client::CircularPattern(self : Client, objectId : String, count : Int, totalAngle : Double?, centerX : Double?, centerY : Double?, centerZ : Double?, axisX : Double?, axisY : Double?, axisZ : Double?, id : String?) -> String!String {
+pub async fn Client::CircularPattern(self : Client, objectId : String, count : Int, totalAngle : Double?, centerX : Double?, centerY : Double?, centerZ : Double?, axisX : Double?, axisY : Double?, axisZ : Double?, id : String?) -> String raise {
   let args : Map[String, JsonValue] = {}
   args.set("objectId", JsonValue::String(objectId))
   args.set("count", JsonValue::Int(count))
@@ -1033,5 +1033,5 @@ pub fn Client::CircularPattern(self : Client, objectId : String, count : Int, to
     Some(v) => args.set("id", JsonValue::String(v))
     None => ()
   }
-  self.call_tool!("circular_pattern", args)
+  self.call_tool("circular_pattern", args)
 }
