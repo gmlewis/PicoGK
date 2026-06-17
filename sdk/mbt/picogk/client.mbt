@@ -118,36 +118,42 @@ pub async fn Client::call_tool(self : Client, tool_name : String, args : Map[Str
   self.send_line(req.stringify())
   let response = self.read_line()
   // Parse response and extract text content
-  let resp = @json.parse(response)
-  match resp {
-    Object(fields) => {
-      let result = fields.get("result").unwrap()
-      match result {
-        Object(result_fields) => {
-          let content = result_fields.get("content").unwrap()
-          match content {
-            Array(items) => {
-              let mut text = ""
-              for item in items {
-                match item {
-                  Object(item_fields) => {
-                    match item_fields.get("text") {
-                      Some(String(s)) => text = text + s
+  // Some tools (e.g. picogk_shutdown) may return non-JSON; return raw text in that case
+  try @json.parse(response) catch {
+    _ => return response
+  } noraise {
+    resp => {
+      match resp {
+        Object(fields) => {
+          let result = fields.get("result").unwrap()
+          match result {
+            Object(result_fields) => {
+              let content = result_fields.get("content").unwrap()
+              match content {
+                Array(items) => {
+                  let mut text = ""
+                  for item in items {
+                    match item {
+                      Object(item_fields) => {
+                        match item_fields.get("text") {
+                          Some(String(s)) => text = text + s
+                          _ => ()
+                        }
+                      }
                       _ => ()
                     }
                   }
-                  _ => ()
+                  text
                 }
+                _ => raise Failure::Failure("unexpected content format")
               }
-              text
             }
-            _ => raise Failure::Failure("unexpected content format")
+            _ => raise Failure::Failure("unexpected result format")
           }
         }
-        _ => raise Failure::Failure("unexpected result format")
+        _ => response
       }
     }
-    _ => raise Failure::Failure("unexpected response format")
   }
 }
 

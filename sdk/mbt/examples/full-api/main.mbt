@@ -122,12 +122,7 @@ async fn main {
   // --- Shutdown ---
   println("")
   println("--- Shutdown ---")
-  // picogk_shutdown may emit a non-JSON final line from the server
-  try client.picogk_shutdown() catch {
-    _ => println("  OK: picogk_shutdown -> (server disposed)")
-  } noraise {
-    _ => println("  OK: picogk_shutdown")
-  }
+  let _ = client.picogk_shutdown()
   client.close()
 
   println("")
