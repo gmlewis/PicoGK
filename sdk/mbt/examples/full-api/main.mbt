@@ -8,7 +8,7 @@
 /// Run:  moon run .  (from the sdk/mbt/examples/full-api directory)
 /// (Requires the PicoGK MCP server at $HOME/.local/bin/picogk-mcp/PicoGK.Mcp)
 async fn main {
-  let outdir = "/tmp/mbtpicogk_full_api"
+  let outdir = "/tmp/mbt-picogk-full-api"
 
   println("=== picogk Full API Exercise ===")
   println("Output dir: " + outdir)

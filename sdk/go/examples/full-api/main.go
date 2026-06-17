@@ -45,7 +45,7 @@ func do(label string, fn func() (string, error)) {
 
 func main() {
 	ctx := context.Background()
-	outdir := "/tmp/gopicogk-full-api"
+	outdir := "/tmp/go-picogk-full-api"
 	os.MkdirAll(outdir, 0755)
 
 	fmt.Println("=== gopicogk Full API Exercise ===")
