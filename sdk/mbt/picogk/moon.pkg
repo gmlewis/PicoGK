@@ -2,10 +2,8 @@
 // DO NOT EDIT — this file is auto-generated.
 
 import {
-  "moonbitlang/async",
   "moonbitlang/async/process",
-  "moonbitlang/async/io",
   "moonbitlang/core/json",
   "moonbitlang/core/env",
-  "moonbitlang/core/encoding/utf8" @utf8,
+  "moonbitlang/core/encoding/utf8",
 }

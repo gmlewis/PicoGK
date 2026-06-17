@@ -106,33 +106,23 @@ def gen_client_mbt(tools: list[ToolDef]) -> str:
     lines.append(GENERATED_HEADER)
     lines.append("")
     lines.append("///")
-    lines.append("/// ClientError represents errors from the PicoGK MCP client.")
-    lines.append("///")
-    lines.append('pub(err) struct ClientError(String) derive(Debug, ToJson)')
-    lines.append("")
-    lines.append("/// Show implementation for ClientError")
-    lines.append("pub impl Show for ClientError with fn to_string(self) {")
-    lines.append('  "ClientError(" + self.0 + ")"')
-    lines.append("}")
-    lines.append("")
-    lines.append("///")
     lines.append("/// Client manages a connection to the PicoGK MCP server.")
     lines.append("/// It launches the server as a subprocess and communicates via JSON-RPC over stdio.")
-    lines.append("/// All tool methods are async and must be called within an `@async.run` block.")
+    lines.append("/// All tool methods are async and must be called within an `async fn main` block.")
     lines.append("///")
     lines.append("/// Usage:")
-    lines.append('///   @async.run() {')
+    lines.append('///   async fn main {')
     lines.append('///     // Uses default server at $HOME/.local/bin/picogk-mcp/PicoGK.Mcp')
-    lines.append('///     let client = @picogk.new_client("").await!()')
+    lines.append('///     let client = @picogk.new_client("")')
     lines.append('///     // Or specify a custom path:')
-    lines.append('///     // let client = @picogk.new_client("/custom/path/to/PicoGK.Mcp").await!()')
-    lines.append('///     client.picogk_init(0.5).await!()')
-    lines.append('///     client.create_sphere(0.0, 0.0, 0.0, 30.0, Some("body")).await!()')
+    lines.append('///     // let client = @picogk.new_client("/custom/path/to/PicoGK.Mcp")')
+    lines.append('///     client.picogk_init(Some(0.5))')
+    lines.append('///     client.create_sphere(0.0, 0.0, 0.0, 30.0, Some("body"))')
     lines.append('///     client.close()')
     lines.append('///   }')
     lines.append("///")
     lines.append("pub struct Client {")
-    lines.append("  proc : @process.Process")
+    lines.append("  pid : Int")
     lines.append("  stdin : @process.WriteToProcess")
     lines.append("  stdout : @process.ReadFromProcess")
     lines.append("  mut msg_id : Int")
@@ -146,7 +136,7 @@ def gen_client_mbt(tools: list[ToolDef]) -> str:
     lines.append("///")
     lines.append("/// new_client launches the PicoGK MCP server binary and returns a Client.")
     lines.append("/// If server_bin is empty, uses default_server_bin.")
-    lines.append("/// Must be called within @async.run().")
+    lines.append("/// Must be called within an async function.")
     lines.append("///")
     lines.append("pub async fn new_client(server_bin : String) -> Client raise {")
     lines.append('  let bin = if server_bin == "" { default_server_bin } else { server_bin }')
@@ -154,13 +144,10 @@ def gen_client_mbt(tools: list[ToolDef]) -> str:
     lines.append("  // Create pipes for stdin/stdout")
     lines.append("  let (stdin_read, stdin_write) = @process.write_to_process()")
     lines.append("  let (stdout_read, stdout_write) = @process.read_from_process()")
-    lines.append("  // Spawn the server process within a task group")
-    lines.append("  let proc = @async.with_task_group() <| group => {")
-    lines.append("    let p = @process.spawn(group, path, [], stdin=stdin_read, stdout=stdout_write, no_wait=true)")
-    lines.append("    p")
-    lines.append("  }")
+    lines.append("  // Spawn the server as an orphan process so it survives beyond any task group")
+    lines.append("  let pid = @process.spawn_orphan(path, [], stdin=stdin_read, stdout=stdout_write)")
     lines.append("  let client = Client::{")
-    lines.append("    proc: proc,")
+    lines.append("    pid: pid,")
     lines.append("    stdin: stdin_write,")
     lines.append("    stdout: stdout_read,")
     lines.append("    msg_id: 0,")
@@ -174,7 +161,6 @@ def gen_client_mbt(tools: list[ToolDef]) -> str:
     lines.append("/// close shuts down the MCP server process.")
     lines.append("///")
     lines.append("pub fn Client::close(self : Client) -> Unit {")
-    lines.append("  self.proc.cancel()")
     lines.append("  self.stdin.close()")
     lines.append("  self.stdout.close()")
     lines.append("}")
@@ -215,42 +201,42 @@ def gen_client_mbt(tools: list[ToolDef]) -> str:
     lines.append("async fn Client::read_line(self : Client) -> String raise {")
     lines.append("  match self.stdout.read_until(\"\\n\") {")
     lines.append("    Some(line) => line")
-    lines.append("    None => raise \"EOF: no more data from server\"")
+    lines.append('    None => raise Failure::Failure("EOF: no more data from server")')
     lines.append("  }")
     lines.append("}")
     lines.append("")
     lines.append("///")
     lines.append("/// call_tool invokes an MCP tool by name and returns the text response.")
     lines.append("///")
-    lines.append("pub async fn Client::call_tool(self : Client, tool_name : String, args : Map[String, JsonValue]) -> String raise {")
+    lines.append("pub async fn Client::call_tool(self : Client, tool_name : String, args : Map[String, Json]) -> String raise {")
     lines.append("  let id = self.next_id()")
-    lines.append("  let req = JsonValue::Object([")
-    lines.append("    (\"jsonrpc\", JsonValue::String(\"2.0\")),")
-    lines.append("    (\"id\", JsonValue::Int(id)),")
-    lines.append("    (\"method\", JsonValue::String(\"tools/call\")),")
-    lines.append("    (\"params\", JsonValue::Object([")
-    lines.append("      (\"name\", JsonValue::String(tool_name)),")
-    lines.append("      (\"arguments\", JsonValue::Object(args.iter().to_array())),")
-    lines.append("    ])),")
-    lines.append("  ])")
+    lines.append("  let req = Json::object(Map([")
+    lines.append('    ("jsonrpc", Json::string("2.0")),')
+    lines.append("    (\"id\", Json::number(id.to_double())),")
+    lines.append('    ("method", Json::string("tools/call")),')
+    lines.append('    ("params", Json::object(Map([')
+    lines.append('      ("name", Json::string(tool_name)),')
+    lines.append('      ("arguments", Json::object(args)),')
+    lines.append("    ]))),")
+    lines.append("  ]))")
     lines.append("  self.send_line(req.stringify())")
     lines.append("  let response = self.read_line()")
     lines.append("  // Parse response and extract text content")
     lines.append("  let resp = @json.parse(response)")
     lines.append("  match resp {")
-    lines.append("    JsonValue::Object(fields) => {")
-    lines.append("      let result = fields.get(\"result\").unwrap()")
+    lines.append("    Object(fields) => {")
+    lines.append('      let result = fields.get("result").unwrap()')
     lines.append("      match result {")
-    lines.append("        JsonValue::Object(result_fields) => {")
-    lines.append("          let content = result_fields.get(\"content\").unwrap()")
+    lines.append("        Object(result_fields) => {")
+    lines.append('          let content = result_fields.get("content").unwrap()')
     lines.append("          match content {")
-    lines.append("            JsonValue::Array(items) => {")
-    lines.append("              let mut text = \"\"")
+    lines.append("            Array(items) => {")
+    lines.append('              let mut text = ""')
     lines.append("              for item in items {")
     lines.append("                match item {")
-    lines.append("                  JsonValue::Object(item_fields) => {")
-    lines.append("                    match item_fields.get(\"text\") {")
-    lines.append("                      Some(JsonValue::String(s)) => text = text + s")
+    lines.append("                  Object(item_fields) => {")
+    lines.append('                    match item_fields.get("text") {')
+    lines.append("                      Some(String(s)) => text = text + s")
     lines.append("                      _ => ()")
     lines.append("                    }")
     lines.append("                  }")
@@ -259,13 +245,13 @@ def gen_client_mbt(tools: list[ToolDef]) -> str:
     lines.append("              }")
     lines.append("              text")
     lines.append("            }")
-    lines.append("            _ => raise \"unexpected content format\"")
+    lines.append('            _ => raise Failure::Failure("unexpected content format")')
     lines.append("          }")
     lines.append("        }")
-    lines.append("        _ => raise \"unexpected result format\"")
+    lines.append('        _ => raise Failure::Failure("unexpected result format")')
     lines.append("      }")
     lines.append("    }")
-    lines.append("    _ => raise \"unexpected response format\"")
+    lines.append('    _ => raise Failure::Failure("unexpected response format")')
     lines.append("  }")
     lines.append("}")
     lines.append("")
@@ -274,26 +260,26 @@ def gen_client_mbt(tools: list[ToolDef]) -> str:
     lines.append("///")
     lines.append("async fn Client::initialize(self : Client) -> Unit raise {")
     lines.append("  let id = self.next_id()")
-    lines.append("  let req = JsonValue::Object([")
-    lines.append("    (\"jsonrpc\", JsonValue::String(\"2.0\")),")
-    lines.append("    (\"id\", JsonValue::Int(id)),")
-    lines.append("    (\"method\", JsonValue::String(\"initialize\")),")
-    lines.append("    (\"params\", JsonValue::Object([")
-    lines.append("      (\"protocolVersion\", JsonValue::String(\"2024-11-05\")),")
-    lines.append("      (\"capabilities\", JsonValue::Object([])),")
-    lines.append("      (\"clientInfo\", JsonValue::Object([")
-    lines.append("        (\"name\", JsonValue::String(\"picogk\")),")
-    lines.append("        (\"version\", JsonValue::String(\"0.1.0\")),")
-    lines.append("      ])),")
-    lines.append("    ])),")
-    lines.append("  ])")
+    lines.append("  let req = Json::object(Map([")
+    lines.append('    ("jsonrpc", Json::string("2.0")),')
+    lines.append("    (\"id\", Json::number(id.to_double())),")
+    lines.append('    ("method", Json::string("initialize")),')
+    lines.append('    ("params", Json::object(Map([')
+    lines.append('      ("protocolVersion", Json::string("2024-11-05")),')
+    lines.append('      ("capabilities", Json::object(Map([]))),')
+    lines.append('      ("clientInfo", Json::object(Map([')
+    lines.append('        ("name", Json::string("picogk")),')
+    lines.append('        ("version", Json::string("0.1.0")),')
+    lines.append("      ]))),")
+    lines.append("    ]))),")
+    lines.append("  ]))")
     lines.append("  self.send_line(req.stringify())")
     lines.append("  let _ = self.read_line()")
     lines.append("  // Send initialized notification")
-    lines.append("  let notif = JsonValue::Object([")
-    lines.append("    (\"jsonrpc\", JsonValue::String(\"2.0\")),")
-    lines.append("    (\"method\", JsonValue::String(\"notifications/initialized\")),")
-    lines.append("  ])")
+    lines.append("  let notif = Json::object(Map([")
+    lines.append('    ("jsonrpc", Json::string("2.0")),')
+    lines.append('    ("method", Json::string("notifications/initialized")),')
+    lines.append("  ]))")
     lines.append("  self.send_line(notif.stringify())")
     lines.append("}")
     lines.append("")
@@ -335,40 +321,40 @@ def gen_tools_mbt(tools: list[ToolDef]) -> str:
                 if p.has_default:
                     if p.cs_type == "string[]":
                         args_lines.append(f"  match {field} {{")
-                        args_lines.append(f"    Some(arr) => args.set(\"{json_key}\", JsonValue::Array(arr.map(fn(s) {{ JsonValue::String(s) }})))")
+                        args_lines.append(f"    Some(arr) => args.set(\"{json_key}\", Json::array(arr.map(fn(s) {{ Json::string(s) }})))")
                         args_lines.append(f"    None => ()")
                         args_lines.append(f"  }}")
                     elif p.cs_type == "float":
                         args_lines.append(f"  match {field} {{")
-                        args_lines.append(f"    Some(v) => args.set(\"{json_key}\", JsonValue::Number(v))")
+                        args_lines.append(f"    Some(v) => args.set(\"{json_key}\", Json::number(v))")
                         args_lines.append(f"    None => ()")
                         args_lines.append(f"  }}")
                     elif p.cs_type == "int":
                         args_lines.append(f"  match {field} {{")
-                        args_lines.append(f"    Some(v) => args.set(\"{json_key}\", JsonValue::Int(v))")
+                        args_lines.append(f"    Some(v) => args.set(\"{json_key}\", Json::number(v.to_double()))")
                         args_lines.append(f"    None => ()")
                         args_lines.append(f"  }}")
                     elif p.cs_type == "bool":
                         args_lines.append(f"  match {field} {{")
-                        args_lines.append(f"    Some(v) => args.set(\"{json_key}\", JsonValue::Bool(v))")
+                        args_lines.append(f"    Some(v) => args.set(\"{json_key}\", Json::boolean(v))")
                         args_lines.append(f"    None => ()")
                         args_lines.append(f"  }}")
                     elif p.cs_type in ("string", "string?"):
                         args_lines.append(f"  match {field} {{")
-                        args_lines.append(f"    Some(v) => args.set(\"{json_key}\", JsonValue::String(v))")
+                        args_lines.append(f"    Some(v) => args.set(\"{json_key}\", Json::string(v))")
                         args_lines.append(f"    None => ()")
                         args_lines.append(f"  }}")
                 else:
                     if p.cs_type == "float":
-                        args_lines.append(f"  args.set(\"{json_key}\", JsonValue::Number({field}))")
+                        args_lines.append(f"  args.set(\"{json_key}\", Json::number({field}))")
                     elif p.cs_type == "int":
-                        args_lines.append(f"  args.set(\"{json_key}\", JsonValue::Int({field}))")
+                        args_lines.append(f"  args.set(\"{json_key}\", Json::number({field}.to_double()))")
                     elif p.cs_type == "bool":
-                        args_lines.append(f"  args.set(\"{json_key}\", JsonValue::Bool({field}))")
+                        args_lines.append(f"  args.set(\"{json_key}\", Json::boolean({field}))")
                     elif p.cs_type in ("string", "string?"):
-                        args_lines.append(f"  args.set(\"{json_key}\", JsonValue::String({field}))")
+                        args_lines.append(f"  args.set(\"{json_key}\", Json::string({field}))")
                     elif p.cs_type == "string[]":
-                        args_lines.append(f"  args.set(\"{json_key}\", JsonValue::Array({field}.map(fn(s) {{ JsonValue::String(s) }})))")
+                        args_lines.append(f"  args.set(\"{json_key}\", Json::array({field}.map(fn(s) {{ Json::string(s) }})))")
 
             # Write doc comment
             # Escape the description for MoonBit comments
@@ -380,11 +366,11 @@ def gen_tools_mbt(tools: list[ToolDef]) -> str:
 
             # Function signature — all tools are async
             if params_str:
-                lines.append(f"pub async fn Client::{tool.name}(self : Client, {params_str}) -> String raise {{")
+                lines.append(f"pub async fn Client::{method_name}(self : Client, {params_str}) -> String raise {{")
             else:
-                lines.append(f"pub async fn Client::{tool.name}(self : Client) -> String raise {{")
+                lines.append(f"pub async fn Client::{method_name}(self : Client) -> String raise {{")
 
-            lines.append(f"  let args : Map[String, JsonValue] = {{}}")
+            lines.append(f"  let args : Map[String, Json] = {{}}")
             if args_lines:
                 lines.extend(args_lines)
             lines.append(f"  self.call_tool(\"{tool.snake_name}\", args)")
@@ -430,9 +416,7 @@ def gen_moon_pkg() -> str:
 // DO NOT EDIT — this file is auto-generated.
 
 import {
-  "moonbitlang/async",
   "moonbitlang/async/process",
-  "moonbitlang/async/io",
   "moonbitlang/core/json",
   "moonbitlang/core/env",
   "moonbitlang/core/encoding/utf8" @utf8,
@@ -461,7 +445,7 @@ primitives to boolean operations, lattice design, mesh manipulation, rendering, 
 3D-printing export.
 
 All tool methods are **async** and use `moonbitlang/async` for subprocess management.
-They must be called within an `@async.run()` block.
+They must be called within an `async fn main` block.
 
 ## Quick Start
 
@@ -471,39 +455,37 @@ moon add gmlewis/picogk
 
 ```moonbit
 ///|
-fn main {{
-  @async.run() {{
-    // Launch the PicoGK MCP server (default: $HOME/.local/bin/picogk-mcp/PicoGK.Mcp)
-    let client = @picogk.new_client("").await!()
+async fn main {{
+  // Launch the PicoGK MCP server (default: $HOME/.local/bin/picogk-mcp/PicoGK.Mcp)
+  let client = @picogk.new_client("")
 
-    // Initialize the geometry kernel (0.5mm voxels)
-    let _ = client.picogk_init(0.5).await!()
+  // Initialize the geometry kernel (0.5mm voxels)
+  let _ = client.picogk_init(Some(0.5))
 
-    // Create a sphere
-    let res = client.create_sphere(0.0, 0.0, 0.0, 30.0, Some("body")).await!()
-    println(res)
+  // Create a sphere
+  let res = client.create_sphere(0.0, 0.0, 0.0, 30.0, Some("body"))
+  println(res)
 
-    // Create a box cutout
-    let _ = client.create_box(-10.0, -10.0, -40.0, 10.0, 10.0, 40.0, Some("cutout")).await!()
+  // Create a box cutout
+  let _ = client.create_box(-10.0, -10.0, -40.0, 10.0, 10.0, 40.0, Some("cutout"))
 
-    // Subtract box from sphere
-    let _ = client.boolean_subtract("body", "cutout", Some("result")).await!()
+  // Subtract box from sphere
+  let _ = client.boolean_subtract("body", "cutout", Some("result"))
 
-    // Smooth the result
-    let _ = client.smooth("result", 2.0, Some("smoothed")).await!()
+  // Smooth the result
+  let _ = client.smooth("result", 2.0, Some("smoothed"))
 
-    // Convert to mesh and export STL
-    let _ = client.voxels_to_mesh("smoothed", Some("mesh")).await!()
-    let _ = client.save_stl("mesh", "/tmp/part.stl").await!()
+  // Convert to mesh and export STL
+  let _ = client.voxels_to_mesh("smoothed", Some("mesh"))
+  let _ = client.save_stl("mesh", "/tmp/part.stl", None)
 
-    // Render a preview
-    let _ = client.render_to_image("smoothed", "/tmp/preview.png").await!()
+  // Render a preview
+  let _ = client.render_to_image("smoothed", "/tmp/preview.png", None, None, None, None)
 
-    // Clean up
-    client.close()
+  // Clean up
+  client.close()
 
-    println("Done! Part exported to /tmp/part.stl")
-  }}
+  println("Done! Part exported to /tmp/part.stl")
 }}
 ```
 
@@ -516,9 +498,9 @@ The SDK exposes all {tool_count} PicoGK MCP tools via typed methods:
 {cat_table}
 
 Each tool has:
-- A `Client::ToolName(...)` method with typed parameters
+- A `Client::method_name(...)` method with typed parameters (snake_case)
 - Optional parameters are `Option[T]` (use `Some(value)` or `None`)
-- Returns `String` (the tool's text response) or raises `String` on error
+- Returns `String` (the tool's text response) or raises `Failure` on error
 - Full doc comments
 
 ## Architecture

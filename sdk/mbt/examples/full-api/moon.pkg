@@ -3,6 +3,7 @@
 
 import {
   "gmlewis/picogk" @picogk,
+  "moonbitlang/async",
 }
 
 options(

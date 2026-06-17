@@ -7,7 +7,7 @@ primitives to boolean operations, lattice design, mesh manipulation, rendering, 
 3D-printing export.
 
 All tool methods are **async** and use `moonbitlang/async` for subprocess management.
-They must be called within an `@async.run()` block.
+They must be called within an `async fn main` block.
 
 ## Quick Start
 
@@ -17,39 +17,37 @@ moon add gmlewis/picogk
 
 ```moonbit
 ///|
-fn main {
-  @async.run() {
-    // Launch the PicoGK MCP server (default: $HOME/.local/bin/picogk-mcp/PicoGK.Mcp)
-    let client = @picogk.new_client("").await!()
+async fn main {
+  // Launch the PicoGK MCP server (default: $HOME/.local/bin/picogk-mcp/PicoGK.Mcp)
+  let client = @picogk.new_client("")
 
-    // Initialize the geometry kernel (0.5mm voxels)
-    let _ = client.picogk_init(0.5).await!()
+  // Initialize the geometry kernel (0.5mm voxels)
+  let _ = client.picogk_init(Some(0.5))
 
-    // Create a sphere
-    let res = client.create_sphere(0.0, 0.0, 0.0, 30.0, Some("body")).await!()
-    println(res)
+  // Create a sphere
+  let res = client.create_sphere(0.0, 0.0, 0.0, 30.0, Some("body"))
+  println(res)
 
-    // Create a box cutout
-    let _ = client.create_box(-10.0, -10.0, -40.0, 10.0, 10.0, 40.0, Some("cutout")).await!()
+  // Create a box cutout
+  let _ = client.create_box(-10.0, -10.0, -40.0, 10.0, 10.0, 40.0, Some("cutout"))
 
-    // Subtract box from sphere
-    let _ = client.boolean_subtract("body", "cutout", Some("result")).await!()
+  // Subtract box from sphere
+  let _ = client.boolean_subtract("body", "cutout", Some("result"))
 
-    // Smooth the result
-    let _ = client.smooth("result", 2.0, Some("smoothed")).await!()
+  // Smooth the result
+  let _ = client.smooth("result", 2.0, Some("smoothed"))
 
-    // Convert to mesh and export STL
-    let _ = client.voxels_to_mesh("smoothed", Some("mesh")).await!()
-    let _ = client.save_stl("mesh", "/tmp/part.stl").await!()
+  // Convert to mesh and export STL
+  let _ = client.voxels_to_mesh("smoothed", Some("mesh"))
+  let _ = client.save_stl("mesh", "/tmp/part.stl", None)
 
-    // Render a preview
-    let _ = client.render_to_image("smoothed", "/tmp/preview.png").await!()
+  // Render a preview
+  let _ = client.render_to_image("smoothed", "/tmp/preview.png", None, None, None, None)
 
-    // Clean up
-    client.close()
+  // Clean up
+  client.close()
 
-    println("Done! Part exported to /tmp/part.stl")
-  }
+  println("Done! Part exported to /tmp/part.stl")
 }
 ```
 
@@ -70,9 +68,9 @@ The SDK exposes all 62 PicoGK MCP tools via typed methods:
 | **Transforms** | offset, double_offset, over_offset, smooth, trim, shell, fillet, project_z_slice, transform_voxels, circular_pattern |
 
 Each tool has:
-- A `Client::ToolName(...)` method with typed parameters
+- A `Client::method_name(...)` method with typed parameters (snake_case)
 - Optional parameters are `Option[T]` (use `Some(value)` or `None`)
-- Returns `String` (the tool's text response) or raises `String` on error
+- Returns `String` (the tool's text response) or raises `Failure` on error
 - Full doc comments
 
 ## Architecture
