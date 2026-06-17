@@ -27,7 +27,7 @@ public static class PrimitiveTools
     {
         try
         {
-            var sphere = Voxels.voxSphere(new Vector3(x, y, z), radius);
+            var sphere = Voxels.voxSphere(session.Library, new Vector3(x, y, z), radius);
             return session.Register(sphere, id, $"Sphere r={radius}mm at ({x},{y},{z})");
         }
         catch (Exception ex)

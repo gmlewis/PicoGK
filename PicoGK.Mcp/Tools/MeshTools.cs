@@ -174,6 +174,9 @@ public static class MeshTools
         var (source, errS) = session.SafeGet<Mesh>(sourceId);
         if (errS != null) return $"Error: {errS}";
 
+        if (targetId == sourceId)
+            return $"Error: Cannot append mesh to itself (same ID: '{targetId}').";
+
         target.Append(source);
         return $"Appended '{sourceId}' into '{targetId}'. " +
                $"Now has {target.nVertexCount()} vertices, {target.nTriangleCount()} triangles.";

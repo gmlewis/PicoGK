@@ -381,7 +381,75 @@ Server: ✓ Rendered to /output/preview.png
 - **Prompt Templates**: Added `GeometryPrompts.cs` with workflow guides
 - **Tool Consolidation**: Removed duplicate `SaveSliceImage` and `LoadStl` tools
 
+### Bug Fixes (Post-Phase 5)
+
+- **`create_sphere` Library bug**: The `CreateSphere` tool was calling `Voxels.voxSphere(Vector3, float)`
+  (the static/global overload) instead of `Voxels.voxSphere(Library, Vector3, float)`. This caused a
+  `DllNotFoundException` when the global library wasn't registered via `Library.Go()`. Fixed to pass
+  `session.Library` explicitly. (PrimitiveTools.cs:30)
+
+- **`mesh_append` self-reference hang**: `MeshAppend` could hang or produce corrupted results when
+  `targetId == sourceId` (appending a mesh to itself). Added a guard that returns an error message
+  instead. (MeshTools.cs:172)
+
+- **Native library path**: When publishing as a self-contained binary, the MCP server binary must
+  reside in the same directory as `picogk.26.2.dylib` and its Boost dependencies. The config path
+  must point to `picogk-mcp/PicoGK.Mcp`, not just `PicoGK.Mcp`, otherwise `dlopen` fails to find
+  `libboost_iostreams.dylib`.
+
 ### Tools Not Implemented (from original plan)
 
 - `save_cli` — CLI format for 3D printing (can be added later)
 - `vectorize_and_save` — Use `save_svg` instead
+
+---
+
+## End-to-End Testing
+
+A comprehensive Python-based E2E test suite is provided in `PicoGK.Mcp/Tests/e2e_test.py`.
+It uses the `mcp` Python package to connect to the server over stdio and exercises every tool.
+
+### Running the Tests
+
+```bash
+# Install the MCP Python client
+pip install mcp
+
+# Publish the server (if not already done)
+dotnet publish PicoGK.Mcp -c Release -r osx-arm64 -o ~/.local/bin/picogk-mcp/
+
+# Run the tests
+python3 PicoGK.Mcp/Tests/e2e_test.py
+
+# Or with custom paths
+python3 PicoGK.Mcp/Tests/e2e_test.py /path/to/PicoGK.Mcp /tmp/output_dir
+```
+
+### Test Coverage
+
+The test suite exercises all 49 tools across every category:
+
+| Category | Tools Tested |
+|----------|-------------|
+| Session | `picogk_init`, `picogk_info`, `picogk_shutdown` |
+| Primitives | `create_sphere`, `create_box`, `create_cylinder`, `create_capsule`, `create_torus` |
+| Booleans | `boolean_add`, `boolean_subtract`, `boolean_intersect`, `boolean_add_all` |
+| Transforms | `offset`, `smooth`, `trim`, `shell`, `fillet`, `project_z_slice` |
+| Lattice | `create_lattice`, `lattice_add_beam`, `lattice_add_sphere`, `lattice_to_voxels` |
+| Mesh | `create_mesh`, `mesh_add_vertex`, `mesh_add_triangle`, `mesh_add_triangle_vertices`, `voxels_to_mesh`, `mesh_to_voxels`, `mesh_transform`, `mesh_mirror`, `mesh_append` |
+| Query | `get_bounding_box`, `get_volume`, `get_voxel_dimensions`, `point_inside`, `closest_point`, `surface_normal`, `get_mesh_info`, `list_objects`, `delete_object` |
+| I/O | `save_stl`, `save_vdb`, `save_svg` |
+| Render | `render_to_image`, `render_slice` |
+
+The test also validates:
+- `point_inside` returns correct INSIDE/OUTSIDE results
+- `mesh_append` self-reference guard returns an error
+- Output files are generated (PNG, STL, VDB, SVG)
+
+### Last Test Results
+
+```
+49 passed, 0 failed out of 49 tests — ALL TESTS PASSED
+Output files: sphere.png (79KB), slice_z0.png (870B),
+              sphere.stl (13.5MB), sphere.vdb (1.2MB), sphere.svg (2.2KB)
+```

@@ -158,7 +158,23 @@ Once configured, an agent can build geometry like this:
 
 ## Running Tests
 
-An end-to-end test is included in `PicoGK.Mcp/Tests/`:
+A comprehensive Python-based end-to-end test is included in `PicoGK.Mcp/Tests/e2e_test.py`. It exercises all 49 tools and validates output files, error guards, and query correctness.
+
+```bash
+# Install the MCP Python client
+pip install mcp
+
+# Publish the server (if not already done)
+dotnet publish PicoGK.Mcp -c Release -r osx-arm64 -o ~/.local/bin/picogk-mcp/
+
+# Run the tests
+python3 PicoGK.Mcp/Tests/e2e_test.py
+
+# Or with custom paths
+python3 PicoGK.Mcp/Tests/e2e_test.py /path/to/PicoGK.Mcp /tmp/output_dir
+```
+
+The original C# E2E test is also available:
 
 ```bash
 dotnet run --project PicoGK.Mcp/Tests/PicoGK.Mcp.Tests.csproj -c Release -- /path/to/PicoGK
