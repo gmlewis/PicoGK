@@ -21,6 +21,9 @@ public static class QueryTools
         PicoGkSession session,
         [Description("ID of the object to query")] string objectId)
     {
+        if (!session.Exists(objectId))
+            return $"Error: Object '{objectId}' not found. Use list_objects to see available objects.";
+
         BBox3 bbox;
         if (session.TryGet<Voxels>(objectId, out var vox))
         {
@@ -36,7 +39,7 @@ public static class QueryTools
         }
         else
         {
-            return $"Cannot get bounding box for object type of '{objectId}'.";
+            return $"Error: Cannot get bounding box for object type of '{objectId}'.";
         }
 
         return $"Bounding Box of '{objectId}':\n" +
@@ -51,7 +54,9 @@ public static class QueryTools
         PicoGkSession session,
         [Description("ID of the voxel object")] string objectId)
     {
-        var vox = session.Get<Voxels>(objectId);
+        var (vox, err) = session.SafeGet<Voxels>(objectId);
+        if (err != null) return $"Error: {err}";
+
         vox.CalculateProperties(out float volume, out BBox3 bbox);
         return $"Volume of '{objectId}': {volume:F2} mm³\n" +
                $"Bounding box: ({bbox.vecMin.X:F2}, {bbox.vecMin.Y:F2}, {bbox.vecMin.Z:F2}) " +
@@ -64,7 +69,9 @@ public static class QueryTools
         PicoGkSession session,
         [Description("ID of the mesh object")] string objectId)
     {
-        var mesh = session.Get<Mesh>(objectId);
+        var (mesh, err) = session.SafeGet<Mesh>(objectId);
+        if (err != null) return $"Error: {err}";
+
         var bbox = mesh.oBoundingBox();
         return $"Mesh '{objectId}':\n" +
                $"  Vertices: {mesh.nVertexCount()}\n" +
@@ -82,7 +89,9 @@ public static class QueryTools
         [Description("Y coordinate")] float y,
         [Description("Z coordinate")] float z)
     {
-        var vox = session.Get<Voxels>(objectId);
+        var (vox, err) = session.SafeGet<Voxels>(objectId);
+        if (err != null) return $"Error: {err}";
+
         var point = new Vector3(x, y, z);
         bool inside = vox.bIsInside(point);
         return $"Point ({x}, {y}, {z}) is {(inside ? "INSIDE" : "OUTSIDE")} '{objectId}'.";
@@ -97,7 +106,9 @@ public static class QueryTools
         [Description("Y coordinate")] float y,
         [Description("Z coordinate")] float z)
     {
-        var vox = session.Get<Voxels>(objectId);
+        var (vox, err) = session.SafeGet<Voxels>(objectId);
+        if (err != null) return $"Error: {err}";
+
         var point = new Vector3(x, y, z);
         var normal = vox.vecSurfaceNormal(point);
         return $"Surface normal at ({x}, {y}, {z}) on '{objectId}':\n" +
@@ -113,14 +124,16 @@ public static class QueryTools
         [Description("Y coordinate of query point")] float y,
         [Description("Z coordinate of query point")] float z)
     {
-        var vox = session.Get<Voxels>(objectId);
+        var (vox, err) = session.SafeGet<Voxels>(objectId);
+        if (err != null) return $"Error: {err}";
+
         var point = new Vector3(x, y, z);
         if (vox.bClosestPointOnSurface(point, out var closest))
         {
             return $"Closest point on '{objectId}' to ({x}, {y}, {z}):\n" +
                    $"  ({closest.X:F3}, {closest.Y:F3}, {closest.Z:F3})";
         }
-        return $"Could not find closest point on '{objectId}'.";
+        return $"Error: Could not find closest point on '{objectId}'.";
     }
 
     [McpServerTool]
@@ -148,9 +161,11 @@ public static class QueryTools
         PicoGkSession session,
         [Description("ID of the object to delete")] string objectId)
     {
-        if (session.Delete(objectId))
-            return $"Deleted object '{objectId}'.";
-        return $"Object '{objectId}' not found.";
+        if (!session.Exists(objectId))
+            return $"Error: Object '{objectId}' not found.";
+
+        session.Delete(objectId);
+        return $"Deleted object '{objectId}'.";
     }
 
     [McpServerTool]
@@ -159,7 +174,9 @@ public static class QueryTools
         PicoGkSession session,
         [Description("ID of the voxel object")] string objectId)
     {
-        var vox = session.Get<Voxels>(objectId);
+        var (vox, err) = session.SafeGet<Voxels>(objectId);
+        if (err != null) return $"Error: {err}";
+
         vox.GetVoxelDimensions(out int sx, out int sy, out int sz);
         return $"Voxel grid of '{objectId}': {sx} x {sy} x {sz} = {sx * sy * sz:N0} voxels";
     }

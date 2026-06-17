@@ -24,7 +24,9 @@ public static class IoTools
         [Description("Full path for the output STL file")] string path,
         [Description("Units: MM, CM, M, FT, IN (default: MM)")] string units = "MM")
     {
-        var mesh = session.Get<Mesh>(meshId);
+        var (mesh, err) = session.SafeGet<Mesh>(meshId);
+        if (err != null) return $"Error: {err}";
+
         var unit = units.ToUpperInvariant() switch
         {
             "CM" => Mesh.EStlUnit.CM,
@@ -41,21 +43,6 @@ public static class IoTools
     }
 
     [McpServerTool]
-    [Description("Load a mesh from an STL file. Returns the object ID.")]
-    public static string LoadStl(
-        PicoGkSession session,
-        [Description("Full path to the STL file")] string path,
-        [Description("Optional ID to assign")] string? id = null)
-    {
-        if (!File.Exists(path))
-            return $"Error: File not found: {path}";
-
-        var mesh = Mesh.mshFromStlFile(path, Mesh.EStlUnit.AUTO, 1.0f, null, session.Library);
-        return session.Register(mesh, id,
-            $"Loaded from {Path.GetFileName(path)} ({mesh.nVertexCount()} vertices, {mesh.nTriangleCount()} triangles)");
-    }
-
-    [McpServerTool]
     [Description("Save voxels to an OpenVDB file. VDB files preserve the full voxel field data.")]
     public static string SaveVdb(
         PicoGkSession session,
@@ -63,7 +50,8 @@ public static class IoTools
         [Description("Full path for the output VDB file")] string path,
         [Description("Optional name for the field inside the VDB file")] string? fieldName = null)
     {
-        var vox = session.Get<Voxels>(voxelsId);
+        var (vox, err) = session.SafeGet<Voxels>(voxelsId);
+        if (err != null) return $"Error: {err}";
 
         Directory.CreateDirectory(Path.GetDirectoryName(path) ?? ".");
 
@@ -108,32 +96,6 @@ public static class IoTools
     }
 
     [McpServerTool]
-    [Description("Save a voxel slice to a PNG image. Renders a cross-section at a given Z height.")]
-    public static string SaveSliceImage(
-        PicoGkSession session,
-        [Description("ID of the voxel object")] string voxelsId,
-        [Description("Z position in mm")] float zPosition,
-        [Description("Full path for the output PNG file")] string path,
-        [Description("Slice mode: SignedDistance, BlackWhite, or Antialiased (default: Antialiased)")] string mode = "Antialiased")
-    {
-        var vox = session.Get<Voxels>(voxelsId);
-
-        var sliceMode = mode.ToLowerInvariant() switch
-        {
-            "sd" or "signeddistance" => Voxels.ESliceMode.SignedDistance,
-            "bw" or "blackwhite" => Voxels.ESliceMode.BlackWhite,
-            _ => Voxels.ESliceMode.Antialiased
-        };
-
-        var img = vox.imgAllocateSlice(out _, Voxels.ESliceAxis.Z);
-        vox.GetInterpolatedVoxelSlice(zPosition, ref img, sliceMode);
-
-        Directory.CreateDirectory(Path.GetDirectoryName(path) ?? ".");
-        img.SavePng(path, 95);
-        return $"Saved Z={zPosition}mm slice to {path}";
-    }
-
-    [McpServerTool]
     [Description("Vectorize voxels into 2D slice contours and save as SVG. " +
         "Useful for 2D manufacturing or visualization.")]
     public static string SaveSvg(
@@ -142,7 +104,9 @@ public static class IoTools
         [Description("Full path for the output SVG file")] string path,
         [Description("Layer height in mm for slicing")] float layerHeight = 1.0f)
     {
-        var vox = session.Get<Voxels>(voxelsId);
+        var (vox, err) = session.SafeGet<Voxels>(voxelsId);
+        if (err != null) return $"Error: {err}";
+
         var slices = vox.oVectorize(layerHeight, false);
 
         Directory.CreateDirectory(Path.GetDirectoryName(path) ?? ".");

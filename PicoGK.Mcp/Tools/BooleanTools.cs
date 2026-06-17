@@ -22,8 +22,11 @@ public static class BooleanTools
         [Description("ID of second object")] string b,
         [Description("Optional ID for the result")] string? id = null)
     {
-        var voxA = session.Get<Voxels>(a);
-        var voxB = session.Get<Voxels>(b);
+        var (voxA, errA) = session.SafeGet<Voxels>(a);
+        if (errA != null) return $"Error: {errA}";
+        var (voxB, errB) = session.SafeGet<Voxels>(b);
+        if (errB != null) return $"Error: {errB}";
+
         var result = voxA + voxB;
         return session.Register(result, id, $"Union({a}, {b})");
     }
@@ -36,8 +39,11 @@ public static class BooleanTools
         [Description("ID of the object to subtract")] string b,
         [Description("Optional ID for the result")] string? id = null)
     {
-        var voxA = session.Get<Voxels>(a);
-        var voxB = session.Get<Voxels>(b);
+        var (voxA, errA) = session.SafeGet<Voxels>(a);
+        if (errA != null) return $"Error: {errA}";
+        var (voxB, errB) = session.SafeGet<Voxels>(b);
+        if (errB != null) return $"Error: {errB}";
+
         var result = voxA - voxB;
         return session.Register(result, id, $"Subtract({a}, {b})");
     }
@@ -50,8 +56,11 @@ public static class BooleanTools
         [Description("ID of second object")] string b,
         [Description("Optional ID for the result")] string? id = null)
     {
-        var voxA = session.Get<Voxels>(a);
-        var voxB = session.Get<Voxels>(b);
+        var (voxA, errA) = session.SafeGet<Voxels>(a);
+        if (errA != null) return $"Error: {errA}";
+        var (voxB, errB) = session.SafeGet<Voxels>(b);
+        if (errB != null) return $"Error: {errB}";
+
         var result = voxA & voxB;
         return session.Register(result, id, $"Intersect({a}, {b})");
     }
@@ -63,7 +72,14 @@ public static class BooleanTools
         [Description("List of object IDs to combine")] string[] objectIds,
         [Description("Optional ID for the result")] string? id = null)
     {
-        var voxels = objectIds.Select(oid => session.Get<Voxels>(oid)).ToList();
+        var voxels = new List<Voxels>();
+        foreach (var oid in objectIds)
+        {
+            var (vox, err) = session.SafeGet<Voxels>(oid);
+            if (err != null) return $"Error: {err}";
+            voxels.Add(vox);
+        }
+
         var first = voxels[0];
         for (int i = 1; i < voxels.Count; i++)
             first = first + voxels[i];

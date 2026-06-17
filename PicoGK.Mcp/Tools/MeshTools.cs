@@ -34,7 +34,9 @@ public static class MeshTools
         [Description("Y coordinate")] float y,
         [Description("Z coordinate")] float z)
     {
-        var mesh = session.Get<Mesh>(meshId);
+        var (mesh, err) = session.SafeGet<Mesh>(meshId);
+        if (err != null) return $"Error: {err}";
+
         int index = mesh.nAddVertex(new Vector3(x, y, z));
         return $"Vertex {index} added to '{meshId}': ({x}, {y}, {z})";
     }
@@ -48,7 +50,9 @@ public static class MeshTools
         [Description("Index of second vertex")] int b,
         [Description("Index of third vertex")] int c)
     {
-        var mesh = session.Get<Mesh>(meshId);
+        var (mesh, err) = session.SafeGet<Mesh>(meshId);
+        if (err != null) return $"Error: {err}";
+
         int index = mesh.nAddTriangle(a, b, c);
         return $"Triangle {index} added to '{meshId}': ({a}, {b}, {c})";
     }
@@ -63,7 +67,9 @@ public static class MeshTools
         [Description("Vertex 2 X")] float x2, [Description("Vertex 2 Y")] float y2, [Description("Vertex 2 Z")] float z2,
         [Description("Vertex 3 X")] float x3, [Description("Vertex 3 Y")] float y3, [Description("Vertex 3 Z")] float z3)
     {
-        var mesh = session.Get<Mesh>(meshId);
+        var (mesh, err) = session.SafeGet<Mesh>(meshId);
+        if (err != null) return $"Error: {err}";
+
         int index = mesh.nAddTriangle(
             new Vector3(x1, y1, z1),
             new Vector3(x2, y2, z2),
@@ -78,7 +84,9 @@ public static class MeshTools
         [Description("ID of the voxel object")] string voxelsId,
         [Description("Optional ID for the result")] string? id = null)
     {
-        var vox = session.Get<Voxels>(voxelsId);
+        var (vox, err) = session.SafeGet<Voxels>(voxelsId);
+        if (err != null) return $"Error: {err}";
+
         var mesh = vox.mshAsMesh();
         return session.Register(mesh, id,
             $"Mesh from '{voxelsId}' ({mesh.nVertexCount()} vertices, {mesh.nTriangleCount()} triangles)");
@@ -91,7 +99,9 @@ public static class MeshTools
         [Description("ID of the mesh object")] string meshId,
         [Description("Optional ID for the result")] string? id = null)
     {
-        var mesh = session.Get<Mesh>(meshId);
+        var (mesh, err) = session.SafeGet<Mesh>(meshId);
+        if (err != null) return $"Error: {err}";
+
         var voxels = new Voxels(mesh);
         return session.Register(voxels, id, $"Voxels from '{meshId}'");
     }
@@ -121,7 +131,9 @@ public static class MeshTools
         [Description("Translation Z")] float translateZ = 0,
         [Description("Optional ID for the result")] string? id = null)
     {
-        var mesh = session.Get<Mesh>(meshId);
+        var (mesh, err) = session.SafeGet<Mesh>(meshId);
+        if (err != null) return $"Error: {err}";
+
         var scaleVec = new Vector3(scale, scale, scale);
         var offsetVec = new Vector3(translateX, translateY, translateZ);
         var result = mesh.mshCreateTransformed(scaleVec, offsetVec);
@@ -141,7 +153,9 @@ public static class MeshTools
         [Description("Mirror plane normal Z")] float nZ,
         [Description("Optional ID for the result")] string? id = null)
     {
-        var mesh = session.Get<Mesh>(meshId);
+        var (mesh, err) = session.SafeGet<Mesh>(meshId);
+        if (err != null) return $"Error: {err}";
+
         var result = mesh.mshCreateMirrored(
             new Vector3(ptX, ptY, ptZ),
             new Vector3(nX, nY, nZ));
@@ -155,8 +169,11 @@ public static class MeshTools
         [Description("ID of the target mesh (will be modified)")] string targetId,
         [Description("ID of the source mesh (will be appended)")] string sourceId)
     {
-        var target = session.Get<Mesh>(targetId);
-        var source = session.Get<Mesh>(sourceId);
+        var (target, errT) = session.SafeGet<Mesh>(targetId);
+        if (errT != null) return $"Error: {errT}";
+        var (source, errS) = session.SafeGet<Mesh>(sourceId);
+        if (errS != null) return $"Error: {errS}";
+
         target.Append(source);
         return $"Appended '{sourceId}' into '{targetId}'. " +
                $"Now has {target.nVertexCount()} vertices, {target.nTriangleCount()} triangles.";

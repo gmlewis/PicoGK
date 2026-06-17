@@ -24,7 +24,9 @@ public static class TransformTools
         [Description("Offset distance in mm. Positive = expand, negative = shrink.")] float distance,
         [Description("Optional ID for the result")] string? id = null)
     {
-        var vox = session.Get<Voxels>(objectId);
+        var (vox, err) = session.SafeGet<Voxels>(objectId);
+        if (err != null) return $"Error: {err}";
+
         var result = vox.voxOffset(distance);
         return session.Register(result, id, $"Offset({objectId}, {distance}mm)");
     }
@@ -38,7 +40,9 @@ public static class TransformTools
         [Description("Smoothing distance in mm. Larger = smoother.")] float distance,
         [Description("Optional ID for the result")] string? id = null)
     {
-        var vox = session.Get<Voxels>(objectId);
+        var (vox, err) = session.SafeGet<Voxels>(objectId);
+        if (err != null) return $"Error: {err}";
+
         var result = vox.voxSmoothen(distance);
         return session.Register(result, id, $"Smooth({objectId}, {distance}mm)");
     }
@@ -57,7 +61,9 @@ public static class TransformTools
         [Description("Maximum Z of trim box")] float maxZ,
         [Description("Optional ID for the result")] string? id = null)
     {
-        var vox = session.Get<Voxels>(objectId);
+        var (vox, err) = session.SafeGet<Voxels>(objectId);
+        if (err != null) return $"Error: {err}";
+
         var bbox = new BBox3(new Vector3(minX, minY, minZ), new Vector3(maxX, maxY, maxZ));
         var result = vox.voxTrim(bbox);
         return session.Register(result, id, $"Trim({objectId})");
@@ -74,7 +80,9 @@ public static class TransformTools
         [Description("Smoothing for the shell walls in mm (0 = no smoothing)")] float smooth = 0,
         [Description("Optional ID for the result")] string? id = null)
     {
-        var vox = session.Get<Voxels>(objectId);
+        var (vox, err) = session.SafeGet<Voxels>(objectId);
+        if (err != null) return $"Error: {err}";
+
         var result = vox.voxShell(-innerOffset, outerOffset, smooth);
         return session.Register(result, id, $"Shell({objectId}, in={innerOffset}mm, out={outerOffset}mm)");
     }
@@ -88,7 +96,9 @@ public static class TransformTools
         [Description("Fillet radius in mm")] float radius,
         [Description("Optional ID for the result")] string? id = null)
     {
-        var vox = session.Get<Voxels>(objectId);
+        var (vox, err) = session.SafeGet<Voxels>(objectId);
+        if (err != null) return $"Error: {err}";
+
         var result = vox.voxFillet(radius);
         return session.Register(result, id, $"Fillet({objectId}, r={radius}mm)");
     }
@@ -103,7 +113,9 @@ public static class TransformTools
         [Description("End Z position in mm")] float endZ,
         [Description("Optional ID for the result")] string? id = null)
     {
-        var vox = session.Get<Voxels>(objectId);
+        var (vox, err) = session.SafeGet<Voxels>(objectId);
+        if (err != null) return $"Error: {err}";
+
         var result = vox.voxProjectZSlice(startZ, endZ);
         return session.Register(result, id, $"ProjectZ({objectId}, z={startZ}-{endZ}mm)");
     }

@@ -29,6 +29,9 @@ public static class RenderTools
         [Description("Background color as hex (default: white)")] string backgroundColor = "#FFFFFF",
         [Description("Object color as hex (default: steel blue)")] string objectColor = "#4682B4")
     {
+        if (!session.Exists(objectId))
+            return $"Error: Object '{objectId}' not found. Use list_objects to see available objects.";
+
         BBox3 bbox;
         Mesh? mesh = null;
 
@@ -44,11 +47,11 @@ public static class RenderTools
         }
         else
         {
-            return $"Cannot render object '{objectId}'. Only voxels and meshes are supported.";
+            return $"Error: Cannot render object '{objectId}'. Only voxels and meshes are supported.";
         }
 
         if (mesh.nTriangleCount() == 0)
-            return $"Object '{objectId}' has no triangles to render.";
+            return $"Error: Object '{objectId}' has no triangles to render.";
 
         Directory.CreateDirectory(Path.GetDirectoryName(path) ?? ".");
 
@@ -62,7 +65,7 @@ public static class RenderTools
         var size = bbox.vecSize();
         float maxDim = Math.Max(size.X, Math.Max(size.Y, size.Z));
         if (maxDim < 1e-6f)
-            return $"Object '{objectId}' has zero size.";
+            return $"Error: Object '{objectId}' has zero size.";
 
         float scale = Math.Min(width, height) * 0.7f / maxDim;
         var center = bbox.vecCenter();
@@ -144,6 +147,9 @@ public static class RenderTools
         [Description("Full path for the output PNG file")] string path,
         [Description("Slice mode: Sdf, Bw, or Antialiased (default: Antialiased)")] string mode = "Antialiased")
     {
+        var err = session.ValidateId(voxelsId, typeof(Voxels));
+        if (err != null) return $"Error: {err}";
+
         var vox = session.Get<Voxels>(voxelsId);
 
         var sliceMode = mode.ToLowerInvariant() switch

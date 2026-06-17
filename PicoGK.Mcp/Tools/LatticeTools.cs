@@ -42,7 +42,9 @@ public static class LatticeTools
         [Description("End radius in mm")] float radius2,
         [Description("Use round caps (default true)")] bool roundCap = true)
     {
-        var lattice = session.Get<Lattice>(latticeId);
+        var (lattice, err) = session.SafeGet<Lattice>(latticeId);
+        if (err != null) return $"Error: {err}";
+
         lattice.AddBeam(
             new Vector3(x1, y1, z1), radius1,
             new Vector3(x2, y2, z2), radius2,
@@ -60,7 +62,9 @@ public static class LatticeTools
         [Description("Center Z")] float z,
         [Description("Radius in mm")] float radius)
     {
-        var lattice = session.Get<Lattice>(latticeId);
+        var (lattice, err) = session.SafeGet<Lattice>(latticeId);
+        if (err != null) return $"Error: {err}";
+
         lattice.AddSphere(new Vector3(x, y, z), radius);
         return $"Sphere node added to '{latticeId}' at ({x},{y},{z}) r={radius}mm";
     }
@@ -73,7 +77,9 @@ public static class LatticeTools
         [Description("ID of the lattice object")] string latticeId,
         [Description("Optional ID for the result")] string? id = null)
     {
-        var lattice = session.Get<Lattice>(latticeId);
+        var (lattice, err) = session.SafeGet<Lattice>(latticeId);
+        if (err != null) return $"Error: {err}";
+
         var voxels = new Voxels(lattice);
         return session.Register(voxels, id, $"Voxels from lattice '{latticeId}'");
     }

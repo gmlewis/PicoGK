@@ -28,26 +28,40 @@ namespace PicoGK.Mcp
 
     public class PicoGkSession : IDisposable
     {
-        private Library? _library;
+        private volatile Library? _library;
+        private readonly object _initLock = new();
         private readonly ConcurrentDictionary<string, ManagedObject> _objects = new();
         private int _autoIdCounter;
 
-        public bool IsInitialized => _library != null;
+        public bool IsInitialized
+        {
+            get { lock (_initLock) return _library != null; }
+        }
 
-        public Library Library => _library
-            ?? throw new InvalidOperationException(
-                "PicoGK is not initialized. Call picogk_init first.");
+        public Library Library
+        {
+            get
+            {
+                lock (_initLock)
+                    return _library
+                        ?? throw new InvalidOperationException(
+                            "PicoGK is not initialized. Call picogk_init first.");
+            }
+        }
 
         public float VoxelSizeMM => Library.fVoxelSize;
 
         public void Initialize(float voxelSizeMM)
         {
-            if (_library != null)
-                throw new InvalidOperationException(
-                    "PicoGK is already initialized.");
+            lock (_initLock)
+            {
+                if (_library != null)
+                    throw new InvalidOperationException(
+                        "PicoGK is already initialized.");
 
-            _library = new Library(voxelSizeMM);
-            Library.RegisterGlobalLibrary(_library);
+                _library = new Library(voxelSizeMM);
+                Library.RegisterGlobalLibrary(_library);
+            }
         }
 
         public string Register(object obj, string? id = null, string description = "")
@@ -101,6 +115,24 @@ namespace PicoGK.Mcp
 
         public bool Exists(string id) => _objects.ContainsKey(id);
 
+        public string? ValidateId(string id, Type? expectedType = null)
+        {
+            if (!_objects.TryGetValue(id, out var entry))
+                return $"Object '{id}' not found. Use list_objects to see available objects.";
+
+            if (expectedType != null && !expectedType.IsAssignableFrom(entry.Value.GetType()))
+                return $"Object '{id}' is {entry.Type}, not {expectedType.Name}.";
+
+            return null;
+        }
+
+        public (T? obj, string? error) SafeGet<T>(string id) where T : class
+        {
+            var err = ValidateId(id, typeof(T));
+            if (err != null) return (null, err);
+            return ((T)_objects[id].Value, null);
+        }
+
         private string AutoId(object obj)
         {
             var prefix = obj switch
@@ -120,11 +152,14 @@ namespace PicoGK.Mcp
         public void Dispose()
         {
             _objects.Clear();
-            if (_library != null)
+            lock (_initLock)
             {
-                Library.UnregisterGlobalLibrary();
-                _library.Dispose();
-                _library = null;
+                if (_library != null)
+                {
+                    Library.UnregisterGlobalLibrary();
+                    _library.Dispose();
+                    _library = null;
+                }
             }
         }
 
