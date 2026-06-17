@@ -16,7 +16,9 @@ namespace PicoGK.Mcp.Tools;
 public static class QueryTools
 {
     [McpServerTool]
-    [Description("Get the axis-aligned bounding box of any object. Returns min/max corners in mm.")]
+    [Description("Get the axis-aligned bounding box of any object. Returns min/max corners in mm. " +
+        "Retries internally with exponential backoff if the object was just created/transformed " +
+        "and the internal mesh conversion is not yet settled.")]
     public static string GetBoundingBox(
         PicoGkSession session,
         [Description("ID of the object to query")] string objectId)
@@ -24,32 +26,41 @@ public static class QueryTools
         if (!session.Exists(objectId))
             return $"Error: Object '{objectId}' not found. Use list_objects to see available objects.";
 
-        BBox3 bbox;
-        if (session.TryGet<Voxels>(objectId, out var vox))
+        try
         {
-            bbox = vox.oCalculateBoundingBox();
-        }
-        else if (session.TryGet<Mesh>(objectId, out var mesh))
-        {
-            bbox = mesh.oBoundingBox();
-        }
-        else if (session.TryGet<PolyLine>(objectId, out var poly))
-        {
-            bbox = poly.oBoundingBox();
-        }
-        else
-        {
-            return $"Error: Cannot get bounding box for object type of '{objectId}'.";
-        }
+            BBox3 bbox;
+            if (session.TryGet<Voxels>(objectId, out var vox))
+            {
+                bbox = session.RetryMeshQuery(() => vox.oCalculateBoundingBox(),
+                    $"bounding box of '{objectId}'");
+            }
+            else if (session.TryGet<Mesh>(objectId, out var mesh))
+            {
+                bbox = mesh.oBoundingBox();
+            }
+            else if (session.TryGet<PolyLine>(objectId, out var poly))
+            {
+                bbox = poly.oBoundingBox();
+            }
+            else
+            {
+                return $"Error: Cannot get bounding box for object type of '{objectId}'.";
+            }
 
-        return $"Bounding Box of '{objectId}':\n" +
-               $"  Min: ({bbox.vecMin.X:F3}, {bbox.vecMin.Y:F3}, {bbox.vecMin.Z:F3})\n" +
-               $"  Max: ({bbox.vecMax.X:F3}, {bbox.vecMax.Y:F3}, {bbox.vecMax.Z:F3})\n" +
-               $"  Size: ({bbox.vecSize().X:F3}, {bbox.vecSize().Y:F3}, {bbox.vecSize().Z:F3}) mm";
+            return $"Bounding Box of '{objectId}':\n" +
+                   $"  Min: ({bbox.vecMin.X:F3}, {bbox.vecMin.Y:F3}, {bbox.vecMin.Z:F3})\n" +
+                   $"  Max: ({bbox.vecMax.X:F3}, {bbox.vecMax.Y:F3}, {bbox.vecMax.Z:F3})\n" +
+                   $"  Size: ({bbox.vecSize().X:F3}, {bbox.vecSize().Y:F3}, {bbox.vecSize().Z:F3}) mm";
+        }
+        catch (Exception ex)
+        {
+            return $"Error getting bounding box of '{objectId}': {ex.Message}";
+        }
     }
 
     [McpServerTool]
-    [Description("Calculate the volume and bounding box of a voxel object.")]
+    [Description("Calculate the volume and bounding box of a voxel object. " +
+        "Retries internally with exponential backoff if the object was just created/transformed.")]
     public static string GetVolume(
         PicoGkSession session,
         [Description("ID of the voxel object")] string objectId)
@@ -57,10 +68,24 @@ public static class QueryTools
         var (vox, err) = session.SafeGet<Voxels>(objectId);
         if (err != null) return $"Error: {err}";
 
-        vox.CalculateProperties(out float volume, out BBox3 bbox);
-        return $"Volume of '{objectId}': {volume:F2} mm³\n" +
-               $"Bounding box: ({bbox.vecMin.X:F2}, {bbox.vecMin.Y:F2}, {bbox.vecMin.Z:F2}) " +
-               $"to ({bbox.vecMax.X:F2}, {bbox.vecMax.Y:F2}, {bbox.vecMax.Z:F2})";
+        try
+        {
+            float volume = 0;
+            BBox3 bbox = new();
+            session.RetryMeshQuery(() =>
+            {
+                vox.CalculateProperties(out volume, out bbox);
+                return true;
+            }, $"volume of '{objectId}'");
+
+            return $"Volume of '{objectId}': {volume:F2} mm³\n" +
+                   $"Bounding box: ({bbox.vecMin.X:F2}, {bbox.vecMin.Y:F2}, {bbox.vecMin.Z:F2}) " +
+                   $"to ({bbox.vecMax.X:F2}, {bbox.vecMax.Y:F2}, {bbox.vecMax.Z:F2})";
+        }
+        catch (Exception ex)
+        {
+            return $"Error calculating volume of '{objectId}': {ex.Message}";
+        }
     }
 
     [McpServerTool]
@@ -179,5 +204,170 @@ public static class QueryTools
 
         vox.GetVoxelDimensions(out int sx, out int sy, out int sz);
         return $"Voxel grid of '{objectId}': {sx} x {sy} x {sz} = {sx * sy * sz:N0} voxels";
+    }
+
+    [McpServerTool]
+    [Description("Cast a ray from a point in a given direction and find where it hits the " +
+        "surface of a voxel object. Useful for measuring wall thickness, checking bore " +
+        "clearance, and probing internal geometry. Returns the hit point and the distance " +
+        "from the origin, or an error if no intersection is found.")]
+    public static string RayCast(
+        PicoGkSession session,
+        [Description("ID of the voxel object")] string objectId,
+        [Description("Origin X of the ray")] float x,
+        [Description("Origin Y of the ray")] float y,
+        [Description("Origin Z of the ray")] float z,
+        [Description("Ray direction X (need not be normalized)")] float dirX,
+        [Description("Ray direction Y")] float dirY,
+        [Description("Ray direction Z")] float dirZ)
+    {
+        var (vox, err) = session.SafeGet<Voxels>(objectId);
+        if (err != null) return $"Error: {err}";
+
+        var origin = new Vector3(x, y, z);
+        var dirVec = new Vector3(dirX, dirY, dirZ);
+        if (dirVec.LengthSquared() < 1e-12f)
+            return "Error: ray direction must be non-zero.";
+
+        var dirNorm = Vector3.Normalize(dirVec);
+
+        if (!vox.bRayCastToSurface(origin, dirNorm, out var hit))
+            return $"No ray-surface intersection found for '{objectId}' " +
+                   $"from ({x},{y},{z}) in direction ({dirX},{dirY},{dirZ}).";
+
+        float dist = Vector3.Distance(origin, hit);
+        return $"Ray hit on '{objectId}':\n" +
+               $"  Origin: ({x:F3}, {y:F3}, {z:F3})\n" +
+               $"  Direction: ({dirNorm.X:F3}, {dirNorm.Y:F3}, {dirNorm.Z:F3})\n" +
+               $"  Hit point: ({hit.X:F3}, {hit.Y:F3}, {hit.Z:F3})\n" +
+               $"  Distance: {dist:F3} mm";
+    }
+
+    [McpServerTool]
+    [Description("Cast a ray from a point in both +direction and -direction and report both " +
+        "hit points and the total span between them. Ideal for measuring wall thickness: " +
+        "place the origin inside the wall and shoot in any direction; the tool reports how " +
+        "far the surface is in each direction and the total thickness.")]
+    public static string MeasureThickness(
+        PicoGkSession session,
+        [Description("ID of the voxel object")] string objectId,
+        [Description("Origin X (ideally inside the wall/material)")] float x,
+        [Description("Origin Y")] float y,
+        [Description("Origin Z")] float z,
+        [Description("Measurement direction X (need not be normalized)")] float dirX,
+        [Description("Measurement direction Y")] float dirY,
+        [Description("Measurement direction Z")] float dirZ)
+    {
+        var (vox, err) = session.SafeGet<Voxels>(objectId);
+        if (err != null) return $"Error: {err}";
+
+        var origin = new Vector3(x, y, z);
+        var dirVec = new Vector3(dirX, dirY, dirZ);
+        if (dirVec.LengthSquared() < 1e-12f)
+            return "Error: direction must be non-zero.";
+
+        var dirNorm = Vector3.Normalize(dirVec);
+
+        bool hitPos = vox.bRayCastToSurface(origin, dirNorm, out var hitP);
+        bool hitNeg = vox.bRayCastToSurface(origin, -dirNorm, out var hitN);
+
+        var lines = new List<string> { $"Thickness measurement on '{objectId}':" };
+        lines.Add($"  Origin: ({x:F3}, {y:F3}, {z:F3})");
+        lines.Add($"  Direction: ({dirNorm.X:F3}, {dirNorm.Y:F3}, {dirNorm.Z:F3})");
+
+        if (hitPos)
+        {
+            float d = Vector3.Distance(origin, hitP);
+            lines.Add($"  +dir hit: ({hitP.X:F3}, {hitP.Y:F3}, {hitP.Z:F3}) — {d:F3} mm");
+        }
+        else
+        {
+            lines.Add("  +dir hit: none (no surface found in positive direction)");
+        }
+
+        if (hitNeg)
+        {
+            float d = Vector3.Distance(origin, hitN);
+            lines.Add($"  -dir hit: ({hitN.X:F3}, {hitN.Y:F3}, {hitN.Z:F3}) — {d:F3} mm");
+        }
+        else
+        {
+            lines.Add("  -dir hit: none (no surface found in negative direction)");
+        }
+
+        if (hitPos && hitNeg)
+        {
+            float thickness = Vector3.Distance(hitP, hitN);
+            lines.Add($"  Total thickness: {thickness:F3} mm");
+        }
+        else
+        {
+            lines.Add("  Total thickness: N/A (one or both directions did not hit surface)");
+        }
+
+        return string.Join("\n", lines);
+    }
+
+    [McpServerTool]
+    [Description("Create a duplicate (deep copy) of an existing object. " +
+        "Works with voxel and mesh objects. Returns the new object ID.")]
+    public static string DuplicateObject(
+        PicoGkSession session,
+        [Description("ID of the object to duplicate")] string objectId,
+        [Description("Optional ID for the copy")] string? id = null)
+    {
+        if (!session.Exists(objectId))
+            return $"Error: Object '{objectId}' not found. Use list_objects to see available objects.";
+
+        if (session.TryGet<Voxels>(objectId, out var vox))
+        {
+            var dup = vox.voxDuplicate();
+            return session.Register(dup, id, $"Duplicate of '{objectId}'");
+        }
+
+        if (session.TryGet<Mesh>(objectId, out var mesh))
+        {
+            // No native Mesh copy; rebuild by copying all triangles.
+            var newMesh = new Mesh(session.Library);
+            for (int i = 0; i < mesh.nTriangleCount(); i++)
+            {
+                mesh.GetTriangle(i, out var a, out var b, out var c);
+                newMesh.nAddTriangle(a, b, c);
+            }
+            return session.Register(newMesh, id, $"Duplicate of '{objectId}'");
+        }
+
+        return $"Error: Cannot duplicate '{objectId}'. Only voxels and meshes are supported.";
+    }
+
+    [McpServerTool]
+    [Description("Delete multiple objects from the session in one call. " +
+        "Useful for cleaning up intermediate objects after a complex build. " +
+        "Returns the count of objects actually deleted.")]
+    public static string DeleteObjects(
+        PicoGkSession session,
+        [Description("List of object IDs to delete")] string[] objectIds,
+        [Description("If true, delete ALL objects EXCEPT those in objectIds (keep-only mode). " +
+            "Default false = delete the listed objects.")] bool keepOnly = false)
+    {
+        if (objectIds == null || objectIds.Length == 0)
+        {
+            if (!keepOnly)
+                return "Error: objectIds list is empty. Provide at least one ID, " +
+                       "or use keepOnly=true to delete everything.";
+            // keepOnly=true with empty list = delete everything
+        }
+
+        if (keepOnly)
+        {
+            var keep = new HashSet<string>(objectIds);
+            int n = session.DeleteAllExcept(keep);
+            return $"Deleted {n} objects (kept {keep.Count}: {string.Join(", ", keep)}).";
+        }
+        else
+        {
+            int n = session.DeleteMany(objectIds);
+            return $"Deleted {n}/{objectIds.Length} objects: {string.Join(", ", objectIds)}";
+        }
     }
 }

@@ -242,4 +242,142 @@ public static class TransformTools
             return _sdf.fSignedDistance(src);
         }
     }
+
+    [McpServerTool]
+    [Description("Create a circular (polar) pattern of a voxel object: rotate copies around an " +
+        "axis through a center point and union them into a single result. " +
+        "Uses SDF re-rasterization (no mesh round-trips) for each copy. " +
+        "Returns a new object ID containing all copies combined. " +
+        "Example: 4 bolt holes around a flange center at 90° intervals.")]
+    public static string CircularPattern(
+        PicoGkSession session,
+        [Description("ID of the source voxel object to pattern")] string objectId,
+        [Description("Number of copies (including the original at angle 0)")] int count,
+        [Description("Total angular span in degrees (default 360 = full circle)")] float totalAngle = 360f,
+        [Description("Center point X of the rotation axis")] float centerX = 0,
+        [Description("Center point Y of the rotation axis")] float centerY = 0,
+        [Description("Center point Z of the rotation axis")] float centerZ = 0,
+        [Description("Rotation axis direction X (default 0 = +Z axis)")] float axisX = 0,
+        [Description("Rotation axis direction Y (default 0 = +Z axis)")] float axisY = 0,
+        [Description("Rotation axis direction Z (default 1 = +Z axis)")] float axisZ = 1,
+        [Description("Optional ID for the result")] string? id = null)
+    {
+        var (vox, err) = session.SafeGet<Voxels>(objectId);
+        if (err != null) return $"Error: {err}";
+
+        if (count < 1)
+            return "Error: count must be at least 1.";
+        if (count == 1)
+        {
+            var dup = vox.voxDuplicate();
+            return session.Register(dup, id, $"CircularPattern({objectId}, 1 copy)");
+        }
+
+        // Normalize the axis
+        var axis = new Vector3(axisX, axisY, axisZ);
+        if (axis.LengthSquared() < 1e-9f)
+            axis = new Vector3(0, 0, 1);
+        else
+            axis = Vector3.Normalize(axis);
+
+        var center = new Vector3(centerX, centerY, centerZ);
+
+        // Extract the SDF from the source once (native VDB, no mesh round-trip).
+        using var sdf = new ScalarField(vox);
+
+        // Compute the source bounding box for the initial output bounds.
+        vox.GetVoxelDimensions(out int ox, out int oy, out int oz,
+                               out int sx, out int sy, out int sz);
+        var srcMin = vox.lib.vecVoxelsToMm(ox, oy, oz);
+        var srcMax = vox.lib.vecVoxelsToMm(ox + sx, oy + sy, oz + sz);
+
+        // Compute the combined output bounding box: transform all 8 corners
+        // through every rotation and take the union AABB.
+        float margin = vox.lib.fVoxelSize * 2;
+        var outMin = new Vector3(float.MaxValue);
+        var outMax = new Vector3(float.MinValue);
+
+        float angleStep = totalAngle / count;
+        var rotations = new List<Matrix4x4>(count);
+
+        for (int i = 0; i < count; i++)
+        {
+            float angle = angleStep * i * MathF.PI / 180f;
+            // Rotation about an arbitrary axis through a point:
+            // translate to origin, rotate, translate back.
+            var rot = Matrix4x4.CreateTranslation(-center)
+                    * Matrix4x4.CreateFromAxisAngle(axis, angle)
+                    * Matrix4x4.CreateTranslation(center);
+            rotations.Add(rot);
+
+            var corners = new Vector3[]
+            {
+                new(srcMin.X, srcMin.Y, srcMin.Z),
+                new(srcMax.X, srcMin.Y, srcMin.Z),
+                new(srcMin.X, srcMax.Y, srcMin.Z),
+                new(srcMax.X, srcMax.Y, srcMin.Z),
+                new(srcMin.X, srcMin.Y, srcMax.Z),
+                new(srcMax.X, srcMin.Y, srcMax.Z),
+                new(srcMin.X, srcMax.Y, srcMax.Z),
+                new(srcMax.X, srcMax.Y, srcMax.Z),
+            };
+
+            foreach (var c in corners)
+            {
+                var t = Vector3.Transform(c, rot);
+                outMin = Vector3.Min(outMin, t);
+                outMax = Vector3.Max(outMax, t);
+            }
+        }
+
+        var outBounds = new BBox3(outMin - new Vector3(margin),
+                                  outMax + new Vector3(margin));
+
+        // Build a combined SDF: the minimum signed distance across all
+        // rotated copies (union = min of SDFs).
+        var inverses = rotations.Select(r =>
+        {
+            Matrix4x4.Invert(r, out var inv);
+            return inv;
+        }).ToList();
+
+        var combined = new CombinedPatternSdf(sdf, inverses);
+
+        // Render the combined SDF into a single voxel field.
+        var result = new Voxels(session.Library, combined, outBounds);
+
+        return session.Register(result, id,
+            $"CircularPattern({objectId}, {count} copies, {totalAngle}°, " +
+            $"axis=({axis.X:F1},{axis.Y:F1},{axis.Z:F1}) @ ({centerX},{centerY},{centerZ}))");
+    }
+
+    /// <summary>
+    /// SDF that represents the union of multiple rotated copies of a source
+    /// ScalarField. The union of SDFs is the minimum of the individual
+    /// signed distances.
+    /// </summary>
+    private sealed class CombinedPatternSdf : IImplicit
+    {
+        private readonly ScalarField _sdf;
+        private readonly List<Matrix4x4> _inverseMatrices;
+
+        public CombinedPatternSdf(ScalarField sdf, List<Matrix4x4> inverseMatrices)
+        {
+            _sdf = sdf;
+            _inverseMatrices = inverseMatrices;
+        }
+
+        public float fSignedDistance(in Vector3 vec)
+        {
+            float minDist = float.MaxValue;
+            foreach (var inv in _inverseMatrices)
+            {
+                var src = Vector3.Transform(vec, inv);
+                float d = _sdf.fSignedDistance(src);
+                if (d < minDist)
+                    minDist = d;
+            }
+            return minDist == float.MaxValue ? 1e6f : minDist;
+        }
+    }
 }

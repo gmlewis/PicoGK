@@ -422,6 +422,169 @@ async def run_tests():
                 results.append(f"  PASS: save_svg multi-slice -> {len(svg_files)} numbered files written")
                 pass_count += 1
 
+            # ── 11.6. New Agent Tools (ray_cast, duplicate, batch delete, pattern) ─
+            # ray_cast: shoot a ray from outside the sphere toward center
+            r = await session.call_tool(
+                "ray_cast",
+                {"objectId": "sphere1", "x": 100, "y": 0, "z": 0,
+                 "dirX": -1, "dirY": 0, "dirZ": 0},
+            )
+            txt, ok_ = check("ray_cast", r)
+            if ok_ and "Hit point" not in txt:
+                results[-1] = f"  FAIL: ray_cast -> Expected hit point, got: {txt[:100]}"
+                fail_count += 1
+                pass_count -= 1
+
+            # measure_thickness: from center of sphere, should hit both sides
+            r = await session.call_tool(
+                "measure_thickness",
+                {"objectId": "sphere1", "x": 0, "y": 0, "z": 0,
+                 "dirX": 1, "dirY": 0, "dirZ": 0},
+            )
+            txt, ok_ = check("measure_thickness", r)
+            if ok_ and "Total thickness" not in txt:
+                results[-1] = f"  FAIL: measure_thickness -> Expected total thickness, got: {txt[:100]}"
+                fail_count += 1
+                pass_count -= 1
+            # Sphere r=30 should have thickness ~60mm
+            if ok_:
+                import re as _re
+                m = _re.search(r"Total thickness:\s*([\d.]+)", txt)
+                if m:
+                    thick = float(m.group(1))
+                    if abs(thick - 60.0) > 3.0:
+                        results[-1] = f"  FAIL: measure_thickness -> Expected ~60mm, got {thick}"
+                        fail_count += 1
+                        pass_count -= 1
+
+            # duplicate_object: copy a voxel object
+            r = await session.call_tool(
+                "duplicate_object",
+                {"objectId": "sphere1", "id": "sphereCopy"},
+            )
+            check("duplicate_object (voxels)", r)
+
+            # verify the copy has the same volume
+            r = await session.call_tool(
+                "get_volume", {"objectId": "sphereCopy"}
+            )
+            check("duplicate_object (verify volume)", r)
+
+            # duplicate_object: copy a mesh
+            r = await session.call_tool(
+                "duplicate_object",
+                {"objectId": "sphereMesh", "id": "meshCopy"},
+            )
+            check("duplicate_object (mesh)", r)
+
+            # duplicate_object: nonexistent should error
+            r = await session.call_tool(
+                "duplicate_object",
+                {"objectId": "nonexistent"},
+            )
+            txt, ok_ = check("duplicate_object (nonexistent guard)", r)
+            if ok_ and "Error" not in txt:
+                results[-1] = f"  FAIL: duplicate_object (nonexistent guard) -> Expected error, got: {txt[:100]}"
+                fail_count += 1
+                pass_count -= 1
+
+            # circular_pattern: 4 copies of a small sphere around Z axis
+            r = await session.call_tool(
+                "create_sphere",
+                {"x": 20, "y": 0, "z": 0, "radius": 3, "id": "patternSrc"},
+            )
+            check("circular_pattern (create source)", r)
+
+            r = await session.call_tool(
+                "circular_pattern",
+                {"objectId": "patternSrc", "count": 4, "totalAngle": 360,
+                 "centerX": 0, "centerY": 0, "centerZ": 0,
+                 "axisX": 0, "axisY": 0, "axisZ": 1,
+                 "id": "pattern4"},
+            )
+            check("circular_pattern (4 copies)", r)
+
+            # Verify the pattern has ~4x the volume of the source
+            r = await session.call_tool(
+                "get_volume", {"objectId": "pattern4"}
+            )
+            txt, ok_ = check("circular_pattern (volume check)", r)
+            if ok_:
+                import re as _re
+                m = _re.search(r"Volume.*:\s*([\d.]+)", txt)
+                if m:
+                    vol4 = float(m.group(1))
+                    src_vol = 4.0 / 3.0 * 3.14159 * 3.0**3  # ~113.1
+                    expected = src_vol * 4  # ~452.4
+                    if abs(vol4 - expected) / expected > 0.15:
+                        results[-1] = f"  FAIL: circular_pattern (volume check) -> Expected ~{expected:.0f}, got {vol4:.0f}"
+                        fail_count += 1
+                        pass_count -= 1
+
+            # circular_pattern: count=1 should just duplicate
+            r = await session.call_tool(
+                "circular_pattern",
+                {"objectId": "sphere1", "count": 1, "id": "pattern1"},
+            )
+            check("circular_pattern (count=1)", r)
+
+            # circular_pattern: count=0 should error
+            r = await session.call_tool(
+                "circular_pattern",
+                {"objectId": "sphere1", "count": 0},
+            )
+            txt, ok_ = check("circular_pattern (count=0 guard)", r)
+            if ok_ and "Error" not in txt:
+                results[-1] = f"  FAIL: circular_pattern (count=0 guard) -> Expected error, got: {txt[:100]}"
+                fail_count += 1
+                pass_count -= 1
+
+            # delete_objects: batch delete
+            r = await session.call_tool(
+                "delete_objects",
+                {"objectIds": ["cyl1", "cap1", "torus1"]},
+            )
+            txt, ok_ = check("delete_objects (batch)", r)
+            if ok_ and "Deleted 3/3" not in txt:
+                results[-1] = f"  FAIL: delete_objects (batch) -> Expected 'Deleted 3/3', got: {txt[:100]}"
+                fail_count += 1
+                pass_count -= 1
+
+            # delete_objects: keepOnly mode
+            r = await session.call_tool(
+                "delete_objects",
+                {"objectIds": ["sphere1", "sphereMesh"], "keepOnly": True},
+            )
+            txt, ok_ = check("delete_objects (keepOnly)", r)
+            if ok_ and "Deleted" not in txt:
+                results[-1] = f"  FAIL: delete_objects (keepOnly) -> Expected deletions, got: {txt[:100]}"
+                fail_count += 1
+                pass_count -= 1
+
+            # verify only 2 objects remain
+            r = await session.call_tool("list_objects", {})
+            txt, ok_ = check("delete_objects (verify cleanup)", r)
+            if ok_:
+                import re as _re
+                m = _re.search(r"Objects \((\d+)\)", txt)
+                if m:
+                    remaining = int(m.group(1))
+                    if remaining != 2:
+                        results[-1] = f"  FAIL: delete_objects (verify cleanup) -> Expected 2 remaining, got {remaining}"
+                        fail_count += 1
+                        pass_count -= 1
+
+            # get_bounding_box on a freshly transformed object (retry test)
+            r = await session.call_tool(
+                "transform_voxels",
+                {"objectId": "sphere1", "translateX": 50, "id": "freshTransform"},
+            )
+            check("retry test (transform)", r)
+            r = await session.call_tool(
+                "get_bounding_box", {"objectId": "freshTransform"}
+            )
+            check("retry test (bbox on fresh transform)", r)
+
             # ── 12. Info & Cleanup ──────────────────────────────
             r = await session.call_tool("picogk_info", {})
             check("picogk_info", r)
