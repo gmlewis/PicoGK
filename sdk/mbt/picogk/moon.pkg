@@ -5,5 +5,5 @@ import {
   "moonbitlang/async/process",
   "moonbitlang/core/json",
   "moonbitlang/core/env",
-  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/encoding/utf8" @utf8,
 }
