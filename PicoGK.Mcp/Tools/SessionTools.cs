@@ -35,17 +35,26 @@ public static class SessionTools
         [Description("Voxel size in millimeters. Controls resolution. Use 0.5 for general purpose, 0.1 for fine detail, 2.0+ for large parts.")]
         float voxelSizeMM = 0.5f)
     {
-        if (session.IsInitialized)
-            return $"PicoGK already initialized with voxel size {session.VoxelSizeMM}mm. " +
-                   "Call picogk_shutdown first to reinitialize.";
+        try
+        {
+            if (session.IsInitialized)
+                return $"PicoGK already initialized with voxel size {session.VoxelSizeMM}mm. " +
+                       "Call picogk_shutdown first to reinitialize.";
 
-        if (voxelSizeMM <= 0)
-            return "Error: voxelSizeMM must be positive.";
+            if (voxelSizeMM <= 0)
+                return "Error: voxelSizeMM must be positive.";
 
-        session.Initialize(voxelSizeMM);
-        return $"PicoGK initialized. Voxel size: {voxelSizeMM}mm. " +
-               $"Library version: {Library.strVersion()}. " +
-               "You can now create geometry objects.";
+            session.Initialize(voxelSizeMM);
+            return $"PicoGK initialized. Voxel size: {voxelSizeMM}mm. " +
+                   $"Library version: {Library.strVersion()}. " +
+                   "You can now create geometry objects.";
+        }
+        catch (Exception ex)
+        {
+            return $"Error initializing PicoGK: {ex.Message}\n" +
+                   "Make sure the native library (picogk.26.2) and its dependencies " +
+                   "(libboost_iostreams, etc.) are in the same directory as PicoGK.Mcp.";
+        }
     }
 
     [McpServerTool]
@@ -77,11 +86,18 @@ public static class SessionTools
         "All object references become invalid after this call.")]
     public static string PicogkShutdown(PicoGkSession session)
     {
-        if (!session.IsInitialized)
-            return "PicoGK is not initialized.";
+        try
+        {
+            if (!session.IsInitialized)
+                return "PicoGK is not initialized.";
 
-        var count = session.ListObjects().Count;
-        session.Dispose();
-        return $"PicoGK shut down. Released {count} objects.";
+            var count = session.ListObjects().Count;
+            session.Dispose();
+            return $"PicoGK shut down. Released {count} objects.";
+        }
+        catch (Exception ex)
+        {
+            return $"Error during shutdown: {ex.Message}";
+        }
     }
 }
