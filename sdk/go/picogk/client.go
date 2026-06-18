@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -22,13 +23,14 @@ import (
 //
 //	// Uses default server at $HOME/.local/bin/picogk-mcp/PicoGK.Mcp
 //	client, err := picogk.NewClient(ctx, "")
-//	defer client.Close(ctx)
+//	defer client.Close()
 //	// Or specify a custom path:
 //	client, err := picogk.NewClient(ctx, "/custom/path/to/PicoGK.Mcp")
 //	// Initialize the geometry kernel
-//	res, err := client.PicogkInit(ctx, picogk.PicogkInitRequest{VoxelSizeMM: 0.5})
+//	res, err := client.PicoGKInit(picogk.PicoGKInitRequest{VoxelSizeMM: 0.5})
 //	// Create a sphere, subtract a box, export STL...
 type Client struct {
+	ctx       context.Context
 	cmd       *exec.Cmd
 	stdin     io.WriteCloser
 	stdout    *bufio.Reader
@@ -68,7 +70,7 @@ func NewClient(ctx context.Context, serverBin string) (*Client, error) {
 		serverBin: serverBin,
 	}
 	// Perform MCP initialize handshake
-	if err := c.initialize(ctx); err != nil {
+	if err := c.initialize(); err != nil {
 		cmd.Process.Kill()
 		return nil, fmt.Errorf("initialize handshake: %w", err)
 	}
@@ -76,7 +78,7 @@ func NewClient(ctx context.Context, serverBin string) (*Client, error) {
 }
 
 // Close shuts down the MCP server process.
-func (c *Client) Close(ctx context.Context) error {
+func (c *Client) Close() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.stdin != nil {
@@ -90,7 +92,7 @@ func (c *Client) Close(ctx context.Context) error {
 		}()
 		select {
 		case <-done:
-		case <-ctx.Done():
+		case <-c.ctx.Done():
 			c.cmd.Process.Kill()
 			<-done
 		}
@@ -112,10 +114,10 @@ func expandPath(path string) string {
 // --- JSON-RPC internals ---
 
 type jsonRPCRequest struct {
-	JSONRPC string      `json:"jsonrpc"`
-	ID      int         `json:"id"`
-	Method  string      `json:"method"`
-	Params  interface{} `json:"params"`
+	JSONRPC string `json:"jsonrpc"`
+	ID      int    `json:"id"`
+	Method  string `json:"method"`
+	Params  any    `json:"params"`
 }
 
 type jsonRPCResponse struct {
@@ -138,26 +140,26 @@ type toolResult struct {
 	IsError bool `json:"isError"`
 }
 
-func (c *Client) initialize(ctx context.Context) error {
-	req := map[string]interface{}{
+func (c *Client) initialize() error {
+	req := map[string]any{
 		"jsonrpc": "2.0",
 		"id":      c.nextID(),
 		"method":  "initialize",
-		"params": map[string]interface{}{
+		"params": map[string]any{
 			"protocolVersion": "2024-11-05",
-			"capabilities":    map[string]interface{}{},
-			"clientInfo": map[string]interface{}{
+			"capabilities":    map[string]any{},
+			"clientInfo": map[string]any{
 				"name":    "picogk",
 				"version": "1.0.0",
 			},
 		},
 	}
-	_, err := c.call(ctx, req)
+	_, err := c.call(req)
 	if err != nil {
 		return err
 	}
 	// Send initialized notification
-	notif := map[string]interface{}{
+	notif := map[string]any{
 		"jsonrpc": "2.0",
 		"method":  "notifications/initialized",
 	}
@@ -171,7 +173,7 @@ func (c *Client) nextID() int {
 	return c.msgID
 }
 
-func (c *Client) send(msg interface{}) error {
+func (c *Client) send(msg any) error {
 	data, err := json.Marshal(msg)
 	if err != nil {
 		return fmt.Errorf("marshaling: %w", err)
@@ -182,14 +184,22 @@ func (c *Client) send(msg interface{}) error {
 	return err
 }
 
-func (c *Client) call(ctx context.Context, req interface{}) (json.RawMessage, error) {
+func (c *Client) callNoParse(req any) (string, error) {
 	if err := c.send(req); err != nil {
-		return nil, err
+		return "", err
 	}
 	// Read response line
 	line, err := c.stdout.ReadString('\n')
 	if err != nil {
-		return nil, fmt.Errorf("reading response: %w", err)
+		return "", fmt.Errorf("reading response: %w", err)
+	}
+	return line, nil
+}
+
+func (c *Client) call(req any) (json.RawMessage, error) {
+	line, err := c.callNoParse(req)
+	if err != nil {
+		return nil, err
 	}
 	var resp jsonRPCResponse
 	if err := json.Unmarshal([]byte(line), &resp); err != nil {
@@ -201,23 +211,37 @@ func (c *Client) call(ctx context.Context, req interface{}) (json.RawMessage, er
 	return resp.Result, nil
 }
 
-// callTool invokes an MCP tool by name and returns the text content of the response.
-func (c *Client) callTool(ctx context.Context, toolName string, args map[string]interface{}) (string, error) {
-	req := map[string]interface{}{
+func (c *Client) newReq(toolName string, args map[string]any) map[string]any {
+	return map[string]any{
 		"jsonrpc": "2.0",
 		"id":      c.nextID(),
 		"method":  "tools/call",
-		"params": map[string]interface{}{
+		"params": map[string]any{
 			"name":      toolName,
 			"arguments": args,
 		},
 	}
-	result, err := c.call(ctx, req)
+}
+
+// callToolNoParse invokes an MCP tool by name and returns the raw text content of the response.
+func (c *Client) callToolNoParse(toolName string, args map[string]any) (string, error) {
+	req := c.newReq(toolName, args)
+	result, err := c.callNoParse(req)
+	if err != nil {
+		return "", err
+	}
+	return string(result), nil
+}
+
+// callTool invokes an MCP tool by name and returns the parsed text content of the response.
+func (c *Client) callTool(toolName string, args map[string]any) (string, error) {
+	req := c.newReq(toolName, args)
+	result, err := c.call(req)
 	if err != nil {
 		return "", err
 	}
 	var tr toolResult
-	if err := json.Unmarshal(result, &tr); err != nil {
+	if err := json.Unmarshal([]byte(result), &tr); err != nil {
 		return "", fmt.Errorf("parsing tool result: %w", err)
 	}
 	var text string
@@ -230,4 +254,210 @@ func (c *Client) callTool(ctx context.Context, toolName string, args map[string]
 		return text, fmt.Errorf("tool error: %s", text)
 	}
 	return text, nil
+}
+
+// Must calls Do and must have no error or it will abort the program.
+func (c *Client) Must(cmd any) (label, result string) {
+	var err error
+	label, result, err = c.Do(cmd)
+	if err != nil {
+		log.Fatalf("FAIL: %v -> %v", label, err)
+	}
+	return label, result
+}
+
+// Do executes an MCP tool call, returning a string result and an error.
+func (c *Client) Do(cmd any) (label, result string, err error) {
+	switch req := cmd.(type) {
+	case BooleanAdd:
+		label = "boolean_add"
+		result, err = c.BooleanAddFn(req)
+	case BooleanSubtract:
+		label = "boolean_subtract"
+		result, err = c.BooleanSubtractFn(req)
+	case BooleanIntersect:
+		label = "boolean_intersect"
+		result, err = c.BooleanIntersectFn(req)
+	case BooleanAddAll:
+		label = "BooleanAddAll"
+		result, err = c.BooleanAddAllFn(req)
+	case BooleanSubtractAll:
+		label = "BooleanSubtractAll"
+		result, err = c.BooleanSubtractAllFn(req)
+	case SaveSTL:
+		label = "SaveSTL"
+		result, err = c.SaveSTLFn(req)
+	case SaveVDB:
+		label = "SaveVDB"
+		result, err = c.SaveVDBFn(req)
+	case LoadVDB:
+		label = "LoadVDB"
+		result, err = c.LoadVDBFn(req)
+	case ListVDBFields:
+		label = "ListVDBFields"
+		result, err = c.ListVDBFieldsFn(req)
+	case SaveSVG:
+		label = "SaveSVG"
+		result, err = c.SaveSVGFn(req)
+	case SaveCLI:
+		label = "SaveCLI"
+		result, err = c.SaveCLIFn(req)
+	case CreateLattice:
+		label = "CreateLattice"
+		result, err = c.CreateLatticeFn(req)
+	case LatticeAddBeam:
+		label = "LatticeAddBeam"
+		result, err = c.LatticeAddBeamFn(req)
+	case LatticeAddSphere:
+		label = "LatticeAddSphere"
+		result, err = c.LatticeAddSphereFn(req)
+	case LatticeToVoxels:
+		label = "LatticeToVoxels"
+		result, err = c.LatticeToVoxelsFn(req)
+	case CreateMesh:
+		label = "CreateMesh"
+		result, err = c.CreateMeshFn(req)
+	case MeshAddVertex:
+		label = "MeshAddVertex"
+		result, err = c.MeshAddVertexFn(req)
+	case MeshAddTriangle:
+		label = "MeshAddTriangle"
+		result, err = c.MeshAddTriangleFn(req)
+	case MeshAddTriangleVertices:
+		label = "MeshAddTriangleVertices"
+		result, err = c.MeshAddTriangleVerticesFn(req)
+	case MeshAddQuad:
+		label = "MeshAddQuad"
+		result, err = c.MeshAddQuadFn(req)
+	case VoxelsToMesh:
+		label = "VoxelsToMesh"
+		result, err = c.VoxelsToMeshFn(req)
+	case MeshToVoxels:
+		label = "MeshToVoxels"
+		result, err = c.MeshToVoxelsFn(req)
+	case MeshFromSTL:
+		label = "MeshFromSTL"
+		result, err = c.MeshFromSTLFn(req)
+	case MeshTransform:
+		label = "MeshTransform"
+		result, err = c.MeshTransformFn(req)
+	case MeshMirror:
+		label = "MeshMirror"
+		result, err = c.MeshMirrorFn(req)
+	case MeshAppend:
+		label = "MeshAppend"
+		result, err = c.MeshAppendFn(req)
+	case CreateSphere:
+		label = "CreateSphere"
+		result, err = c.CreateSphereFn(req)
+	case CreateBox:
+		label = "CreateBox"
+		result, err = c.CreateBoxFn(req)
+	case CreateCylinder:
+		label = "CreateCylinder"
+		result, err = c.CreateCylinderFn(req)
+	case CreateCapsule:
+		label = "CreateCapsule"
+		result, err = c.CreateCapsuleFn(req)
+	case CreateTorus:
+		label = "CreateTorus"
+		result, err = c.CreateTorusFn(req)
+	case GetBoundingBox:
+		label = "GetBoundingBox"
+		result, err = c.GetBoundingBoxFn(req)
+	case GetVolume:
+		label = "GetVolume"
+		result, err = c.GetVolumeFn(req)
+	case GetMeshInfo:
+		label = "GetMeshInfo"
+		result, err = c.GetMeshInfoFn(req)
+	case PointInside:
+		label = "PointInside"
+		result, err = c.PointInsideFn(req)
+	case SurfaceNormal:
+		label = "SurfaceNormal"
+		result, err = c.SurfaceNormalFn(req)
+	case ClosestPoint:
+		label = "ClosestPoint"
+		result, err = c.ClosestPointFn(req)
+	case ListObjects:
+		label = "ListObjects"
+		result, err = c.ListObjectsFn(req)
+	case DeleteObject:
+		label = "DeleteObject"
+		result, err = c.DeleteObjectFn(req)
+	case GetVoxelDimensions:
+		label = "GetVoxelDimensions"
+		result, err = c.GetVoxelDimensionsFn(req)
+	case VoxelsIsEmpty:
+		label = "VoxelsIsEmpty"
+		result, err = c.VoxelsIsEmptyFn(req)
+	case VoxelsMemUsage:
+		label = "VoxelsMemUsage"
+		result, err = c.VoxelsMemUsageFn(req)
+	case VoxelsIsEqual:
+		label = "VoxelsIsEqual"
+		result, err = c.VoxelsIsEqualFn(req)
+	case RayCast:
+		label = "RayCast"
+		result, err = c.RayCastFn(req)
+	case MeasureThickness:
+		label = "MeasureThickness"
+		result, err = c.MeasureThicknessFn(req)
+	case DuplicateObject:
+		label = "DuplicateObject"
+		result, err = c.DuplicateObjectFn(req)
+	case DeleteObjects:
+		label = "DeleteObjects"
+		result, err = c.DeleteObjectsFn(req)
+	case RenderToImage:
+		label = "RenderToImage"
+		result, err = c.RenderToImageFn(req)
+	case RenderSlice:
+		label = "RenderSlice"
+		result, err = c.RenderSliceFn(req)
+	case Init:
+		label = "Init"
+		result, err = c.InitFn(req)
+	case Info:
+		label = "Info"
+		result, err = c.InfoFn(req)
+	case Shutdown:
+		label = "Shutdown"
+		result, err = c.ShutdownFn(req)
+	case Offset:
+		label = "Offset"
+		result, err = c.OffsetFn(req)
+	case DoubleOffset:
+		label = "DoubleOffset"
+		result, err = c.DoubleOffsetFn(req)
+	case OverOffset:
+		label = "OverOffset"
+		result, err = c.OverOffsetFn(req)
+	case Smooth:
+		label = "Smooth"
+		result, err = c.SmoothFn(req)
+	case Trim:
+		label = "Trim"
+		result, err = c.TrimFn(req)
+	case Shell:
+		label = "Shell"
+		result, err = c.ShellFn(req)
+	case Fillet:
+		label = "Fillet"
+		result, err = c.FilletFn(req)
+	case ProjectZSlice:
+		label = "ProjectZSlice"
+		result, err = c.ProjectZSliceFn(req)
+	case TransformVoxels:
+		label = "TransformVoxels"
+		result, err = c.TransformVoxelsFn(req)
+	case CircularPattern:
+		label = "CircularPattern"
+		result, err = c.CircularPatternFn(req)
+
+	default:
+		return "", "", fmt.Errorf("unknown cmd type %T", cmd)
+	}
+	return label, result, err
 }

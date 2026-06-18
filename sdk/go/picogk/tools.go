@@ -2,223 +2,219 @@
 
 package picogk
 
-import (
-	"context"
-)
-
 // --- Booleans ---
 
-// BooleanAddRequest holds parameters for the boolean_add tool.
+// BooleanAdd holds parameters for the boolean_add tool.
 // Boolean UNION: combine two voxel objects. Both volumes are kept, overlapping regions are merged. Returns a new object ID.
-type BooleanAddRequest struct {
-	A  string  `json:"a"`
-	B  string  `json:"b"`
-	Id *string `json:"id,omitempty"`
+type BooleanAdd struct {
+	A  string `json:"a"`
+	B  string `json:"b"`
+	ID string `json:"id,omitempty"`
 }
 
-// BooleanAdd calls the boolean_add MCP tool.
+// BooleanAddFn calls the boolean_add MCP tool.
 // Boolean UNION: combine two voxel objects. Both volumes are kept, overlapping regions are merged. Returns a new object ID.
-func (c *Client) BooleanAdd(ctx context.Context, req BooleanAddRequest) (string, error) {
-	args := map[string]interface{}{}
+func (c *Client) BooleanAddFn(req BooleanAdd) (string, error) {
+	args := map[string]any{}
 	args["a"] = req.A
 	args["b"] = req.B
-	if req.Id != nil {
-		args["id"] = *req.Id
+	if req.ID != "" {
+		args["id"] = req.ID
 	}
-	return c.callTool(ctx, "boolean_add", args)
+	return c.callTool("boolean_add", args)
 }
 
-// BooleanSubtractRequest holds parameters for the boolean_subtract tool.
+// BooleanSubtract holds parameters for the boolean_subtract tool.
 // Boolean SUBTRACTION: subtract voxels of B from A. Removes the volume of B from A. Returns a new object ID.
-type BooleanSubtractRequest struct {
-	A  string  `json:"a"`
-	B  string  `json:"b"`
-	Id *string `json:"id,omitempty"`
+type BooleanSubtract struct {
+	A  string `json:"a"`
+	B  string `json:"b"`
+	ID string `json:"id,omitempty"`
 }
 
-// BooleanSubtract calls the boolean_subtract MCP tool.
+// BooleanSubtractFn calls the boolean_subtract MCP tool.
 // Boolean SUBTRACTION: subtract voxels of B from A. Removes the volume of B from A. Returns a new object ID.
-func (c *Client) BooleanSubtract(ctx context.Context, req BooleanSubtractRequest) (string, error) {
-	args := map[string]interface{}{}
+func (c *Client) BooleanSubtractFn(req BooleanSubtract) (string, error) {
+	args := map[string]any{}
 	args["a"] = req.A
 	args["b"] = req.B
-	if req.Id != nil {
-		args["id"] = *req.Id
+	if req.ID != "" {
+		args["id"] = req.ID
 	}
-	return c.callTool(ctx, "boolean_subtract", args)
+	return c.callTool("boolean_subtract", args)
 }
 
-// BooleanIntersectRequest holds parameters for the boolean_intersect tool.
+// BooleanIntersect holds parameters for the boolean_intersect tool.
 // Boolean INTERSECTION: keep only the overlapping volume of two voxel objects. Returns a new object ID.
-type BooleanIntersectRequest struct {
-	A  string  `json:"a"`
-	B  string  `json:"b"`
-	Id *string `json:"id,omitempty"`
+type BooleanIntersect struct {
+	A  string `json:"a"`
+	B  string `json:"b"`
+	ID string `json:"id,omitempty"`
 }
 
 // BooleanIntersect calls the boolean_intersect MCP tool.
 // Boolean INTERSECTION: keep only the overlapping volume of two voxel objects. Returns a new object ID.
-func (c *Client) BooleanIntersect(ctx context.Context, req BooleanIntersectRequest) (string, error) {
-	args := map[string]interface{}{}
+func (c *Client) BooleanIntersectFn(req BooleanIntersect) (string, error) {
+	args := map[string]any{}
 	args["a"] = req.A
 	args["b"] = req.B
-	if req.Id != nil {
-		args["id"] = *req.Id
+	if req.ID != "" {
+		args["id"] = req.ID
 	}
-	return c.callTool(ctx, "boolean_intersect", args)
+	return c.callTool("boolean_intersect", args)
 }
 
-// BooleanAddAllRequest holds parameters for the boolean_add_all tool.
+// BooleanAddAll holds parameters for the boolean_add_all tool.
 // Combine multiple voxel objects into one. All volumes are merged. Returns a new object ID.
-type BooleanAddAllRequest struct {
-	ObjectIds []string `json:"objectIds"`
-	Id        *string  `json:"id,omitempty"`
+type BooleanAddAll struct {
+	ObjectIDs []string `json:"objectIds"`
+	ID        string   `json:"id,omitempty"`
 }
 
 // BooleanAddAll calls the boolean_add_all MCP tool.
 // Combine multiple voxel objects into one. All volumes are merged. Returns a new object ID.
-func (c *Client) BooleanAddAll(ctx context.Context, req BooleanAddAllRequest) (string, error) {
-	args := map[string]interface{}{}
-	args["objectIds"] = req.ObjectIds
-	if req.Id != nil {
-		args["id"] = *req.Id
+func (c *Client) BooleanAddAllFn(req BooleanAddAll) (string, error) {
+	args := map[string]any{}
+	args["objectIds"] = req.ObjectIDs
+	if req.ID != "" {
+		args["id"] = req.ID
 	}
-	return c.callTool(ctx, "boolean_add_all", args)
+	return c.callTool("boolean_add_all", args)
 }
 
-// BooleanSubtractAllRequest holds parameters for the boolean_subtract_all tool.
+// BooleanSubtractAll holds parameters for the boolean_subtract_all tool.
 // Subtract multiple voxel objects from a single object in one call. Equivalent to calling boolean_subtract repeatedly, but more efficient for multi-hole drilling or multi-cutout operations. Returns a new object ID.
-type BooleanSubtractAllRequest struct {
+type BooleanSubtractAll struct {
 	A           string   `json:"a"`
-	SubtractIds []string `json:"subtractIds"`
-	Id          *string  `json:"id,omitempty"`
+	SubtractIDs []string `json:"subtractIds"`
+	ID          string   `json:"id,omitempty"`
 }
 
 // BooleanSubtractAll calls the boolean_subtract_all MCP tool.
 // Subtract multiple voxel objects from a single object in one call. Equivalent to calling boolean_subtract repeatedly, but more efficient for multi-hole drilling or multi-cutout operations. Returns a new object ID.
-func (c *Client) BooleanSubtractAll(ctx context.Context, req BooleanSubtractAllRequest) (string, error) {
-	args := map[string]interface{}{}
+func (c *Client) BooleanSubtractAllFn(req BooleanSubtractAll) (string, error) {
+	args := map[string]any{}
 	args["a"] = req.A
-	args["subtractIds"] = req.SubtractIds
-	if req.Id != nil {
-		args["id"] = *req.Id
+	args["subtractIds"] = req.SubtractIDs
+	if req.ID != "" {
+		args["id"] = req.ID
 	}
-	return c.callTool(ctx, "boolean_subtract_all", args)
+	return c.callTool("boolean_subtract_all", args)
 }
 
 // --- IO ---
 
-// SaveStlRequest holds parameters for the save_stl tool.
+// SaveSTL holds parameters for the save_stl tool.
 // Save a mesh to an STL file. The mesh is typically obtained from voxels_to_mesh. Units are millimeters by default.
-type SaveStlRequest struct {
-	MeshId string  `json:"meshId"`
-	Path   string  `json:"path"`
-	Units  *string `json:"units,omitempty"`
+type SaveSTL struct {
+	MeshID string `json:"meshId"`
+	Path   string `json:"path"`
+	Units  string `json:"units,omitempty"`
 }
 
-// SaveStl calls the save_stl MCP tool.
+// SaveSTL calls the save_stl MCP tool.
 // Save a mesh to an STL file. The mesh is typically obtained from voxels_to_mesh. Units are millimeters by default.
-func (c *Client) SaveStl(ctx context.Context, req SaveStlRequest) (string, error) {
-	args := map[string]interface{}{}
-	args["meshId"] = req.MeshId
+func (c *Client) SaveSTLFn(req SaveSTL) (string, error) {
+	args := map[string]any{}
+	args["meshId"] = req.MeshID
 	args["path"] = req.Path
-	if req.Units != nil {
-		args["units"] = *req.Units
+	if req.Units != "" {
+		args["units"] = req.Units
 	}
-	return c.callTool(ctx, "save_stl", args)
+	return c.callTool("save_stl", args)
 }
 
-// SaveVdbRequest holds parameters for the save_vdb tool.
+// SaveVDB holds parameters for the save_vdb tool.
 // Save voxels to an OpenVDB file. VDB files preserve the full voxel field data.
-type SaveVdbRequest struct {
-	VoxelsId  string  `json:"voxelsId"`
-	Path      string  `json:"path"`
-	FieldName *string `json:"fieldName,omitempty"`
+type SaveVDB struct {
+	VoxelsID  string `json:"voxelsId"`
+	Path      string `json:"path"`
+	FieldName string `json:"fieldName,omitempty"`
 }
 
-// SaveVdb calls the save_vdb MCP tool.
+// SaveVDB calls the save_vdb MCP tool.
 // Save voxels to an OpenVDB file. VDB files preserve the full voxel field data.
-func (c *Client) SaveVdb(ctx context.Context, req SaveVdbRequest) (string, error) {
-	args := map[string]interface{}{}
-	args["voxelsId"] = req.VoxelsId
+func (c *Client) SaveVDBFn(req SaveVDB) (string, error) {
+	args := map[string]any{}
+	args["voxelsId"] = req.VoxelsID
 	args["path"] = req.Path
-	if req.FieldName != nil {
-		args["fieldName"] = *req.FieldName
+	if req.FieldName != "" {
+		args["fieldName"] = req.FieldName
 	}
-	return c.callTool(ctx, "save_vdb", args)
+	return c.callTool("save_vdb", args)
 }
 
-// LoadVdbRequest holds parameters for the load_vdb tool.
+// LoadVDB holds parameters for the load_vdb tool.
 // Load voxels from an OpenVDB file. Returns the object ID.
-type LoadVdbRequest struct {
-	Path      string  `json:"path"`
-	FieldName *string `json:"fieldName,omitempty"`
-	Id        *string `json:"id,omitempty"`
+type LoadVDB struct {
+	Path      string `json:"path"`
+	FieldName string `json:"fieldName,omitempty"`
+	ID        string `json:"id,omitempty"`
 }
 
-// LoadVdb calls the load_vdb MCP tool.
+// LoadVDB calls the load_vdb MCP tool.
 // Load voxels from an OpenVDB file. Returns the object ID.
-func (c *Client) LoadVdb(ctx context.Context, req LoadVdbRequest) (string, error) {
-	args := map[string]interface{}{}
+func (c *Client) LoadVDBFn(req LoadVDB) (string, error) {
+	args := map[string]any{}
 	args["path"] = req.Path
-	if req.FieldName != nil {
-		args["fieldName"] = *req.FieldName
+	if req.FieldName != "" {
+		args["fieldName"] = req.FieldName
 	}
-	if req.Id != nil {
-		args["id"] = *req.Id
+	if req.ID != "" {
+		args["id"] = req.ID
 	}
-	return c.callTool(ctx, "load_vdb", args)
+	return c.callTool("load_vdb", args)
 }
 
-// ListVdbFieldsRequest holds parameters for the list_vdb_fields tool.
+// ListVDBFields holds parameters for the list_vdb_fields tool.
 // List all fields in a VDB file with their names, types, and indices. Useful for inspecting multi-field VDB files before loading a specific field with load_vdb. Returns field count and a table of index, name, type, and PicoGK compatibility.
-type ListVdbFieldsRequest struct {
+type ListVDBFields struct {
 	Path string `json:"path"`
 }
 
-// ListVdbFields calls the list_vdb_fields MCP tool.
+// ListVDBFields calls the list_vdb_fields MCP tool.
 // List all fields in a VDB file with their names, types, and indices. Useful for inspecting multi-field VDB files before loading a specific field with load_vdb. Returns field count and a table of index, name, type, and PicoGK compatibility.
-func (c *Client) ListVdbFields(ctx context.Context, req ListVdbFieldsRequest) (string, error) {
-	args := map[string]interface{}{}
+func (c *Client) ListVDBFieldsFn(req ListVDBFields) (string, error) {
+	args := map[string]any{}
 	args["path"] = req.Path
-	return c.callTool(ctx, "list_vdb_fields", args)
+	return c.callTool("list_vdb_fields", args)
 }
 
-// SaveSvgRequest holds parameters for the save_svg tool.
+// SaveSVG holds parameters for the save_svg tool.
 // Vectorize voxels into 2D slice contours and save as SVG. Each slice is written to its own file: <path>.NNNN.svg (zero-padded 4 digits). Useful for 2D manufacturing or visualization. Returns the count of files written.
-type SaveSvgRequest struct {
-	VoxelsId    string   `json:"voxelsId"`
+type SaveSVG struct {
+	VoxelsID    string   `json:"voxelsId"`
 	Path        string   `json:"path"`
 	LayerHeight *float64 `json:"layerHeight,omitempty"`
 }
 
-// SaveSvg calls the save_svg MCP tool.
+// SaveSVG calls the save_svg MCP tool.
 // Vectorize voxels into 2D slice contours and save as SVG. Each slice is written to its own file: <path>.NNNN.svg (zero-padded 4 digits). Useful for 2D manufacturing or visualization. Returns the count of files written.
-func (c *Client) SaveSvg(ctx context.Context, req SaveSvgRequest) (string, error) {
-	args := map[string]interface{}{}
-	args["voxelsId"] = req.VoxelsId
+func (c *Client) SaveSVGFn(req SaveSVG) (string, error) {
+	args := map[string]any{}
+	args["voxelsId"] = req.VoxelsID
 	args["path"] = req.Path
 	if req.LayerHeight != nil {
 		args["layerHeight"] = *req.LayerHeight
 	}
-	return c.callTool(ctx, "save_svg", args)
+	return c.callTool("save_svg", args)
 }
 
-// SaveCliRequest holds parameters for the save_cli tool.
+// SaveCLI holds parameters for the save_cli tool.
 // Save voxels to a CLI (Common Layer Interface) file for 3D printing. Vectorizes the voxel field into 2D layers and writes the CLI format. Returns the file path and slice count.
-type SaveCliRequest struct {
-	VoxelsId       string   `json:"voxelsId"`
+type SaveCLI struct {
+	VoxelsID       string   `json:"voxelsId"`
 	Path           string   `json:"path"`
 	LayerHeight    *float64 `json:"layerHeight,omitempty"`
 	Format         *string  `json:"format,omitempty"`
 	UseAbsXYOrigin *bool    `json:"useAbsXYOrigin,omitempty"`
 }
 
-// SaveCli calls the save_cli MCP tool.
+// SaveCLI calls the save_cli MCP tool.
 // Save voxels to a CLI (Common Layer Interface) file for 3D printing. Vectorizes the voxel field into 2D layers and writes the CLI format. Returns the file path and slice count.
-func (c *Client) SaveCli(ctx context.Context, req SaveCliRequest) (string, error) {
-	args := map[string]interface{}{}
-	args["voxelsId"] = req.VoxelsId
+func (c *Client) SaveCLIFn(req SaveCLI) (string, error) {
+	args := map[string]any{}
+	args["voxelsId"] = req.VoxelsID
 	args["path"] = req.Path
 	if req.LayerHeight != nil {
 		args["layerHeight"] = *req.LayerHeight
@@ -229,31 +225,31 @@ func (c *Client) SaveCli(ctx context.Context, req SaveCliRequest) (string, error
 	if req.UseAbsXYOrigin != nil {
 		args["useAbsXYOrigin"] = *req.UseAbsXYOrigin
 	}
-	return c.callTool(ctx, "save_cli", args)
+	return c.callTool("save_cli", args)
 }
 
 // --- Lattice ---
 
-// CreateLatticeRequest holds parameters for the create_lattice tool.
+// CreateLattice holds parameters for the create_lattice tool.
 // Create an empty lattice structure. Add beams and sphere nodes to build it, then convert to voxels. Returns the object ID.
-type CreateLatticeRequest struct {
-	Id *string `json:"id,omitempty"`
+type CreateLattice struct {
+	ID string `json:"id,omitempty"`
 }
 
 // CreateLattice calls the create_lattice MCP tool.
 // Create an empty lattice structure. Add beams and sphere nodes to build it, then convert to voxels. Returns the object ID.
-func (c *Client) CreateLattice(ctx context.Context, req CreateLatticeRequest) (string, error) {
-	args := map[string]interface{}{}
-	if req.Id != nil {
-		args["id"] = *req.Id
+func (c *Client) CreateLatticeFn(req CreateLattice) (string, error) {
+	args := map[string]any{}
+	if req.ID != "" {
+		args["id"] = req.ID
 	}
-	return c.callTool(ctx, "create_lattice", args)
+	return c.callTool("create_lattice", args)
 }
 
-// LatticeAddBeamRequest holds parameters for the lattice_add_beam tool.
+// LatticeAddBeam holds parameters for the lattice_add_beam tool.
 // Add a tapered beam (strut) between two points in a lattice. Each end has its own radius. Returns a confirmation.
-type LatticeAddBeamRequest struct {
-	LatticeId string  `json:"latticeId"`
+type LatticeAddBeam struct {
+	LatticeID string  `json:"latticeId"`
 	X1        float64 `json:"x1"`
 	Y1        float64 `json:"y1"`
 	Z1        float64 `json:"z1"`
@@ -267,9 +263,9 @@ type LatticeAddBeamRequest struct {
 
 // LatticeAddBeam calls the lattice_add_beam MCP tool.
 // Add a tapered beam (strut) between two points in a lattice. Each end has its own radius. Returns a confirmation.
-func (c *Client) LatticeAddBeam(ctx context.Context, req LatticeAddBeamRequest) (string, error) {
-	args := map[string]interface{}{}
-	args["latticeId"] = req.LatticeId
+func (c *Client) LatticeAddBeamFn(req LatticeAddBeam) (string, error) {
+	args := map[string]any{}
+	args["latticeId"] = req.LatticeID
 	args["x1"] = req.X1
 	args["y1"] = req.Y1
 	args["z1"] = req.Z1
@@ -281,13 +277,13 @@ func (c *Client) LatticeAddBeam(ctx context.Context, req LatticeAddBeamRequest) 
 	if req.RoundCap != nil {
 		args["roundCap"] = *req.RoundCap
 	}
-	return c.callTool(ctx, "lattice_add_beam", args)
+	return c.callTool("lattice_add_beam", args)
 }
 
-// LatticeAddSphereRequest holds parameters for the lattice_add_sphere tool.
+// LatticeAddSphere holds parameters for the lattice_add_sphere tool.
 // Add a sphere node at a point in a lattice. Returns a confirmation.
-type LatticeAddSphereRequest struct {
-	LatticeId string  `json:"latticeId"`
+type LatticeAddSphere struct {
+	LatticeID string  `json:"latticeId"`
 	X         float64 `json:"x"`
 	Y         float64 `json:"y"`
 	Z         float64 `json:"z"`
@@ -296,56 +292,56 @@ type LatticeAddSphereRequest struct {
 
 // LatticeAddSphere calls the lattice_add_sphere MCP tool.
 // Add a sphere node at a point in a lattice. Returns a confirmation.
-func (c *Client) LatticeAddSphere(ctx context.Context, req LatticeAddSphereRequest) (string, error) {
-	args := map[string]interface{}{}
-	args["latticeId"] = req.LatticeId
+func (c *Client) LatticeAddSphereFn(req LatticeAddSphere) (string, error) {
+	args := map[string]any{}
+	args["latticeId"] = req.LatticeID
 	args["x"] = req.X
 	args["y"] = req.Y
 	args["z"] = req.Z
 	args["radius"] = req.Radius
-	return c.callTool(ctx, "lattice_add_sphere", args)
+	return c.callTool("lattice_add_sphere", args)
 }
 
-// LatticeToVoxelsRequest holds parameters for the lattice_to_voxels tool.
+// LatticeToVoxels holds parameters for the lattice_to_voxels tool.
 // Convert a lattice to voxels. Renders the lattice beams and nodes into a voxel field. Returns a new voxel object ID.
-type LatticeToVoxelsRequest struct {
-	LatticeId string  `json:"latticeId"`
-	Id        *string `json:"id,omitempty"`
+type LatticeToVoxels struct {
+	LatticeID string `json:"latticeId"`
+	ID        string `json:"id,omitempty"`
 }
 
 // LatticeToVoxels calls the lattice_to_voxels MCP tool.
 // Convert a lattice to voxels. Renders the lattice beams and nodes into a voxel field. Returns a new voxel object ID.
-func (c *Client) LatticeToVoxels(ctx context.Context, req LatticeToVoxelsRequest) (string, error) {
-	args := map[string]interface{}{}
-	args["latticeId"] = req.LatticeId
-	if req.Id != nil {
-		args["id"] = *req.Id
+func (c *Client) LatticeToVoxelsFn(req LatticeToVoxels) (string, error) {
+	args := map[string]any{}
+	args["latticeId"] = req.LatticeID
+	if req.ID != "" {
+		args["id"] = req.ID
 	}
-	return c.callTool(ctx, "lattice_to_voxels", args)
+	return c.callTool("lattice_to_voxels", args)
 }
 
 // --- Mesh ---
 
-// CreateMeshRequest holds parameters for the create_mesh tool.
+// CreateMesh holds parameters for the create_mesh tool.
 // Create an empty mesh. Add vertices and triangles to build geometry. Returns the object ID.
-type CreateMeshRequest struct {
-	Id *string `json:"id,omitempty"`
+type CreateMesh struct {
+	ID string `json:"id,omitempty"`
 }
 
 // CreateMesh calls the create_mesh MCP tool.
 // Create an empty mesh. Add vertices and triangles to build geometry. Returns the object ID.
-func (c *Client) CreateMesh(ctx context.Context, req CreateMeshRequest) (string, error) {
-	args := map[string]interface{}{}
-	if req.Id != nil {
-		args["id"] = *req.Id
+func (c *Client) CreateMeshFn(req CreateMesh) (string, error) {
+	args := map[string]any{}
+	if req.ID != "" {
+		args["id"] = req.ID
 	}
-	return c.callTool(ctx, "create_mesh", args)
+	return c.callTool("create_mesh", args)
 }
 
-// MeshAddVertexRequest holds parameters for the mesh_add_vertex tool.
+// MeshAddVertex holds parameters for the mesh_add_vertex tool.
 // Add a vertex to a mesh. Returns the vertex index (0-based) for use in triangle creation.
-type MeshAddVertexRequest struct {
-	MeshId string  `json:"meshId"`
+type MeshAddVertex struct {
+	MeshID string  `json:"meshId"`
 	X      float64 `json:"x"`
 	Y      float64 `json:"y"`
 	Z      float64 `json:"z"`
@@ -353,19 +349,19 @@ type MeshAddVertexRequest struct {
 
 // MeshAddVertex calls the mesh_add_vertex MCP tool.
 // Add a vertex to a mesh. Returns the vertex index (0-based) for use in triangle creation.
-func (c *Client) MeshAddVertex(ctx context.Context, req MeshAddVertexRequest) (string, error) {
-	args := map[string]interface{}{}
-	args["meshId"] = req.MeshId
+func (c *Client) MeshAddVertexFn(req MeshAddVertex) (string, error) {
+	args := map[string]any{}
+	args["meshId"] = req.MeshID
 	args["x"] = req.X
 	args["y"] = req.Y
 	args["z"] = req.Z
-	return c.callTool(ctx, "mesh_add_vertex", args)
+	return c.callTool("mesh_add_vertex", args)
 }
 
-// MeshAddTriangleRequest holds parameters for the mesh_add_triangle tool.
+// MeshAddTriangle holds parameters for the mesh_add_triangle tool.
 // Add a triangle to a mesh using vertex indices. Returns the triangle index.
-type MeshAddTriangleRequest struct {
-	MeshId string `json:"meshId"`
+type MeshAddTriangle struct {
+	MeshID string `json:"meshId"`
 	A      int    `json:"a"`
 	B      int    `json:"b"`
 	C      int    `json:"c"`
@@ -373,19 +369,19 @@ type MeshAddTriangleRequest struct {
 
 // MeshAddTriangle calls the mesh_add_triangle MCP tool.
 // Add a triangle to a mesh using vertex indices. Returns the triangle index.
-func (c *Client) MeshAddTriangle(ctx context.Context, req MeshAddTriangleRequest) (string, error) {
-	args := map[string]interface{}{}
-	args["meshId"] = req.MeshId
+func (c *Client) MeshAddTriangleFn(req MeshAddTriangle) (string, error) {
+	args := map[string]any{}
+	args["meshId"] = req.MeshID
 	args["a"] = req.A
 	args["b"] = req.B
 	args["c"] = req.C
-	return c.callTool(ctx, "mesh_add_triangle", args)
+	return c.callTool("mesh_add_triangle", args)
 }
 
-// MeshAddTriangleVerticesRequest holds parameters for the mesh_add_triangle_vertices tool.
+// MeshAddTriangleVertices holds parameters for the mesh_add_triangle_vertices tool.
 // Add a triangle to a mesh by specifying three vertex positions directly. The vertices are added automatically. Returns the triangle index.
-type MeshAddTriangleVerticesRequest struct {
-	MeshId string  `json:"meshId"`
+type MeshAddTriangleVertices struct {
+	MeshID string  `json:"meshId"`
 	X1     float64 `json:"x1"`
 	Y1     float64 `json:"y1"`
 	Z1     float64 `json:"z1"`
@@ -399,9 +395,9 @@ type MeshAddTriangleVerticesRequest struct {
 
 // MeshAddTriangleVertices calls the mesh_add_triangle_vertices MCP tool.
 // Add a triangle to a mesh by specifying three vertex positions directly. The vertices are added automatically. Returns the triangle index.
-func (c *Client) MeshAddTriangleVertices(ctx context.Context, req MeshAddTriangleVerticesRequest) (string, error) {
-	args := map[string]interface{}{}
-	args["meshId"] = req.MeshId
+func (c *Client) MeshAddTriangleVerticesFn(req MeshAddTriangleVertices) (string, error) {
+	args := map[string]any{}
+	args["meshId"] = req.MeshID
 	args["x1"] = req.X1
 	args["y1"] = req.Y1
 	args["z1"] = req.Z1
@@ -411,13 +407,13 @@ func (c *Client) MeshAddTriangleVertices(ctx context.Context, req MeshAddTriangl
 	args["x3"] = req.X3
 	args["y3"] = req.Y3
 	args["z3"] = req.Z3
-	return c.callTool(ctx, "mesh_add_triangle_vertices", args)
+	return c.callTool("mesh_add_triangle_vertices", args)
 }
 
-// MeshAddQuadRequest holds parameters for the mesh_add_quad tool.
+// MeshAddQuad holds parameters for the mesh_add_quad tool.
 // Add a quad to a mesh by specifying four vertex positions directly. The vertices are added automatically and two triangles are created. Use bFlipped=true to reverse the winding order. Returns the starting triangle index.
-type MeshAddQuadRequest struct {
-	MeshId  string  `json:"meshId"`
+type MeshAddQuad struct {
+	MeshID  string  `json:"meshId"`
 	X0      float64 `json:"x0"`
 	Y0      float64 `json:"y0"`
 	Z0      float64 `json:"z0"`
@@ -435,9 +431,9 @@ type MeshAddQuadRequest struct {
 
 // MeshAddQuad calls the mesh_add_quad MCP tool.
 // Add a quad to a mesh by specifying four vertex positions directly. The vertices are added automatically and two triangles are created. Use bFlipped=true to reverse the winding order. Returns the starting triangle index.
-func (c *Client) MeshAddQuad(ctx context.Context, req MeshAddQuadRequest) (string, error) {
-	args := map[string]interface{}{}
-	args["meshId"] = req.MeshId
+func (c *Client) MeshAddQuadFn(req MeshAddQuad) (string, error) {
+	args := map[string]any{}
+	args["meshId"] = req.MeshID
 	args["x0"] = req.X0
 	args["y0"] = req.Y0
 	args["z0"] = req.Z0
@@ -453,79 +449,79 @@ func (c *Client) MeshAddQuad(ctx context.Context, req MeshAddQuadRequest) (strin
 	if req.Flipped != nil {
 		args["flipped"] = *req.Flipped
 	}
-	return c.callTool(ctx, "mesh_add_quad", args)
+	return c.callTool("mesh_add_quad", args)
 }
 
-// VoxelsToMeshRequest holds parameters for the voxels_to_mesh tool.
+// VoxelsToMesh holds parameters for the voxels_to_mesh tool.
 // Convert a voxel object to a mesh using marching cubes. Returns a new mesh object ID.
-type VoxelsToMeshRequest struct {
-	VoxelsId string  `json:"voxelsId"`
-	Id       *string `json:"id,omitempty"`
+type VoxelsToMesh struct {
+	VoxelsID string `json:"voxelsId"`
+	ID       string `json:"id,omitempty"`
 }
 
 // VoxelsToMesh calls the voxels_to_mesh MCP tool.
 // Convert a voxel object to a mesh using marching cubes. Returns a new mesh object ID.
-func (c *Client) VoxelsToMesh(ctx context.Context, req VoxelsToMeshRequest) (string, error) {
-	args := map[string]interface{}{}
-	args["voxelsId"] = req.VoxelsId
-	if req.Id != nil {
-		args["id"] = *req.Id
+func (c *Client) VoxelsToMeshFn(req VoxelsToMesh) (string, error) {
+	args := map[string]any{}
+	args["voxelsId"] = req.VoxelsID
+	if req.ID != "" {
+		args["id"] = req.ID
 	}
-	return c.callTool(ctx, "voxels_to_mesh", args)
+	return c.callTool("voxels_to_mesh", args)
 }
 
-// MeshToVoxelsRequest holds parameters for the mesh_to_voxels tool.
+// MeshToVoxels holds parameters for the mesh_to_voxels tool.
 // Convert a mesh to voxels. Returns a new voxel object ID.
-type MeshToVoxelsRequest struct {
-	MeshId string  `json:"meshId"`
-	Id     *string `json:"id,omitempty"`
+type MeshToVoxels struct {
+	MeshID string `json:"meshId"`
+	ID     string `json:"id,omitempty"`
 }
 
 // MeshToVoxels calls the mesh_to_voxels MCP tool.
 // Convert a mesh to voxels. Returns a new voxel object ID.
-func (c *Client) MeshToVoxels(ctx context.Context, req MeshToVoxelsRequest) (string, error) {
-	args := map[string]interface{}{}
-	args["meshId"] = req.MeshId
-	if req.Id != nil {
-		args["id"] = *req.Id
+func (c *Client) MeshToVoxelsFn(req MeshToVoxels) (string, error) {
+	args := map[string]any{}
+	args["meshId"] = req.MeshID
+	if req.ID != "" {
+		args["id"] = req.ID
 	}
-	return c.callTool(ctx, "mesh_to_voxels", args)
+	return c.callTool("mesh_to_voxels", args)
 }
 
-// MeshFromStlRequest holds parameters for the mesh_from_stl tool.
+// MeshFromSTL holds parameters for the mesh_from_stl tool.
 // Load a mesh from an STL file on disk. Returns the object ID.
-type MeshFromStlRequest struct {
-	Path string  `json:"path"`
-	Id   *string `json:"id,omitempty"`
+type MeshFromSTL struct {
+	Path string `json:"path"`
+	ID   string `json:"id,omitempty"`
 }
 
-// MeshFromStl calls the mesh_from_stl MCP tool.
+// MeshFromSTL calls the mesh_from_stl MCP tool.
 // Load a mesh from an STL file on disk. Returns the object ID.
-func (c *Client) MeshFromStl(ctx context.Context, req MeshFromStlRequest) (string, error) {
-	args := map[string]interface{}{}
+func (c *Client) MeshFromSTLFn(req MeshFromSTL) (string, error) {
+	args := map[string]any{}
 	args["path"] = req.Path
-	if req.Id != nil {
-		args["id"] = *req.Id
+	if req.ID != "" {
+		args["id"] = req.ID
 	}
-	return c.callTool(ctx, "mesh_from_stl", args)
+	return c.callTool("mesh_from_stl", args)
 }
 
-// MeshTransformRequest holds parameters for the mesh_transform tool.
+// MeshTransform holds parameters for the mesh_transform tool.
 // Transform a mesh: apply uniform scale and/or translation. Returns a new mesh object ID.
-type MeshTransformRequest struct {
-	MeshId     string   `json:"meshId"`
+type MeshTransform struct {
+	MeshID     string   `json:"meshId"`
 	Scale      *float64 `json:"scale,omitempty"`
 	TranslateX *float64 `json:"translateX,omitempty"`
 	TranslateY *float64 `json:"translateY,omitempty"`
 	TranslateZ *float64 `json:"translateZ,omitempty"`
-	Id         *string  `json:"id,omitempty"`
+	ID         string   `json:"id,omitempty"`
 }
 
 // MeshTransform calls the mesh_transform MCP tool.
 // Transform a mesh: apply uniform scale and/or translation. Returns a new mesh object ID.
-func (c *Client) MeshTransform(ctx context.Context, req MeshTransformRequest) (string, error) {
-	args := map[string]interface{}{}
-	args["meshId"] = req.MeshId
+func (c *Client) MeshTransformFn(req MeshTransform) (string, error) {
+	args := map[string]any{}
+	args["meshId"] = req.MeshID
 	if req.Scale != nil {
 		args["scale"] = *req.Scale
 	}
@@ -538,115 +534,115 @@ func (c *Client) MeshTransform(ctx context.Context, req MeshTransformRequest) (s
 	if req.TranslateZ != nil {
 		args["translateZ"] = *req.TranslateZ
 	}
-	if req.Id != nil {
-		args["id"] = *req.Id
+	if req.ID != "" {
+		args["id"] = req.ID
 	}
-	return c.callTool(ctx, "mesh_transform", args)
+	return c.callTool("mesh_transform", args)
 }
 
-// MeshMirrorRequest holds parameters for the mesh_mirror tool.
+// MeshMirror holds parameters for the mesh_mirror tool.
 // Mirror a mesh across a plane defined by a point and normal. Returns a new mesh object ID.
-type MeshMirrorRequest struct {
-	MeshId string  `json:"meshId"`
+type MeshMirror struct {
+	MeshID string  `json:"meshId"`
 	PtX    float64 `json:"ptX"`
 	PtY    float64 `json:"ptY"`
 	PtZ    float64 `json:"ptZ"`
 	NX     float64 `json:"nX"`
 	NY     float64 `json:"nY"`
 	NZ     float64 `json:"nZ"`
-	Id     *string `json:"id,omitempty"`
+	ID     string  `json:"id,omitempty"`
 }
 
 // MeshMirror calls the mesh_mirror MCP tool.
 // Mirror a mesh across a plane defined by a point and normal. Returns a new mesh object ID.
-func (c *Client) MeshMirror(ctx context.Context, req MeshMirrorRequest) (string, error) {
-	args := map[string]interface{}{}
-	args["meshId"] = req.MeshId
+func (c *Client) MeshMirrorFn(req MeshMirror) (string, error) {
+	args := map[string]any{}
+	args["meshId"] = req.MeshID
 	args["ptX"] = req.PtX
 	args["ptY"] = req.PtY
 	args["ptZ"] = req.PtZ
 	args["nX"] = req.NX
 	args["nY"] = req.NY
 	args["nZ"] = req.NZ
-	if req.Id != nil {
-		args["id"] = *req.Id
+	if req.ID != "" {
+		args["id"] = req.ID
 	}
-	return c.callTool(ctx, "mesh_mirror", args)
+	return c.callTool("mesh_mirror", args)
 }
 
-// MeshAppendRequest holds parameters for the mesh_append tool.
+// MeshAppend holds parameters for the mesh_append tool.
 // Append one mesh into another (modifies the target). Returns the target mesh ID.
-type MeshAppendRequest struct {
-	TargetId string `json:"targetId"`
-	SourceId string `json:"sourceId"`
+type MeshAppend struct {
+	TargetID string `json:"targetId"`
+	SourceID string `json:"sourceId"`
 }
 
 // MeshAppend calls the mesh_append MCP tool.
 // Append one mesh into another (modifies the target). Returns the target mesh ID.
-func (c *Client) MeshAppend(ctx context.Context, req MeshAppendRequest) (string, error) {
-	args := map[string]interface{}{}
-	args["targetId"] = req.TargetId
-	args["sourceId"] = req.SourceId
-	return c.callTool(ctx, "mesh_append", args)
+func (c *Client) MeshAppendFn(req MeshAppend) (string, error) {
+	args := map[string]any{}
+	args["targetId"] = req.TargetID
+	args["sourceId"] = req.SourceID
+	return c.callTool("mesh_append", args)
 }
 
 // --- Primitives ---
 
-// CreateSphereRequest holds parameters for the create_sphere tool.
+// CreateSphere holds parameters for the create_sphere tool.
 // Create a sphere voxel object. Returns the object ID.
-type CreateSphereRequest struct {
+type CreateSphere struct {
 	X      float64 `json:"x"`
 	Y      float64 `json:"y"`
 	Z      float64 `json:"z"`
 	Radius float64 `json:"radius"`
-	Id     *string `json:"id,omitempty"`
+	ID     string  `json:"id,omitempty"`
 }
 
 // CreateSphere calls the create_sphere MCP tool.
 // Create a sphere voxel object. Returns the object ID.
-func (c *Client) CreateSphere(ctx context.Context, req CreateSphereRequest) (string, error) {
-	args := map[string]interface{}{}
+func (c *Client) CreateSphereFn(req CreateSphere) (string, error) {
+	args := map[string]any{}
 	args["x"] = req.X
 	args["y"] = req.Y
 	args["z"] = req.Z
 	args["radius"] = req.Radius
-	if req.Id != nil {
-		args["id"] = *req.Id
+	if req.ID != "" {
+		args["id"] = req.ID
 	}
-	return c.callTool(ctx, "create_sphere", args)
+	return c.callTool("create_sphere", args)
 }
 
-// CreateBoxRequest holds parameters for the create_box tool.
+// CreateBox holds parameters for the create_box tool.
 // Create a box (axis-aligned cuboid) from minimum and maximum corner coordinates. Returns the object ID.
-type CreateBoxRequest struct {
+type CreateBox struct {
 	MinX float64 `json:"minX"`
 	MinY float64 `json:"minY"`
 	MinZ float64 `json:"minZ"`
 	MaxX float64 `json:"maxX"`
 	MaxY float64 `json:"maxY"`
 	MaxZ float64 `json:"maxZ"`
-	Id   *string `json:"id,omitempty"`
+	ID   string  `json:"id,omitempty"`
 }
 
 // CreateBox calls the create_box MCP tool.
 // Create a box (axis-aligned cuboid) from minimum and maximum corner coordinates. Returns the object ID.
-func (c *Client) CreateBox(ctx context.Context, req CreateBoxRequest) (string, error) {
-	args := map[string]interface{}{}
+func (c *Client) CreateBoxFn(req CreateBox) (string, error) {
+	args := map[string]any{}
 	args["minX"] = req.MinX
 	args["minY"] = req.MinY
 	args["minZ"] = req.MinZ
 	args["maxX"] = req.MaxX
 	args["maxY"] = req.MaxY
 	args["maxZ"] = req.MaxZ
-	if req.Id != nil {
-		args["id"] = *req.Id
+	if req.ID != "" {
+		args["id"] = req.ID
 	}
-	return c.callTool(ctx, "create_box", args)
+	return c.callTool("create_box", args)
 }
 
-// CreateCylinderRequest holds parameters for the create_cylinder tool.
+// CreateCylinder holds parameters for the create_cylinder tool.
 // Create a cylinder. By default it runs along the +Z axis from (x,y,z) to (x,y,z+height). Pass dirX/dirY/dirZ to orient the axis differently (the vector is normalized automatically). The cylinder has flat end caps. Returns the object ID.
-type CreateCylinderRequest struct {
+type CreateCylinder struct {
 	X      float64  `json:"x"`
 	Y      float64  `json:"y"`
 	Z      float64  `json:"z"`
@@ -655,13 +651,13 @@ type CreateCylinderRequest struct {
 	DirX   *float64 `json:"dirX,omitempty"`
 	DirY   *float64 `json:"dirY,omitempty"`
 	DirZ   *float64 `json:"dirZ,omitempty"`
-	Id     *string  `json:"id,omitempty"`
+	ID     string   `json:"id,omitempty"`
 }
 
 // CreateCylinder calls the create_cylinder MCP tool.
 // Create a cylinder. By default it runs along the +Z axis from (x,y,z) to (x,y,z+height). Pass dirX/dirY/dirZ to orient the axis differently (the vector is normalized automatically). The cylinder has flat end caps. Returns the object ID.
-func (c *Client) CreateCylinder(ctx context.Context, req CreateCylinderRequest) (string, error) {
-	args := map[string]interface{}{}
+func (c *Client) CreateCylinderFn(req CreateCylinder) (string, error) {
+	args := map[string]any{}
 	args["x"] = req.X
 	args["y"] = req.Y
 	args["z"] = req.Z
@@ -676,15 +672,15 @@ func (c *Client) CreateCylinder(ctx context.Context, req CreateCylinderRequest) 
 	if req.DirZ != nil {
 		args["dirZ"] = *req.DirZ
 	}
-	if req.Id != nil {
-		args["id"] = *req.Id
+	if req.ID != "" {
+		args["id"] = req.ID
 	}
-	return c.callTool(ctx, "create_cylinder", args)
+	return c.callTool("create_cylinder", args)
 }
 
-// CreateCapsuleRequest holds parameters for the create_capsule tool.
+// CreateCapsule holds parameters for the create_capsule tool.
 // Create a capsule (a sphere-swept line segment). Returns the object ID.
-type CreateCapsuleRequest struct {
+type CreateCapsule struct {
 	X1     float64 `json:"x1"`
 	Y1     float64 `json:"y1"`
 	Z1     float64 `json:"z1"`
@@ -692,13 +688,13 @@ type CreateCapsuleRequest struct {
 	Y2     float64 `json:"y2"`
 	Z2     float64 `json:"z2"`
 	Radius float64 `json:"radius"`
-	Id     *string `json:"id,omitempty"`
+	ID     string  `json:"id,omitempty"`
 }
 
 // CreateCapsule calls the create_capsule MCP tool.
 // Create a capsule (a sphere-swept line segment). Returns the object ID.
-func (c *Client) CreateCapsule(ctx context.Context, req CreateCapsuleRequest) (string, error) {
-	args := map[string]interface{}{}
+func (c *Client) CreateCapsuleFn(req CreateCapsule) (string, error) {
+	args := map[string]any{}
 	args["x1"] = req.X1
 	args["y1"] = req.Y1
 	args["z1"] = req.Z1
@@ -706,27 +702,27 @@ func (c *Client) CreateCapsule(ctx context.Context, req CreateCapsuleRequest) (s
 	args["y2"] = req.Y2
 	args["z2"] = req.Z2
 	args["radius"] = req.Radius
-	if req.Id != nil {
-		args["id"] = *req.Id
+	if req.ID != "" {
+		args["id"] = req.ID
 	}
-	return c.callTool(ctx, "create_capsule", args)
+	return c.callTool("create_capsule", args)
 }
 
-// CreateTorusRequest holds parameters for the create_torus tool.
+// CreateTorus holds parameters for the create_torus tool.
 // Create a torus (donut shape) by revolving a circle around the Z axis. Returns the object ID.
-type CreateTorusRequest struct {
+type CreateTorus struct {
 	MajorRadius float64  `json:"majorRadius"`
 	MinorRadius float64  `json:"minorRadius"`
 	X           *float64 `json:"x,omitempty"`
 	Y           *float64 `json:"y,omitempty"`
 	Z           *float64 `json:"z,omitempty"`
-	Id          *string  `json:"id,omitempty"`
+	ID          string   `json:"id,omitempty"`
 }
 
 // CreateTorus calls the create_torus MCP tool.
 // Create a torus (donut shape) by revolving a circle around the Z axis. Returns the object ID.
-func (c *Client) CreateTorus(ctx context.Context, req CreateTorusRequest) (string, error) {
-	args := map[string]interface{}{}
+func (c *Client) CreateTorusFn(req CreateTorus) (string, error) {
+	args := map[string]any{}
 	args["majorRadius"] = req.MajorRadius
 	args["minorRadius"] = req.MinorRadius
 	if req.X != nil {
@@ -738,60 +734,60 @@ func (c *Client) CreateTorus(ctx context.Context, req CreateTorusRequest) (strin
 	if req.Z != nil {
 		args["z"] = *req.Z
 	}
-	if req.Id != nil {
-		args["id"] = *req.Id
+	if req.ID != "" {
+		args["id"] = req.ID
 	}
-	return c.callTool(ctx, "create_torus", args)
+	return c.callTool("create_torus", args)
 }
 
 // --- Query ---
 
-// GetBoundingBoxRequest holds parameters for the get_bounding_box tool.
+// GetBoundingBox holds parameters for the get_bounding_box tool.
 // Get the axis-aligned bounding box of any object. Returns min/max corners in mm. Retries internally with exponential backoff if the object was just created/transformed and the internal mesh conversion is not yet settled.
-type GetBoundingBoxRequest struct {
-	ObjectId string `json:"objectId"`
+type GetBoundingBox struct {
+	ObjectID string `json:"objectId"`
 }
 
 // GetBoundingBox calls the get_bounding_box MCP tool.
 // Get the axis-aligned bounding box of any object. Returns min/max corners in mm. Retries internally with exponential backoff if the object was just created/transformed and the internal mesh conversion is not yet settled.
-func (c *Client) GetBoundingBox(ctx context.Context, req GetBoundingBoxRequest) (string, error) {
-	args := map[string]interface{}{}
-	args["objectId"] = req.ObjectId
-	return c.callTool(ctx, "get_bounding_box", args)
+func (c *Client) GetBoundingBoxFn(req GetBoundingBox) (string, error) {
+	args := map[string]any{}
+	args["objectId"] = req.ObjectID
+	return c.callTool("get_bounding_box", args)
 }
 
-// GetVolumeRequest holds parameters for the get_volume tool.
+// GetVolume holds parameters for the get_volume tool.
 // Calculate the volume and bounding box of a voxel object. Retries internally with exponential backoff if the object was just created/transformed.
-type GetVolumeRequest struct {
-	ObjectId string `json:"objectId"`
+type GetVolume struct {
+	ObjectID string `json:"objectId"`
 }
 
 // GetVolume calls the get_volume MCP tool.
 // Calculate the volume and bounding box of a voxel object. Retries internally with exponential backoff if the object was just created/transformed.
-func (c *Client) GetVolume(ctx context.Context, req GetVolumeRequest) (string, error) {
-	args := map[string]interface{}{}
-	args["objectId"] = req.ObjectId
-	return c.callTool(ctx, "get_volume", args)
+func (c *Client) GetVolumeFn(req GetVolume) (string, error) {
+	args := map[string]any{}
+	args["objectId"] = req.ObjectID
+	return c.callTool("get_volume", args)
 }
 
-// GetMeshInfoRequest holds parameters for the get_mesh_info tool.
+// GetMeshInfo holds parameters for the get_mesh_info tool.
 // Get information about a mesh: vertex count, triangle count, bounding box.
-type GetMeshInfoRequest struct {
-	ObjectId string `json:"objectId"`
+type GetMeshInfo struct {
+	ObjectID string `json:"objectId"`
 }
 
 // GetMeshInfo calls the get_mesh_info MCP tool.
 // Get information about a mesh: vertex count, triangle count, bounding box.
-func (c *Client) GetMeshInfo(ctx context.Context, req GetMeshInfoRequest) (string, error) {
-	args := map[string]interface{}{}
-	args["objectId"] = req.ObjectId
-	return c.callTool(ctx, "get_mesh_info", args)
+func (c *Client) GetMeshInfoFn(req GetMeshInfo) (string, error) {
+	args := map[string]any{}
+	args["objectId"] = req.ObjectID
+	return c.callTool("get_mesh_info", args)
 }
 
-// PointInsideRequest holds parameters for the point_inside tool.
+// PointInside holds parameters for the point_inside tool.
 // Check if a 3D point is inside a voxel object.
-type PointInsideRequest struct {
-	ObjectId string  `json:"objectId"`
+type PointInside struct {
+	ObjectID string  `json:"objectId"`
 	X        float64 `json:"x"`
 	Y        float64 `json:"y"`
 	Z        float64 `json:"z"`
@@ -799,19 +795,19 @@ type PointInsideRequest struct {
 
 // PointInside calls the point_inside MCP tool.
 // Check if a 3D point is inside a voxel object.
-func (c *Client) PointInside(ctx context.Context, req PointInsideRequest) (string, error) {
-	args := map[string]interface{}{}
-	args["objectId"] = req.ObjectId
+func (c *Client) PointInsideFn(req PointInside) (string, error) {
+	args := map[string]any{}
+	args["objectId"] = req.ObjectID
 	args["x"] = req.X
 	args["y"] = req.Y
 	args["z"] = req.Z
-	return c.callTool(ctx, "point_inside", args)
+	return c.callTool("point_inside", args)
 }
 
-// SurfaceNormalRequest holds parameters for the surface_normal tool.
+// SurfaceNormal holds parameters for the surface_normal tool.
 // Get the surface normal vector at a point on a voxel object's surface.
-type SurfaceNormalRequest struct {
-	ObjectId string  `json:"objectId"`
+type SurfaceNormal struct {
+	ObjectID string  `json:"objectId"`
 	X        float64 `json:"x"`
 	Y        float64 `json:"y"`
 	Z        float64 `json:"z"`
@@ -819,19 +815,19 @@ type SurfaceNormalRequest struct {
 
 // SurfaceNormal calls the surface_normal MCP tool.
 // Get the surface normal vector at a point on a voxel object's surface.
-func (c *Client) SurfaceNormal(ctx context.Context, req SurfaceNormalRequest) (string, error) {
-	args := map[string]interface{}{}
-	args["objectId"] = req.ObjectId
+func (c *Client) SurfaceNormalFn(req SurfaceNormal) (string, error) {
+	args := map[string]any{}
+	args["objectId"] = req.ObjectID
 	args["x"] = req.X
 	args["y"] = req.Y
 	args["z"] = req.Z
-	return c.callTool(ctx, "surface_normal", args)
+	return c.callTool("surface_normal", args)
 }
 
-// ClosestPointRequest holds parameters for the closest_point tool.
+// ClosestPoint holds parameters for the closest_point tool.
 // Find the closest point on a voxel object's surface to a given point.
-type ClosestPointRequest struct {
-	ObjectId string  `json:"objectId"`
+type ClosestPoint struct {
+	ObjectID string  `json:"objectId"`
 	X        float64 `json:"x"`
 	Y        float64 `json:"y"`
 	Z        float64 `json:"z"`
@@ -839,103 +835,103 @@ type ClosestPointRequest struct {
 
 // ClosestPoint calls the closest_point MCP tool.
 // Find the closest point on a voxel object's surface to a given point.
-func (c *Client) ClosestPoint(ctx context.Context, req ClosestPointRequest) (string, error) {
-	args := map[string]interface{}{}
-	args["objectId"] = req.ObjectId
+func (c *Client) ClosestPointFn(req ClosestPoint) (string, error) {
+	args := map[string]any{}
+	args["objectId"] = req.ObjectID
 	args["x"] = req.X
 	args["y"] = req.Y
 	args["z"] = req.Z
-	return c.callTool(ctx, "closest_point", args)
+	return c.callTool("closest_point", args)
 }
 
-// ListObjectsRequest holds parameters for the list_objects tool.
+// ListObjects holds parameters for the list_objects tool.
 // List all objects in the current session with their IDs, types, and descriptions.
-type ListObjectsRequest struct {
+type ListObjects struct {
 }
 
 // ListObjects calls the list_objects MCP tool.
 // List all objects in the current session with their IDs, types, and descriptions.
-func (c *Client) ListObjects(ctx context.Context, req ListObjectsRequest) (string, error) {
-	args := map[string]interface{}{}
-	return c.callTool(ctx, "list_objects", args)
+func (c *Client) ListObjectsFn(req ListObjects) (string, error) {
+	args := map[string]any{}
+	return c.callTool("list_objects", args)
 }
 
-// DeleteObjectRequest holds parameters for the delete_object tool.
+// DeleteObject holds parameters for the delete_object tool.
 // Delete an object from the session. Frees memory and removes the object from the registry.
-type DeleteObjectRequest struct {
-	ObjectId string `json:"objectId"`
+type DeleteObject struct {
+	ObjectID string `json:"objectId"`
 }
 
 // DeleteObject calls the delete_object MCP tool.
 // Delete an object from the session. Frees memory and removes the object from the registry.
-func (c *Client) DeleteObject(ctx context.Context, req DeleteObjectRequest) (string, error) {
-	args := map[string]interface{}{}
-	args["objectId"] = req.ObjectId
-	return c.callTool(ctx, "delete_object", args)
+func (c *Client) DeleteObjectFn(req DeleteObject) (string, error) {
+	args := map[string]any{}
+	args["objectId"] = req.ObjectID
+	return c.callTool("delete_object", args)
 }
 
-// GetVoxelDimensionsRequest holds parameters for the get_voxel_dimensions tool.
+// GetVoxelDimensions holds parameters for the get_voxel_dimensions tool.
 // Get the voxel dimensions (grid size) of a voxel object.
-type GetVoxelDimensionsRequest struct {
-	ObjectId string `json:"objectId"`
+type GetVoxelDimensions struct {
+	ObjectID string `json:"objectId"`
 }
 
 // GetVoxelDimensions calls the get_voxel_dimensions MCP tool.
 // Get the voxel dimensions (grid size) of a voxel object.
-func (c *Client) GetVoxelDimensions(ctx context.Context, req GetVoxelDimensionsRequest) (string, error) {
-	args := map[string]interface{}{}
-	args["objectId"] = req.ObjectId
-	return c.callTool(ctx, "get_voxel_dimensions", args)
+func (c *Client) GetVoxelDimensionsFn(req GetVoxelDimensions) (string, error) {
+	args := map[string]any{}
+	args["objectId"] = req.ObjectID
+	return c.callTool("get_voxel_dimensions", args)
 }
 
-// VoxelsIsEmptyRequest holds parameters for the voxels_is_empty tool.
+// VoxelsIsEmpty holds parameters for the voxels_is_empty tool.
 // Check if a voxel object is empty (contains no volume). Useful for detecting failed operations — e.g. an intersection that produced no overlap, or a subtraction that removed all material.
-type VoxelsIsEmptyRequest struct {
-	ObjectId string `json:"objectId"`
+type VoxelsIsEmpty struct {
+	ObjectID string `json:"objectId"`
 }
 
 // VoxelsIsEmpty calls the voxels_is_empty MCP tool.
 // Check if a voxel object is empty (contains no volume). Useful for detecting failed operations — e.g. an intersection that produced no overlap, or a subtraction that removed all material.
-func (c *Client) VoxelsIsEmpty(ctx context.Context, req VoxelsIsEmptyRequest) (string, error) {
-	args := map[string]interface{}{}
-	args["objectId"] = req.ObjectId
-	return c.callTool(ctx, "voxels_is_empty", args)
+func (c *Client) VoxelsIsEmptyFn(req VoxelsIsEmpty) (string, error) {
+	args := map[string]any{}
+	args["objectId"] = req.ObjectID
+	return c.callTool("voxels_is_empty", args)
 }
 
-// VoxelsMemUsageRequest holds parameters for the voxels_mem_usage tool.
+// VoxelsMemUsage holds parameters for the voxels_mem_usage tool.
 // Get the memory usage of a voxel object in bytes. Useful for monitoring memory consumption when building complex models.
-type VoxelsMemUsageRequest struct {
-	ObjectId string `json:"objectId"`
+type VoxelsMemUsage struct {
+	ObjectID string `json:"objectId"`
 }
 
 // VoxelsMemUsage calls the voxels_mem_usage MCP tool.
 // Get the memory usage of a voxel object in bytes. Useful for monitoring memory consumption when building complex models.
-func (c *Client) VoxelsMemUsage(ctx context.Context, req VoxelsMemUsageRequest) (string, error) {
-	args := map[string]interface{}{}
-	args["objectId"] = req.ObjectId
-	return c.callTool(ctx, "voxels_mem_usage", args)
+func (c *Client) VoxelsMemUsageFn(req VoxelsMemUsage) (string, error) {
+	args := map[string]any{}
+	args["objectId"] = req.ObjectID
+	return c.callTool("voxels_mem_usage", args)
 }
 
-// VoxelsIsEqualRequest holds parameters for the voxels_is_equal tool.
+// VoxelsIsEqual holds parameters for the voxels_is_equal tool.
 // Compare two voxel objects for equality. Returns true if they contain the same voxel data. Useful for verifying that a transform or round-trip preserved the shape.
-type VoxelsIsEqualRequest struct {
-	ObjectIdA string `json:"objectIdA"`
-	ObjectIdB string `json:"objectIdB"`
+type VoxelsIsEqual struct {
+	ObjectIDA string `json:"objectIdA"`
+	ObjectIDB string `json:"objectIdB"`
 }
 
 // VoxelsIsEqual calls the voxels_is_equal MCP tool.
 // Compare two voxel objects for equality. Returns true if they contain the same voxel data. Useful for verifying that a transform or round-trip preserved the shape.
-func (c *Client) VoxelsIsEqual(ctx context.Context, req VoxelsIsEqualRequest) (string, error) {
-	args := map[string]interface{}{}
-	args["objectIdA"] = req.ObjectIdA
-	args["objectIdB"] = req.ObjectIdB
-	return c.callTool(ctx, "voxels_is_equal", args)
+func (c *Client) VoxelsIsEqualFn(req VoxelsIsEqual) (string, error) {
+	args := map[string]any{}
+	args["objectIdA"] = req.ObjectIDA
+	args["objectIdB"] = req.ObjectIDB
+	return c.callTool("voxels_is_equal", args)
 }
 
-// RayCastRequest holds parameters for the ray_cast tool.
+// RayCast holds parameters for the ray_cast tool.
 // Cast a ray from a point in a given direction and find where it hits the surface of a voxel object. Useful for measuring wall thickness, checking bore clearance, and probing internal geometry. Returns the hit point and the distance from the origin, or an error if no intersection is found.
-type RayCastRequest struct {
-	ObjectId string  `json:"objectId"`
+type RayCast struct {
+	ObjectID string  `json:"objectId"`
 	X        float64 `json:"x"`
 	Y        float64 `json:"y"`
 	Z        float64 `json:"z"`
@@ -946,22 +942,22 @@ type RayCastRequest struct {
 
 // RayCast calls the ray_cast MCP tool.
 // Cast a ray from a point in a given direction and find where it hits the surface of a voxel object. Useful for measuring wall thickness, checking bore clearance, and probing internal geometry. Returns the hit point and the distance from the origin, or an error if no intersection is found.
-func (c *Client) RayCast(ctx context.Context, req RayCastRequest) (string, error) {
-	args := map[string]interface{}{}
-	args["objectId"] = req.ObjectId
+func (c *Client) RayCastFn(req RayCast) (string, error) {
+	args := map[string]any{}
+	args["objectId"] = req.ObjectID
 	args["x"] = req.X
 	args["y"] = req.Y
 	args["z"] = req.Z
 	args["dirX"] = req.DirX
 	args["dirY"] = req.DirY
 	args["dirZ"] = req.DirZ
-	return c.callTool(ctx, "ray_cast", args)
+	return c.callTool("ray_cast", args)
 }
 
-// MeasureThicknessRequest holds parameters for the measure_thickness tool.
+// MeasureThickness holds parameters for the measure_thickness tool.
 // Cast a ray from a point in both +direction and -direction and report both hit points and the total span between them. Measures the through-thickness of the object along the ray axis (surface to surface through the interior, which may cross internal cavities). For local wall thickness of a shell, place the origin inside the wall material and note that the total span includes all internal voids.
-type MeasureThicknessRequest struct {
-	ObjectId string  `json:"objectId"`
+type MeasureThickness struct {
+	ObjectID string  `json:"objectId"`
 	X        float64 `json:"x"`
 	Y        float64 `json:"y"`
 	Z        float64 `json:"z"`
@@ -972,60 +968,60 @@ type MeasureThicknessRequest struct {
 
 // MeasureThickness calls the measure_thickness MCP tool.
 // Cast a ray from a point in both +direction and -direction and report both hit points and the total span between them. Measures the through-thickness of the object along the ray axis (surface to surface through the interior, which may cross internal cavities). For local wall thickness of a shell, place the origin inside the wall material and note that the total span includes all internal voids.
-func (c *Client) MeasureThickness(ctx context.Context, req MeasureThicknessRequest) (string, error) {
-	args := map[string]interface{}{}
-	args["objectId"] = req.ObjectId
+func (c *Client) MeasureThicknessFn(req MeasureThickness) (string, error) {
+	args := map[string]any{}
+	args["objectId"] = req.ObjectID
 	args["x"] = req.X
 	args["y"] = req.Y
 	args["z"] = req.Z
 	args["dirX"] = req.DirX
 	args["dirY"] = req.DirY
 	args["dirZ"] = req.DirZ
-	return c.callTool(ctx, "measure_thickness", args)
+	return c.callTool("measure_thickness", args)
 }
 
-// DuplicateObjectRequest holds parameters for the duplicate_object tool.
+// DuplicateObject holds parameters for the duplicate_object tool.
 // Create a duplicate (deep copy) of an existing object. Works with voxel and mesh objects. Returns the new object ID.
-type DuplicateObjectRequest struct {
-	ObjectId string  `json:"objectId"`
-	Id       *string `json:"id,omitempty"`
+type DuplicateObject struct {
+	ObjectID string `json:"objectId"`
+	ID       string `json:"id,omitempty"`
 }
 
 // DuplicateObject calls the duplicate_object MCP tool.
 // Create a duplicate (deep copy) of an existing object. Works with voxel and mesh objects. Returns the new object ID.
-func (c *Client) DuplicateObject(ctx context.Context, req DuplicateObjectRequest) (string, error) {
-	args := map[string]interface{}{}
-	args["objectId"] = req.ObjectId
-	if req.Id != nil {
-		args["id"] = *req.Id
+func (c *Client) DuplicateObjectFn(req DuplicateObject) (string, error) {
+	args := map[string]any{}
+	args["objectId"] = req.ObjectID
+	if req.ID != "" {
+		args["id"] = req.ID
 	}
-	return c.callTool(ctx, "duplicate_object", args)
+	return c.callTool("duplicate_object", args)
 }
 
-// DeleteObjectsRequest holds parameters for the delete_objects tool.
+// DeleteObjects holds parameters for the delete_objects tool.
 // Delete multiple objects from the session in one call. Useful for cleaning up intermediate objects after a complex build. Returns the count of objects actually deleted.
-type DeleteObjectsRequest struct {
-	ObjectIds []string `json:"objectIds"`
+type DeleteObjects struct {
+	ObjectIDs []string `json:"objectIds"`
 	KeepOnly  *bool    `json:"keepOnly,omitempty"`
 }
 
 // DeleteObjects calls the delete_objects MCP tool.
 // Delete multiple objects from the session in one call. Useful for cleaning up intermediate objects after a complex build. Returns the count of objects actually deleted.
-func (c *Client) DeleteObjects(ctx context.Context, req DeleteObjectsRequest) (string, error) {
-	args := map[string]interface{}{}
-	args["objectIds"] = req.ObjectIds
+func (c *Client) DeleteObjectsFn(req DeleteObjects) (string, error) {
+	args := map[string]any{}
+	args["objectIds"] = req.ObjectIDs
 	if req.KeepOnly != nil {
 		args["keepOnly"] = *req.KeepOnly
 	}
-	return c.callTool(ctx, "delete_objects", args)
+	return c.callTool("delete_objects", args)
 }
 
 // --- Render ---
 
-// RenderToImageRequest holds parameters for the render_to_image tool.
+// RenderToImage holds parameters for the render_to_image tool.
 // Render an object to a PNG image using an isometric projection with Lambertian shading. The agent can use this to visually inspect geometry. Returns the file path of the rendered image.
-type RenderToImageRequest struct {
-	ObjectId        string  `json:"objectId"`
+type RenderToImage struct {
+	ObjectID        string  `json:"objectId"`
 	Path            string  `json:"path"`
 	Width           *int    `json:"width,omitempty"`
 	Height          *int    `json:"height,omitempty"`
@@ -1035,9 +1031,9 @@ type RenderToImageRequest struct {
 
 // RenderToImage calls the render_to_image MCP tool.
 // Render an object to a PNG image using an isometric projection with Lambertian shading. The agent can use this to visually inspect geometry. Returns the file path of the rendered image.
-func (c *Client) RenderToImage(ctx context.Context, req RenderToImageRequest) (string, error) {
-	args := map[string]interface{}{}
-	args["objectId"] = req.ObjectId
+func (c *Client) RenderToImageFn(req RenderToImage) (string, error) {
+	args := map[string]any{}
+	args["objectId"] = req.ObjectID
 	args["path"] = req.Path
 	if req.Width != nil {
 		args["width"] = *req.Width
@@ -1051,13 +1047,13 @@ func (c *Client) RenderToImage(ctx context.Context, req RenderToImageRequest) (s
 	if req.ObjectColor != nil {
 		args["objectColor"] = *req.ObjectColor
 	}
-	return c.callTool(ctx, "render_to_image", args)
+	return c.callTool("render_to_image", args)
 }
 
-// RenderSliceRequest holds parameters for the render_slice tool.
+// RenderSlice holds parameters for the render_slice tool.
 // Render a Z-slice of a voxel object to a PNG image. Shows the cross-section at a specific height. Returns the file path.
-type RenderSliceRequest struct {
-	VoxelsId  string  `json:"voxelsId"`
+type RenderSlice struct {
+	VoxelsID  string  `json:"voxelsId"`
 	ZPosition float64 `json:"zPosition"`
 	Path      string  `json:"path"`
 	Mode      *string `json:"mode,omitempty"`
@@ -1065,249 +1061,249 @@ type RenderSliceRequest struct {
 
 // RenderSlice calls the render_slice MCP tool.
 // Render a Z-slice of a voxel object to a PNG image. Shows the cross-section at a specific height. Returns the file path.
-func (c *Client) RenderSlice(ctx context.Context, req RenderSliceRequest) (string, error) {
-	args := map[string]interface{}{}
-	args["voxelsId"] = req.VoxelsId
+func (c *Client) RenderSliceFn(req RenderSlice) (string, error) {
+	args := map[string]any{}
+	args["voxelsId"] = req.VoxelsID
 	args["zPosition"] = req.ZPosition
 	args["path"] = req.Path
 	if req.Mode != nil {
 		args["mode"] = *req.Mode
 	}
-	return c.callTool(ctx, "render_slice", args)
+	return c.callTool("render_slice", args)
 }
 
 // --- Session ---
 
-// PicogkInitRequest holds parameters for the picogk_init tool.
+// Init holds parameters for the picogk_init tool.
 // Initialize the PicoGK geometry kernel. Must be called before any other tool. Sets the voxel resolution in millimeters. Smaller values = higher resolution but more memory. Typical range: 0.1mm (fine) to 5.0mm (coarse).
-type PicogkInitRequest struct {
+type Init struct {
 	VoxelSizeMM *float64 `json:"voxelSizeMM,omitempty"`
 }
 
-// PicogkInit calls the picogk_init MCP tool.
+// Init calls the picogk_init MCP tool.
 // Initialize the PicoGK geometry kernel. Must be called before any other tool. Sets the voxel resolution in millimeters. Smaller values = higher resolution but more memory. Typical range: 0.1mm (fine) to 5.0mm (coarse).
-func (c *Client) PicogkInit(ctx context.Context, req PicogkInitRequest) (string, error) {
-	args := map[string]interface{}{}
+func (c *Client) InitFn(req Init) (string, error) {
+	args := map[string]any{}
 	if req.VoxelSizeMM != nil {
 		args["voxelSizeMM"] = *req.VoxelSizeMM
 	}
-	return c.callTool(ctx, "picogk_init", args)
+	return c.callTool("picogk_init", args)
 }
 
-// PicogkInfoRequest holds parameters for the picogk_info tool.
+// Info holds parameters for the picogk_info tool.
 // Get information about the PicoGK library and current session state. Returns version, memory usage, and counts of allocated objects.
-type PicogkInfoRequest struct {
+type Info struct {
 }
 
 // PicogkInfo calls the picogk_info MCP tool.
 // Get information about the PicoGK library and current session state. Returns version, memory usage, and counts of allocated objects.
-func (c *Client) PicogkInfo(ctx context.Context, req PicogkInfoRequest) (string, error) {
-	args := map[string]interface{}{}
-	return c.callTool(ctx, "picogk_info", args)
+func (c *Client) InfoFn(req Info) (string, error) {
+	args := map[string]any{}
+	return c.callTool("picogk_info", args)
 }
 
-// PicogkShutdownRequest holds parameters for the picogk_shutdown tool.
+// Shutdown holds parameters for the picogk_shutdown tool.
 // Shut down the PicoGK session and release all resources. All object references become invalid after this call.
-type PicogkShutdownRequest struct {
+type Shutdown struct {
 }
 
-// PicogkShutdown calls the picogk_shutdown MCP tool.
+// Shutdown calls the picogk_shutdown MCP tool.
 // Shut down the PicoGK session and release all resources. All object references become invalid after this call.
-func (c *Client) PicogkShutdown(ctx context.Context, req PicogkShutdownRequest) (string, error) {
-	args := map[string]interface{}{}
-	return c.callTool(ctx, "picogk_shutdown", args)
+func (c *Client) ShutdownFn(req Shutdown) (string, error) {
+	args := map[string]any{}
+	return c.callToolNoParse("picogk_shutdown", args)
 }
 
 // --- Transforms ---
 
-// OffsetRequest holds parameters for the offset tool.
+// Offset holds parameters for the offset tool.
 // Offset a voxel surface outward (positive) or inward (negative) by a distance. Use for thickening, thinning, or creating clearance. Returns a new object ID.
-type OffsetRequest struct {
-	ObjectId string  `json:"objectId"`
+type Offset struct {
+	ObjectID string  `json:"objectId"`
 	Distance float64 `json:"distance"`
-	Id       *string `json:"id,omitempty"`
+	ID       string  `json:"id,omitempty"`
 }
 
 // Offset calls the offset MCP tool.
 // Offset a voxel surface outward (positive) or inward (negative) by a distance. Use for thickening, thinning, or creating clearance. Returns a new object ID.
-func (c *Client) Offset(ctx context.Context, req OffsetRequest) (string, error) {
-	args := map[string]interface{}{}
-	args["objectId"] = req.ObjectId
+func (c *Client) OffsetFn(req Offset) (string, error) {
+	args := map[string]any{}
+	args["objectId"] = req.ObjectID
 	args["distance"] = req.Distance
-	if req.Id != nil {
-		args["id"] = *req.Id
+	if req.ID != "" {
+		args["id"] = req.ID
 	}
-	return c.callTool(ctx, "offset", args)
+	return c.callTool("offset", args)
 }
 
-// DoubleOffsetRequest holds parameters for the double_offset tool.
+// DoubleOffset holds parameters for the double_offset tool.
 // Offset a voxel surface twice: first by offset1, then by offset2. Enables precise morphological operations not possible with a single offset — e.g. offset out by 2mm then back by 1.5mm to remove thin features while preserving wall thickness. Returns a new object ID.
-type DoubleOffsetRequest struct {
-	ObjectId string  `json:"objectId"`
+type DoubleOffset struct {
+	ObjectID string  `json:"objectId"`
 	Offset1  float64 `json:"offset1"`
 	Offset2  float64 `json:"offset2"`
-	Id       *string `json:"id,omitempty"`
+	ID       string  `json:"id,omitempty"`
 }
 
 // DoubleOffset calls the double_offset MCP tool.
 // Offset a voxel surface twice: first by offset1, then by offset2. Enables precise morphological operations not possible with a single offset — e.g. offset out by 2mm then back by 1.5mm to remove thin features while preserving wall thickness. Returns a new object ID.
-func (c *Client) DoubleOffset(ctx context.Context, req DoubleOffsetRequest) (string, error) {
-	args := map[string]interface{}{}
-	args["objectId"] = req.ObjectId
+func (c *Client) DoubleOffsetFn(req DoubleOffset) (string, error) {
+	args := map[string]any{}
+	args["objectId"] = req.ObjectID
 	args["offset1"] = req.Offset1
 	args["offset2"] = req.Offset2
-	if req.Id != nil {
-		args["id"] = *req.Id
+	if req.ID != "" {
+		args["id"] = req.ID
 	}
-	return c.callTool(ctx, "double_offset", args)
+	return c.callTool("double_offset", args)
 }
 
-// OverOffsetRequest holds parameters for the over_offset tool.
+// OverOffset holds parameters for the over_offset tool.
 // Offset a voxel surface by a first distance, then settle the surface at a specified final distance from the original. More precise than fillet: lets you say 'offset by 3mm, then move the surface to exactly 0.5mm from where it started.' Useful for controlled material removal. Returns a new object ID.
-type OverOffsetRequest struct {
-	ObjectId         string   `json:"objectId"`
+type OverOffset struct {
+	ObjectID         string   `json:"objectId"`
 	FirstOffset      float64  `json:"firstOffset"`
 	FinalSurfaceDist *float64 `json:"finalSurfaceDist,omitempty"`
-	Id               *string  `json:"id,omitempty"`
+	ID               string   `json:"id,omitempty"`
 }
 
 // OverOffset calls the over_offset MCP tool.
 // Offset a voxel surface by a first distance, then settle the surface at a specified final distance from the original. More precise than fillet: lets you say 'offset by 3mm, then move the surface to exactly 0.5mm from where it started.' Useful for controlled material removal. Returns a new object ID.
-func (c *Client) OverOffset(ctx context.Context, req OverOffsetRequest) (string, error) {
-	args := map[string]interface{}{}
-	args["objectId"] = req.ObjectId
+func (c *Client) OverOffsetFn(req OverOffset) (string, error) {
+	args := map[string]any{}
+	args["objectId"] = req.ObjectID
 	args["firstOffset"] = req.FirstOffset
 	if req.FinalSurfaceDist != nil {
 		args["finalSurfaceDist"] = *req.FinalSurfaceDist
 	}
-	if req.Id != nil {
-		args["id"] = *req.Id
+	if req.ID != "" {
+		args["id"] = req.ID
 	}
-	return c.callTool(ctx, "over_offset", args)
+	return c.callTool("over_offset", args)
 }
 
-// SmoothRequest holds parameters for the smooth tool.
+// Smooth holds parameters for the smooth tool.
 // Smooth/round a voxel surface by applying triple offset. Good for removing sharp edges. Returns a new object ID.
-type SmoothRequest struct {
-	ObjectId string  `json:"objectId"`
+type Smooth struct {
+	ObjectID string  `json:"objectId"`
 	Distance float64 `json:"distance"`
-	Id       *string `json:"id,omitempty"`
+	ID       string  `json:"id,omitempty"`
 }
 
 // Smooth calls the smooth MCP tool.
 // Smooth/round a voxel surface by applying triple offset. Good for removing sharp edges. Returns a new object ID.
-func (c *Client) Smooth(ctx context.Context, req SmoothRequest) (string, error) {
-	args := map[string]interface{}{}
-	args["objectId"] = req.ObjectId
+func (c *Client) SmoothFn(req Smooth) (string, error) {
+	args := map[string]any{}
+	args["objectId"] = req.ObjectID
 	args["distance"] = req.Distance
-	if req.Id != nil {
-		args["id"] = *req.Id
+	if req.ID != "" {
+		args["id"] = req.ID
 	}
-	return c.callTool(ctx, "smooth", args)
+	return c.callTool("smooth", args)
 }
 
-// TrimRequest holds parameters for the trim tool.
+// Trim holds parameters for the trim tool.
 // Trim a voxel object to fit within a bounding box. Everything outside the box is removed. Returns a new object ID.
-type TrimRequest struct {
-	ObjectId string  `json:"objectId"`
+type Trim struct {
+	ObjectID string  `json:"objectId"`
 	MinX     float64 `json:"minX"`
 	MinY     float64 `json:"minY"`
 	MinZ     float64 `json:"minZ"`
 	MaxX     float64 `json:"maxX"`
 	MaxY     float64 `json:"maxY"`
 	MaxZ     float64 `json:"maxZ"`
-	Id       *string `json:"id,omitempty"`
+	ID       string  `json:"id,omitempty"`
 }
 
 // Trim calls the trim MCP tool.
 // Trim a voxel object to fit within a bounding box. Everything outside the box is removed. Returns a new object ID.
-func (c *Client) Trim(ctx context.Context, req TrimRequest) (string, error) {
-	args := map[string]interface{}{}
-	args["objectId"] = req.ObjectId
+func (c *Client) TrimFn(req Trim) (string, error) {
+	args := map[string]any{}
+	args["objectId"] = req.ObjectID
 	args["minX"] = req.MinX
 	args["minY"] = req.MinY
 	args["minZ"] = req.MinZ
 	args["maxX"] = req.MaxX
 	args["maxY"] = req.MaxY
 	args["maxZ"] = req.MaxZ
-	if req.Id != nil {
-		args["id"] = *req.Id
+	if req.ID != "" {
+		args["id"] = req.ID
 	}
-	return c.callTool(ctx, "trim", args)
+	return c.callTool("trim", args)
 }
 
-// ShellRequest holds parameters for the shell tool.
+// Shell holds parameters for the shell tool.
 // Create a hollow shell from a voxel object. Both positive and negative offsets are applied. Returns a new object ID.
-type ShellRequest struct {
-	ObjectId    string   `json:"objectId"`
+type Shell struct {
+	ObjectID    string   `json:"objectId"`
 	InnerOffset float64  `json:"innerOffset"`
 	OuterOffset float64  `json:"outerOffset"`
 	Smooth      *float64 `json:"smooth,omitempty"`
-	Id          *string  `json:"id,omitempty"`
+	ID          string   `json:"id,omitempty"`
 }
 
 // Shell calls the shell MCP tool.
 // Create a hollow shell from a voxel object. Both positive and negative offsets are applied. Returns a new object ID.
-func (c *Client) Shell(ctx context.Context, req ShellRequest) (string, error) {
-	args := map[string]interface{}{}
-	args["objectId"] = req.ObjectId
+func (c *Client) ShellFn(req Shell) (string, error) {
+	args := map[string]any{}
+	args["objectId"] = req.ObjectID
 	args["innerOffset"] = req.InnerOffset
 	args["outerOffset"] = req.OuterOffset
 	if req.Smooth != nil {
 		args["smooth"] = *req.Smooth
 	}
-	if req.Id != nil {
-		args["id"] = *req.Id
+	if req.ID != "" {
+		args["id"] = req.ID
 	}
-	return c.callTool(ctx, "shell", args)
+	return c.callTool("shell", args)
 }
 
-// FilletRequest holds parameters for the fillet tool.
+// Fillet holds parameters for the fillet tool.
 // Fillets (rounds) the surface of a voxel object. Same as smooth but semantically for rounding edges. Returns a new object ID.
-type FilletRequest struct {
-	ObjectId string  `json:"objectId"`
+type Fillet struct {
+	ObjectID string  `json:"objectId"`
 	Radius   float64 `json:"radius"`
-	Id       *string `json:"id,omitempty"`
+	ID       string  `json:"id,omitempty"`
 }
 
 // Fillet calls the fillet MCP tool.
 // Fillets (rounds) the surface of a voxel object. Same as smooth but semantically for rounding edges. Returns a new object ID.
-func (c *Client) Fillet(ctx context.Context, req FilletRequest) (string, error) {
-	args := map[string]interface{}{}
-	args["objectId"] = req.ObjectId
+func (c *Client) FilletFn(req Fillet) (string, error) {
+	args := map[string]any{}
+	args["objectId"] = req.ObjectID
 	args["radius"] = req.Radius
-	if req.Id != nil {
-		args["id"] = *req.Id
+	if req.ID != "" {
+		args["id"] = req.ID
 	}
-	return c.callTool(ctx, "fillet", args)
+	return c.callTool("fillet", args)
 }
 
-// ProjectZSliceRequest holds parameters for the project_z_slice tool.
+// ProjectZSlice holds parameters for the project_z_slice tool.
 // Project voxels onto a Z-plane (top-down silhouette). Useful for creating 2D cross-sections. Returns a new object ID.
-type ProjectZSliceRequest struct {
-	ObjectId string  `json:"objectId"`
+type ProjectZSlice struct {
+	ObjectID string  `json:"objectId"`
 	StartZ   float64 `json:"startZ"`
 	EndZ     float64 `json:"endZ"`
-	Id       *string `json:"id,omitempty"`
+	ID       string  `json:"id,omitempty"`
 }
 
 // ProjectZSlice calls the project_z_slice MCP tool.
 // Project voxels onto a Z-plane (top-down silhouette). Useful for creating 2D cross-sections. Returns a new object ID.
-func (c *Client) ProjectZSlice(ctx context.Context, req ProjectZSliceRequest) (string, error) {
-	args := map[string]interface{}{}
-	args["objectId"] = req.ObjectId
+func (c *Client) ProjectZSliceFn(req ProjectZSlice) (string, error) {
+	args := map[string]any{}
+	args["objectId"] = req.ObjectID
 	args["startZ"] = req.StartZ
 	args["endZ"] = req.EndZ
-	if req.Id != nil {
-		args["id"] = *req.Id
+	if req.ID != "" {
+		args["id"] = req.ID
 	}
-	return c.callTool(ctx, "project_z_slice", args)
+	return c.callTool("project_z_slice", args)
 }
 
-// TransformVoxelsRequest holds parameters for the transform_voxels tool.
+// TransformVoxels holds parameters for the transform_voxels tool.
 // Transform a voxel object by translating, rotating, and/or scaling it. Rotations are applied first (around the world origin 0,0,0 — not the object's center), then translation. To rotate an object in place, first translate it to the origin, rotate, then translate back. Uses native PicoGK signed-distance-field re-rasterization (no expensive mesh round-trip), so it is efficient for large voxel fields. Returns a new object ID.
-type TransformVoxelsRequest struct {
-	ObjectId   string   `json:"objectId"`
+type TransformVoxels struct {
+	ObjectID   string   `json:"objectId"`
 	TranslateX *float64 `json:"translateX,omitempty"`
 	TranslateY *float64 `json:"translateY,omitempty"`
 	TranslateZ *float64 `json:"translateZ,omitempty"`
@@ -1315,14 +1311,14 @@ type TransformVoxelsRequest struct {
 	RotateY    *float64 `json:"rotateY,omitempty"`
 	RotateZ    *float64 `json:"rotateZ,omitempty"`
 	Scale      *float64 `json:"scale,omitempty"`
-	Id         *string  `json:"id,omitempty"`
+	ID         string   `json:"id,omitempty"`
 }
 
 // TransformVoxels calls the transform_voxels MCP tool.
 // Transform a voxel object by translating, rotating, and/or scaling it. Rotations are applied first (around the world origin 0,0,0 — not the object's center), then translation. To rotate an object in place, first translate it to the origin, rotate, then translate back. Uses native PicoGK signed-distance-field re-rasterization (no expensive mesh round-trip), so it is efficient for large voxel fields. Returns a new object ID.
-func (c *Client) TransformVoxels(ctx context.Context, req TransformVoxelsRequest) (string, error) {
-	args := map[string]interface{}{}
-	args["objectId"] = req.ObjectId
+func (c *Client) TransformVoxelsFn(req TransformVoxels) (string, error) {
+	args := map[string]any{}
+	args["objectId"] = req.ObjectID
 	if req.TranslateX != nil {
 		args["translateX"] = *req.TranslateX
 	}
@@ -1344,16 +1340,16 @@ func (c *Client) TransformVoxels(ctx context.Context, req TransformVoxelsRequest
 	if req.Scale != nil {
 		args["scale"] = *req.Scale
 	}
-	if req.Id != nil {
-		args["id"] = *req.Id
+	if req.ID != "" {
+		args["id"] = req.ID
 	}
-	return c.callTool(ctx, "transform_voxels", args)
+	return c.callTool("transform_voxels", args)
 }
 
-// CircularPatternRequest holds parameters for the circular_pattern tool.
+// CircularPattern holds parameters for the circular_pattern tool.
 // Create a circular (polar) pattern of a voxel object: rotate copies around an axis through a center point and union them into a single result. Uses SDF re-rasterization (no mesh round-trips) for each copy. Returns a new object ID containing all copies combined. Example: 4 bolt holes around a flange center at 90° intervals.
-type CircularPatternRequest struct {
-	ObjectId   string   `json:"objectId"`
+type CircularPattern struct {
+	ObjectID   string   `json:"objectId"`
 	Count      int      `json:"count"`
 	TotalAngle *float64 `json:"totalAngle,omitempty"`
 	CenterX    *float64 `json:"centerX,omitempty"`
@@ -1362,14 +1358,14 @@ type CircularPatternRequest struct {
 	AxisX      *float64 `json:"axisX,omitempty"`
 	AxisY      *float64 `json:"axisY,omitempty"`
 	AxisZ      *float64 `json:"axisZ,omitempty"`
-	Id         *string  `json:"id,omitempty"`
+	ID         string   `json:"id,omitempty"`
 }
 
 // CircularPattern calls the circular_pattern MCP tool.
 // Create a circular (polar) pattern of a voxel object: rotate copies around an axis through a center point and union them into a single result. Uses SDF re-rasterization (no mesh round-trips) for each copy. Returns a new object ID containing all copies combined. Example: 4 bolt holes around a flange center at 90° intervals.
-func (c *Client) CircularPattern(ctx context.Context, req CircularPatternRequest) (string, error) {
-	args := map[string]interface{}{}
-	args["objectId"] = req.ObjectId
+func (c *Client) CircularPatternFn(req CircularPattern) (string, error) {
+	args := map[string]any{}
+	args["objectId"] = req.ObjectID
 	args["count"] = req.Count
 	if req.TotalAngle != nil {
 		args["totalAngle"] = *req.TotalAngle
@@ -1392,8 +1388,8 @@ func (c *Client) CircularPattern(ctx context.Context, req CircularPatternRequest
 	if req.AxisZ != nil {
 		args["axisZ"] = *req.AxisZ
 	}
-	if req.Id != nil {
-		args["id"] = *req.Id
+	if req.ID != "" {
+		args["id"] = req.ID
 	}
-	return c.callTool(ctx, "circular_pattern", args)
+	return c.callTool("circular_pattern", args)
 }

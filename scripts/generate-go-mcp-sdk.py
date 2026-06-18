@@ -122,13 +122,14 @@ def gen_client_go(tools: list[ToolDef]) -> str:
     lines.append("// Usage:")
     lines.append("//\t// Uses default server at $HOME/.local/bin/picogk-mcp/PicoGK.Mcp")
     lines.append("//\tclient, err := picogk.NewClient(ctx, \"\")")
-    lines.append("//\tdefer client.Close(ctx)")
+    lines.append("//\tdefer client.Close()")
     lines.append("//\t// Or specify a custom path:")
     lines.append("//\tclient, err := picogk.NewClient(ctx, \"/custom/path/to/PicoGK.Mcp\")")
     lines.append("//\t// Initialize the geometry kernel")
-    lines.append("//\tres, err := client.PicogkInit(ctx, picogk.PicogkInitRequest{VoxelSizeMM: 0.5})")
+    lines.append("//\tres, err := client.PicoGKInit(ctx, picogk.PicoGKInitRequest{VoxelSizeMM: 0.5})")
     lines.append("//\t// Create a sphere, subtract a box, export STL...")
     lines.append("type Client struct {")
+    lines.append("\tctx       context.Context")
     lines.append("\tcmd       *exec.Cmd")
     lines.append("\tstdin     io.WriteCloser")
     lines.append("\tstdout    *bufio.Reader")
@@ -162,6 +163,7 @@ def gen_client_go(tools: list[ToolDef]) -> str:
     lines.append("\t\treturn nil, fmt.Errorf(\"starting server: %w\", err)")
     lines.append("\t}")
     lines.append("\tc := &Client{")
+    lines.append("\t\tctx:       ctx,")
     lines.append("\t\tcmd:       cmd,")
     lines.append("\t\tstdin:     stdin,")
     lines.append("\t\tstdout:    bufio.NewReader(stdout),")
@@ -176,7 +178,7 @@ def gen_client_go(tools: list[ToolDef]) -> str:
     lines.append("}")
     lines.append("")
     lines.append("// Close shuts down the MCP server process.")
-    lines.append("func (c *Client) Close(ctx context.Context) error {")
+    lines.append("func (c *Client) Close() error {")
     lines.append("\tc.mu.Lock()")
     lines.append("\tdefer c.mu.Unlock()")
     lines.append("\tif c.stdin != nil {")
@@ -190,7 +192,7 @@ def gen_client_go(tools: list[ToolDef]) -> str:
     lines.append("\t\t}()")
     lines.append("\t\tselect {")
     lines.append("\t\tcase <-done:")
-    lines.append("\t\tcase <-ctx.Done():")
+    lines.append("\t\tcase <-c.ctx.Done():")
     lines.append("\t\t\tc.cmd.Process.Kill()")
     lines.append("\t\t\t<-done")
     lines.append("\t\t}")
@@ -239,7 +241,7 @@ def gen_client_go(tools: list[ToolDef]) -> str:
     lines.append("\tIsError bool `json:\"isError\"`")
     lines.append("}")
     lines.append("")
-    lines.append("func (c *Client) initialize(ctx context.Context) error {")
+    lines.append("func (c *Client) initialize() error {")
     lines.append("\treq := map[string]interface{}{")
     lines.append('\t\t"jsonrpc": "2.0",')
     lines.append('\t\t"id":      c.nextID(),')
@@ -283,7 +285,7 @@ def gen_client_go(tools: list[ToolDef]) -> str:
     lines.append("\treturn err")
     lines.append("}")
     lines.append("")
-    lines.append("func (c *Client) call(ctx context.Context, req interface{}) (json.RawMessage, error) {")
+    lines.append("func (c *Client) call(req interface{}) (json.RawMessage, error) {")
     lines.append("\tif err := c.send(req); err != nil {")
     lines.append("\t\treturn nil, err")
     lines.append("\t}")
@@ -303,7 +305,7 @@ def gen_client_go(tools: list[ToolDef]) -> str:
     lines.append("}")
     lines.append("")
     lines.append("// callTool invokes an MCP tool by name and returns the text content of the response.")
-    lines.append("func (c *Client) callTool(ctx context.Context, toolName string, args map[string]interface{}) (string, error) {")
+    lines.append("func (c *Client) callTool(toolName string, args map[string]interface{}) (string, error) {")
     lines.append("\treq := map[string]interface{}{")
     lines.append('\t\t"jsonrpc": "2.0",')
     lines.append('\t\t"id":      c.nextID(),')
@@ -393,7 +395,7 @@ def gen_tools_go(tools: list[ToolDef]) -> str:
                 req_params_str = ", ".join(
                     p.name for p in tool.required_params
                 )
-            lines.append(f"func (c *Client) {tool.name}(ctx context.Context, req {req_struct}) (string, error) {{")
+            lines.append(f"func (c *Client) {tool.name}(req {req_struct}) (string, error) {{")
 
             # Build args map
             lines.append("\targs := map[string]interface{}{}")
@@ -479,7 +481,7 @@ func main() {{
     defer client.Close(ctx)
 
     // Initialize the geometry kernel (0.5mm voxels)
-    _, err = client.PicogkInit(ctx, picogk.PicogkInitRequest{{
+    _, err = client.PicoGKInit(ctx, picogk.PicoGKInitRequest{{
         VoxelSizeMM: float64Ptr(0.5),
     }})
     if err != nil {{

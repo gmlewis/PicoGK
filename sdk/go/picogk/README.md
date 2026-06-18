@@ -30,10 +30,10 @@ func main() {
     if err != nil {
         log.Fatal(err)
     }
-    defer client.Close(ctx)
+    defer client.Close()
 
     // Initialize the geometry kernel (0.5mm voxels)
-    _, err = client.PicogkInit(ctx, picogk.PicogkInitRequest{
+    _, err = client.PicoGKInit(picogk.PicoGKInitRequest{
         VoxelSizeMM: float64Ptr(0.5),
     })
     if err != nil {
@@ -41,7 +41,7 @@ func main() {
     }
 
     // Create a sphere
-    res, err := client.CreateSphere(ctx, picogk.CreateSphereRequest{
+    res, err := client.CreateSphere(picogk.CreateSphereRequest{
         X:      0,
         Y:      0,
         Z:      0,
@@ -54,7 +54,7 @@ func main() {
     fmt.Println(res)
 
     // Create a box cutout
-    _, err = client.CreateBox(ctx, picogk.CreateBoxRequest{
+    _, err = client.CreateBox(picogk.CreateBoxRequest{
         MinX: -10, MinY: -10, MinZ: -40,
         MaxX:  10, MaxY:  10, MaxZ: 40,
         Id:   stringPtr("cutout"),
@@ -64,7 +64,7 @@ func main() {
     }
 
     // Subtract box from sphere
-    _, err = client.BooleanSubtract(ctx, picogk.BooleanSubtractRequest{
+    _, err = client.BooleanSubtract(picogk.BooleanSubtractRequest{
         A:  "body",
         B:  "cutout",
         Id: stringPtr("result"),
@@ -74,7 +74,7 @@ func main() {
     }
 
     // Smooth the result
-    _, err = client.Smooth(ctx, picogk.SmoothRequest{
+    _, err = client.Smooth(picogk.SmoothRequest{
         ObjectId: "result",
         Distance: 2.0,
         Id:       stringPtr("smoothed"),
@@ -84,14 +84,14 @@ func main() {
     }
 
     // Convert to mesh and export STL
-    _, err = client.VoxelsToMesh(ctx, picogk.VoxelsToMeshRequest{
+    _, err = client.VoxelsToMesh(picogk.VoxelsToMeshRequest{
         VoxelsId: "smoothed",
         Id:       stringPtr("mesh"),
     })
     if err != nil {
         log.Fatal(err)
     }
-    _, err = client.SaveStl(ctx, picogk.SaveStlRequest{
+    _, err = client.SaveStl(picogk.SaveStlRequest{
         MeshId: "mesh",
         Path:   "/tmp/part.stl",
     })
@@ -100,7 +100,7 @@ func main() {
     }
 
     // Render a preview
-    _, err = client.RenderToImage(ctx, picogk.RenderToImageRequest{
+    _, err = client.RenderToImage(picogk.RenderToImageRequest{
         ObjectId: "smoothed",
         Path:     "/tmp/preview.png",
     })
@@ -136,7 +136,7 @@ The SDK exposes all 62 PicoGK MCP tools via builder-pattern request structs:
 
 Each tool has:
 - A `XxxRequest` struct with typed fields (optional params are pointers)
-- A `Client.Xxx(ctx, req)` method returning `(string, error)`
+- A `client.Xxx(req)` method returning `(string, error)`
 - Full doc comments
 
 ## Architecture
