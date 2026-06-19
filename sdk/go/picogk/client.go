@@ -64,6 +64,7 @@ func NewClient(ctx context.Context, serverBin string) (*Client, error) {
 		return nil, fmt.Errorf("starting server: %w", err)
 	}
 	c := &Client{
+		ctx:       ctx,
 		cmd:       cmd,
 		stdin:     stdin,
 		stdout:    bufio.NewReader(stdout),
@@ -270,13 +271,13 @@ func (c *Client) Must(cmd any) (label, result string) {
 func (c *Client) Do(cmd any) (label, result string, err error) {
 	switch req := cmd.(type) {
 	case BooleanAdd:
-		label = "boolean_add"
+		label = "BooleanAdd"
 		result, err = c.BooleanAddFn(req)
 	case BooleanSubtract:
-		label = "boolean_subtract"
+		label = "BooleanSubtract"
 		result, err = c.BooleanSubtractFn(req)
 	case BooleanIntersect:
-		label = "boolean_intersect"
+		label = "BooleanIntersect"
 		result, err = c.BooleanIntersectFn(req)
 	case BooleanAddAll:
 		label = "BooleanAddAll"

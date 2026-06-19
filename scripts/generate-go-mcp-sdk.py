@@ -44,7 +44,7 @@ def go_type(cs_type: str) -> str:
         return "string"
     if cs_type == "string[]":
         return "[]string"
-    return "interface{}"
+    return "any"
 
 
 def go_zero(cs_type: str) -> str:
@@ -74,7 +74,7 @@ def go_json_type(cs_type: str) -> str:
         return "string"
     if cs_type == "string[]":
         return "[]string"
-    return "interface{}"
+    return "any"
 
 
 def is_pointer_optional(cs_type: str) -> bool:
@@ -86,10 +86,48 @@ def is_pointer_optional(cs_type: str) -> bool:
 # Name conversion
 # ---------------------------------------------------------------------------
 
+def go_tool_name(tool_name: str) -> str:
+    """Apply Go initialism rules to a tool name (e.g. SaveStl -> SaveSTL)."""
+    replacements = {
+        "Stl": "STL",
+        "Svg": "SVG",
+        "VdbFields": "VDBFields",
+        "Vdb": "VDB",
+        "Cli": "CLI",
+    }
+    for old, new in replacements.items():
+        if tool_name.endswith(old):
+            return tool_name[:-len(old)] + new
+    if tool_name.startswith("Picogk"):
+        return tool_name[6:]
+    return tool_name
+
+
+def capitalize_initialisms(p: str) -> str:
+    """Capitalize words, checking for common Go initialisms"""
+    if p == "ids":
+        return "IDs"
+    if p == "id":
+        return "ID"
+
+    if p.endswith("IdA"):
+        p = p[:-3] + "IDA"
+    if p.endswith("IdB"):
+        p = p[:-3] + "IDB"
+    if p.endswith("Ids"):
+        p = p[:-3] + "IDs"
+    if p.endswith("Id"):
+        p = p[:-2] + "ID"
+    return p[:1].upper() + p[1:]
+
+def capitalize_field_name(parts: list[str]) -> str:
+    wp = [capitalize_initialisms(p) for p in parts]
+    return "".join(wp)
+
 def go_field_name(param_name: str) -> str:
     """Convert snake_case param name to Go-idiomatic exported field name."""
     parts = param_name.split("_")
-    return "".join(p[:1].upper() + p[1:] for p in parts)
+    return capitalize_field_name(parts)
 
 
 # ---------------------------------------------------------------------------
@@ -100,241 +138,289 @@ def gen_client_go(tools: list[ToolDef]) -> str:
     """Generate the core client.go file."""
     lines: list[str] = []
     lines.append(GENERATED_HEADER)
-    lines.append("")
-    lines.append("package picogk")
-    lines.append("")
-    lines.append("import (")
-    lines.append('\t"bufio"')
-    lines.append('\t"context"')
-    lines.append('\t"encoding/json"')
-    lines.append('\t"fmt"')
-    lines.append('\t"io"')
-    lines.append('\t"os"')
-    lines.append('\t"os/exec"')
-    lines.append('\t"path/filepath"')
-    lines.append('\t"strings"')
-    lines.append('\t"sync"')
-    lines.append(")")
-    lines.append("")
-    lines.append("// Client manages a connection to the PicoGK MCP server.")
-    lines.append("// It launches the server as a subprocess and communicates via JSON-RPC over stdio.")
-    lines.append("//")
-    lines.append("// Usage:")
-    lines.append("//\t// Uses default server at $HOME/.local/bin/picogk-mcp/PicoGK.Mcp")
-    lines.append("//\tclient, err := picogk.NewClient(ctx, \"\")")
-    lines.append("//\tdefer client.Close()")
-    lines.append("//\t// Or specify a custom path:")
-    lines.append("//\tclient, err := picogk.NewClient(ctx, \"/custom/path/to/PicoGK.Mcp\")")
-    lines.append("//\t// Initialize the geometry kernel")
-    lines.append("//\tres, err := client.PicoGKInit(ctx, picogk.PicoGKInitRequest{VoxelSizeMM: 0.5})")
-    lines.append("//\t// Create a sphere, subtract a box, export STL...")
-    lines.append("type Client struct {")
-    lines.append("\tctx       context.Context")
-    lines.append("\tcmd       *exec.Cmd")
-    lines.append("\tstdin     io.WriteCloser")
-    lines.append("\tstdout    *bufio.Reader")
-    lines.append("\tmu        sync.Mutex")
-    lines.append("\tmsgID     int")
-    lines.append("\tserverBin string")
-    lines.append("}")
-    lines.append("")
-    lines.append("// DefaultServerBin is the default path to the PicoGK MCP server binary.")
-    lines.append("// It can be overridden by passing a non-empty path to NewClient.")
-    lines.append("const DefaultServerBin = \"~/.local/bin/picogk-mcp/PicoGK.Mcp\"")
-    lines.append("")
-    lines.append("// NewClient launches the PicoGK MCP server binary and returns a Client.")
-    lines.append("// If serverBin is empty, uses DefaultServerBin ($HOME/.local/bin/picogk-mcp/PicoGK.Mcp).")
-    lines.append("// Expand ~ to the user's home directory automatically.")
-    lines.append("func NewClient(ctx context.Context, serverBin string) (*Client, error) {")
-    lines.append("\tif serverBin == \"\" {")
-    lines.append("\t\tserverBin = DefaultServerBin")
-    lines.append("\t}")
-    lines.append("\tserverBin = expandPath(serverBin)")
-    lines.append("\tcmd := exec.CommandContext(ctx, serverBin)")
-    lines.append("\tstdin, err := cmd.StdinPipe()")
-    lines.append("\tif err != nil {")
-    lines.append("\t\treturn nil, fmt.Errorf(\"creating stdin pipe: %w\", err)")
-    lines.append("\t}")
-    lines.append("\tstdout, err := cmd.StdoutPipe()")
-    lines.append("\tif err != nil {")
-    lines.append("\t\treturn nil, fmt.Errorf(\"creating stdout pipe: %w\", err)")
-    lines.append("\t}")
-    lines.append("\tif err := cmd.Start(); err != nil {")
-    lines.append("\t\treturn nil, fmt.Errorf(\"starting server: %w\", err)")
-    lines.append("\t}")
-    lines.append("\tc := &Client{")
-    lines.append("\t\tctx:       ctx,")
-    lines.append("\t\tcmd:       cmd,")
-    lines.append("\t\tstdin:     stdin,")
-    lines.append("\t\tstdout:    bufio.NewReader(stdout),")
-    lines.append("\t\tserverBin: serverBin,")
-    lines.append("\t}")
-    lines.append("\t// Perform MCP initialize handshake")
-    lines.append("\tif err := c.initialize(ctx); err != nil {")
-    lines.append("\t\tcmd.Process.Kill()")
-    lines.append("\t\treturn nil, fmt.Errorf(\"initialize handshake: %w\", err)")
-    lines.append("\t}")
-    lines.append("\treturn c, nil")
-    lines.append("}")
-    lines.append("")
-    lines.append("// Close shuts down the MCP server process.")
-    lines.append("func (c *Client) Close() error {")
-    lines.append("\tc.mu.Lock()")
-    lines.append("\tdefer c.mu.Unlock()")
-    lines.append("\tif c.stdin != nil {")
-    lines.append("\t\tc.stdin.Close()")
-    lines.append("\t}")
-    lines.append("\tif c.cmd != nil && c.cmd.Process != nil {")
-    lines.append("\t\tdone := make(chan struct{})")
-    lines.append("\t\tgo func() {")
-    lines.append("\t\t\tc.cmd.Wait()")
-    lines.append("\t\t\tclose(done)")
-    lines.append("\t\t}()")
-    lines.append("\t\tselect {")
-    lines.append("\t\tcase <-done:")
-    lines.append("\t\tcase <-c.ctx.Done():")
-    lines.append("\t\t\tc.cmd.Process.Kill()")
-    lines.append("\t\t\t<-done")
-    lines.append("\t\t}")
-    lines.append("\t}")
-    lines.append("\treturn nil")
-    lines.append("}")
-    lines.append("")
-    lines.append("")
-    lines.append("// expandPath expands a leading ~ to the user's home directory.")
-    lines.append("func expandPath(path string) string {")
-    lines.append('\tif strings.HasPrefix(path, "~") {')
-    lines.append('\t\thome, err := os.UserHomeDir()')
-    lines.append('\t\tif err == nil {')
-    lines.append('\t\t\tpath = filepath.Join(home, path[1:])')
-    lines.append('\t\t}')
-    lines.append('\t}')
-    lines.append('\treturn path')
-    lines.append("}")
-    lines.append("")
-    lines.append("// --- JSON-RPC internals ---")
-    lines.append("")
-    lines.append("type jsonRPCRequest struct {")
-    lines.append('\tJSONRPC string      `json:"jsonrpc"`')
-    lines.append("\tID       int         `json:\"id\"`")
-    lines.append("\tMethod   string      `json:\"method\"`")
-    lines.append("\tParams   interface{} `json:\"params\"`")
-    lines.append("}")
-    lines.append("")
-    lines.append("type jsonRPCResponse struct {")
-    lines.append('\tJSONRPC string          `json:"jsonrpc"`')
-    lines.append("\tID       int             `json:\"id\"`")
-    lines.append("\tResult   json.RawMessage `json:\"result,omitempty\"`")
-    lines.append("\tError    *jsonRPCErr     `json:\"error,omitempty\"`")
-    lines.append("}")
-    lines.append("")
-    lines.append("type jsonRPCErr struct {")
-    lines.append("\tCode    int    `json:\"code\"`")
-    lines.append("\tMessage string `json:\"message\"`")
-    lines.append("}")
-    lines.append("")
-    lines.append("type toolResult struct {")
-    lines.append("\tContent []struct {")
-    lines.append("\t\tType string `json:\"type\"`")
-    lines.append("\t\tText string `json:\"text\"`")
-    lines.append("\t} `json:\"content\"`")
-    lines.append("\tIsError bool `json:\"isError\"`")
-    lines.append("}")
-    lines.append("")
-    lines.append("func (c *Client) initialize() error {")
-    lines.append("\treq := map[string]interface{}{")
-    lines.append('\t\t"jsonrpc": "2.0",')
-    lines.append('\t\t"id":      c.nextID(),')
-    lines.append('\t\t"method":  "initialize",')
-    lines.append('\t\t"params": map[string]interface{}{')
-    lines.append('\t\t\t"protocolVersion": "2024-11-05",')
-    lines.append('\t\t\t"capabilities":   map[string]interface{}{},')
-    lines.append('\t\t\t"clientInfo": map[string]interface{}{')
-    lines.append('\t\t\t\t"name":    "picogk",')
-    lines.append('\t\t\t\t"version": "1.0.0",')
-    lines.append('\t\t\t},')
-    lines.append('\t\t},')
-    lines.append("\t}")
-    lines.append("\t_, err := c.call(ctx, req)")
-    lines.append("\tif err != nil {")
-    lines.append("\t\treturn err")
-    lines.append("\t}")
-    lines.append("\t// Send initialized notification")
-    lines.append("\tnotif := map[string]interface{}{")
-    lines.append('\t\t"jsonrpc": "2.0",')
-    lines.append('\t\t"method":  "notifications/initialized",')
-    lines.append("\t}")
-    lines.append("\treturn c.send(notif)")
-    lines.append("}")
-    lines.append("")
-    lines.append("func (c *Client) nextID() int {")
-    lines.append("\tc.mu.Lock()")
-    lines.append("\tdefer c.mu.Unlock()")
-    lines.append("\tc.msgID++")
-    lines.append("\treturn c.msgID")
-    lines.append("}")
-    lines.append("")
-    lines.append("func (c *Client) send(msg interface{}) error {")
-    lines.append("\tdata, err := json.Marshal(msg)")
-    lines.append("\tif err != nil {")
-    lines.append("\t\treturn fmt.Errorf(\"marshaling: %w\", err)")
-    lines.append("\t}")
-    lines.append("\tc.mu.Lock()")
-    lines.append("\tdefer c.mu.Unlock()")
-    lines.append("\t_, err = c.stdin.Write(append(data, '\\n'))")
-    lines.append("\treturn err")
-    lines.append("}")
-    lines.append("")
-    lines.append("func (c *Client) call(req interface{}) (json.RawMessage, error) {")
-    lines.append("\tif err := c.send(req); err != nil {")
-    lines.append("\t\treturn nil, err")
-    lines.append("\t}")
-    lines.append("\t// Read response line")
-    lines.append("\tline, err := c.stdout.ReadString('\\n')")
-    lines.append("\tif err != nil {")
-    lines.append("\t\treturn nil, fmt.Errorf(\"reading response: %w\", err)")
-    lines.append("\t}")
-    lines.append("\tvar resp jsonRPCResponse")
-    lines.append("\tif err := json.Unmarshal([]byte(line), &resp); err != nil {")
-    lines.append('\t\treturn nil, fmt.Errorf("parsing response: %w (line: %q)", err, line)')
-    lines.append("\t}")
-    lines.append("\tif resp.Error != nil {")
-    lines.append("\t\treturn nil, fmt.Errorf(\"server error [%d]: %s\", resp.Error.Code, resp.Error.Message)")
-    lines.append("\t}")
-    lines.append("\treturn resp.Result, nil")
-    lines.append("}")
-    lines.append("")
-    lines.append("// callTool invokes an MCP tool by name and returns the text content of the response.")
-    lines.append("func (c *Client) callTool(toolName string, args map[string]interface{}) (string, error) {")
-    lines.append("\treq := map[string]interface{}{")
-    lines.append('\t\t"jsonrpc": "2.0",')
-    lines.append('\t\t"id":      c.nextID(),')
-    lines.append('\t\t"method":  "tools/call",')
-    lines.append('\t\t"params": map[string]interface{}{')
-    lines.append('\t\t\t"name":      toolName,')
-    lines.append('\t\t\t"arguments": args,')
-    lines.append('\t\t},')
-    lines.append("\t}")
-    lines.append("\tresult, err := c.call(ctx, req)")
-    lines.append("\tif err != nil {")
-    lines.append("\t\treturn \"\", err")
-    lines.append("\t}")
-    lines.append("\tvar tr toolResult")
-    lines.append("\tif err := json.Unmarshal(result, &tr); err != nil {")
-    lines.append('\t\treturn "", fmt.Errorf("parsing tool result: %w", err)')
-    lines.append("\t}")
-    lines.append("\tvar text string")
-    lines.append("\tfor _, item := range tr.Content {")
-    lines.append("\t\tif item.Type == \"text\" {")
-    lines.append("\t\t\ttext += item.Text")
-    lines.append("\t\t}")
-    lines.append("\t}")
-    lines.append("\tif tr.IsError {")
-    lines.append('\t\treturn text, fmt.Errorf("tool error: %s", text)')
-    lines.append("\t}")
-    lines.append("\treturn text, nil")
-    lines.append("}")
-    lines.append("")
+    lines.append("""package picogk
+
+import (
+	"bufio"
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"log"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"sync"
+)
+
+// Client manages a connection to the PicoGK MCP server.
+// It launches the server as a subprocess and communicates via JSON-RPC over stdio.
+//
+// Usage:
+//
+//	// Uses default server at $HOME/.local/bin/picogk-mcp/PicoGK.Mcp
+//	client, err := picogk.NewClient(ctx, "")
+//	defer client.Close()
+//	// Or specify a custom path:
+//	client, err := picogk.NewClient(ctx, "/custom/path/to/PicoGK.Mcp")
+//	// Initialize the geometry kernel
+//	res, err := client.PicoGKInit(picogk.PicoGKInitRequest{VoxelSizeMM: 0.5})
+//	// Create a sphere, subtract a box, export STL...
+type Client struct {
+	ctx       context.Context
+	cmd       *exec.Cmd
+	stdin     io.WriteCloser
+	stdout    *bufio.Reader
+	mu        sync.Mutex
+	msgID     int
+	serverBin string
+}
+
+// DefaultServerBin is the default path to the PicoGK MCP server binary.
+// It can be overridden by passing a non-empty path to NewClient.
+const DefaultServerBin = "~/.local/bin/picogk-mcp/PicoGK.Mcp"
+
+// NewClient launches the PicoGK MCP server binary and returns a Client.
+// If serverBin is empty, uses DefaultServerBin ($HOME/.local/bin/picogk-mcp/PicoGK.Mcp).
+// Expand ~ to the user's home directory automatically.
+func NewClient(ctx context.Context, serverBin string) (*Client, error) {
+	if serverBin == "" {
+		serverBin = DefaultServerBin
+	}
+	serverBin = expandPath(serverBin)
+	cmd := exec.CommandContext(ctx, serverBin)
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		return nil, fmt.Errorf("creating stdin pipe: %w", err)
+	}
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, fmt.Errorf("creating stdout pipe: %w", err)
+	}
+	if err := cmd.Start(); err != nil {
+		return nil, fmt.Errorf("starting server: %w", err)
+	}
+	c := &Client{
+		ctx:       ctx,
+		cmd:       cmd,
+		stdin:     stdin,
+		stdout:    bufio.NewReader(stdout),
+		serverBin: serverBin,
+	}
+	// Perform MCP initialize handshake
+	if err := c.initialize(); err != nil {
+		cmd.Process.Kill()
+		return nil, fmt.Errorf("initialize handshake: %w", err)
+	}
+	return c, nil
+}
+
+// Close shuts down the MCP server process.
+func (c *Client) Close() error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.stdin != nil {
+		c.stdin.Close()
+	}
+	if c.cmd != nil && c.cmd.Process != nil {
+		done := make(chan struct{})
+		go func() {
+			c.cmd.Wait()
+			close(done)
+		}()
+		select {
+		case <-done:
+		case <-c.ctx.Done():
+			c.cmd.Process.Kill()
+			<-done
+		}
+	}
+	return nil
+}
+
+// expandPath expands a leading ~ to the user's home directory.
+func expandPath(path string) string {
+	if strings.HasPrefix(path, "~") {
+		home, err := os.UserHomeDir()
+		if err == nil {
+			path = filepath.Join(home, path[1:])
+		}
+	}
+	return path
+}
+
+// --- JSON-RPC internals ---
+
+type jsonRPCRequest struct {
+	JSONRPC string `json:"jsonrpc"`
+	ID      int    `json:"id"`
+	Method  string `json:"method"`
+	Params  any    `json:"params"`
+}
+
+type jsonRPCResponse struct {
+	JSONRPC string          `json:"jsonrpc"`
+	ID      int             `json:"id"`
+	Result  json.RawMessage `json:"result,omitempty"`
+	Error   *jsonRPCErr     `json:"error,omitempty"`
+}
+
+type jsonRPCErr struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+}
+
+type toolResult struct {
+	Content []struct {
+		Type string `json:"type"`
+		Text string `json:"text"`
+	} `json:"content"`
+	IsError bool `json:"isError"`
+}
+
+func (c *Client) initialize() error {
+	req := map[string]any{
+		"jsonrpc": "2.0",
+		"id":      c.nextID(),
+		"method":  "initialize",
+		"params": map[string]any{
+			"protocolVersion": "2024-11-05",
+			"capabilities":    map[string]any{},
+			"clientInfo": map[string]any{
+				"name":    "picogk",
+				"version": "1.0.0",
+			},
+		},
+	}
+	_, err := c.call(req)
+	if err != nil {
+		return err
+	}
+	// Send initialized notification
+	notif := map[string]any{
+		"jsonrpc": "2.0",
+		"method":  "notifications/initialized",
+	}
+	return c.send(notif)
+}
+
+func (c *Client) nextID() int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.msgID++
+	return c.msgID
+}
+
+func (c *Client) send(msg any) error {
+	data, err := json.Marshal(msg)
+	if err != nil {
+		return fmt.Errorf("marshaling: %w", err)
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	_, err = c.stdin.Write(append(data, '\\n'))
+	return err
+}
+
+func (c *Client) callNoParse(req any) (string, error) {
+	if err := c.send(req); err != nil {
+		return "", err
+	}
+	// Read response line
+	line, err := c.stdout.ReadString('\\n')
+	if err != nil {
+		return "", fmt.Errorf("reading response: %w", err)
+	}
+	return line, nil
+}
+
+func (c *Client) call(req any) (json.RawMessage, error) {
+	line, err := c.callNoParse(req)
+	if err != nil {
+		return nil, err
+	}
+	var resp jsonRPCResponse
+	if err := json.Unmarshal([]byte(line), &resp); err != nil {
+		return nil, fmt.Errorf("parsing response: %w (line: %q)", err, line)
+	}
+	if resp.Error != nil {
+		return nil, fmt.Errorf("server error [%d]: %s", resp.Error.Code, resp.Error.Message)
+	}
+	return resp.Result, nil
+}
+
+func (c *Client) newReq(toolName string, args map[string]any) map[string]any {
+	return map[string]any{
+		"jsonrpc": "2.0",
+		"id":      c.nextID(),
+		"method":  "tools/call",
+		"params": map[string]any{
+			"name":      toolName,
+			"arguments": args,
+		},
+	}
+}
+
+// callToolNoParse invokes an MCP tool by name and returns the raw text content of the response.
+func (c *Client) callToolNoParse(toolName string, args map[string]any) (string, error) {
+	req := c.newReq(toolName, args)
+	result, err := c.callNoParse(req)
+	if err != nil {
+		return "", err
+	}
+	return string(result), nil
+}
+
+// callTool invokes an MCP tool by name and returns the parsed text content of the response.
+func (c *Client) callTool(toolName string, args map[string]any) (string, error) {
+	req := c.newReq(toolName, args)
+	result, err := c.call(req)
+	if err != nil {
+		return "", err
+	}
+	var tr toolResult
+	if err := json.Unmarshal([]byte(result), &tr); err != nil {
+		return "", fmt.Errorf("parsing tool result: %w", err)
+	}
+	var text string
+	for _, item := range tr.Content {
+		if item.Type == "text" {
+			text += item.Text
+		}
+	}
+	if tr.IsError {
+		return text, fmt.Errorf("tool error: %s", text)
+	}
+	return text, nil
+}
+
+// Must calls Do and must have no error or it will abort the program.
+func (c *Client) Must(cmd any) (label, result string) {
+	var err error
+	label, result, err = c.Do(cmd)
+	if err != nil {
+		log.Fatalf("FAIL: %v -> %v", label, err)
+	}
+	return label, result
+}
+
+// Do executes an MCP tool call, returning a string result and an error.
+func (c *Client) Do(cmd any) (label, result string, err error) {
+	switch req := cmd.(type) {""")
+    # Now build up the switch case statements
+    for tool in tools:
+        go_name = go_tool_name(tool.name)
+        lines.append(f"\tcase {go_name}:")
+        lines.append(f"\tlabel = \"{go_name}\"")
+        lines.append(f"\tresult, err = c.{go_name}Fn(req)")
+    lines.append("""
+	default:
+		return "", "", fmt.Errorf("unknown cmd type %T", cmd)
+	}
+	return label, result, err
+}
+""")
     return "\n".join(lines)
 
 
@@ -345,9 +431,6 @@ def gen_tools_go(tools: list[ToolDef]) -> str:
     lines.append("")
     lines.append("package picogk")
     lines.append("")
-    lines.append("import (")
-    lines.append('\t"context"')
-    lines.append(")")
     lines.append("")
 
     # Group tools by category
@@ -361,10 +444,10 @@ def gen_tools_go(tools: list[ToolDef]) -> str:
 
         for tool in cat_tools:
             # Generate request struct
-            req_struct = f"{tool.name}Request"
-            lines.append(f"// {req_struct} holds parameters for the {tool.snake_name} tool.")
+            go_name = go_tool_name(tool.name)
+            lines.append(f"// {go_name} holds parameters for the {tool.snake_name} tool.")
             lines.append(f"// {tool.description}")
-            lines.append(f"type {req_struct} struct {{")
+            lines.append(f"type {go_name} struct {{")
             for p in tool.params:
                 go_t = go_type(p.cs_type)
                 field = go_field_name(p.name)
@@ -378,7 +461,8 @@ def gen_tools_go(tools: list[ToolDef]) -> str:
                     elif p.cs_type == "bool":
                         go_t = "*bool"
                     elif p.cs_type in ("string", "string?"):
-                        go_t = "*string"
+                        # go_t = "*string"
+                        go_t = "string"
                     elif p.cs_type == "string[]":
                         go_t = "[]string"  # nil means not set
                     # json omitempty for optionals
@@ -389,21 +473,25 @@ def gen_tools_go(tools: list[ToolDef]) -> str:
             lines.append("")
 
             # Generate method on Client
-            lines.append(f"// {tool.name} calls the {tool.snake_name} MCP tool.")
+            lines.append(f"// {go_name}Fn calls the {tool.snake_name} MCP tool.")
             lines.append(f"// {tool.description}")
             if tool.required_params:
                 req_params_str = ", ".join(
                     p.name for p in tool.required_params
                 )
-            lines.append(f"func (c *Client) {tool.name}(req {req_struct}) (string, error) {{")
+            lines.append(f"func (c *Client) {go_name}Fn(req {go_name}) (string, error) {{")
 
             # Build args map
-            lines.append("\targs := map[string]interface{}{}")
+            lines.append("\targs := map[string]any{}")
             for p in tool.params:
                 field = go_field_name(p.name)
                 if p.has_default:
                     if p.cs_type == "string[]":
                         lines.append(f"\tif req.{field} != nil {{")
+                        lines.append(f"\t\targs[\"{p.name}\"] = req.{field}")
+                        lines.append(f"\t}}")
+                    elif p.cs_type == "string" or p.cs_type == "string?":
+                        lines.append(f"\tif req.{field} != \"\" {{")
                         lines.append(f"\t\targs[\"{p.name}\"] = req.{field}")
                         lines.append(f"\t}}")
                     else:
@@ -416,7 +504,10 @@ def gen_tools_go(tools: list[ToolDef]) -> str:
                     else:
                         lines.append(f"\targs[\"{p.name}\"] = req.{field}")
 
-            lines.append(f"\treturn c.callTool(ctx, \"{tool.snake_name}\", args)")
+            if tool.snake_name == "picogk_shutdown":
+                lines.append(f"\treturn c.callToolNoParse(\"{tool.snake_name}\", args)")
+            else:
+                lines.append(f"\treturn c.callTool(\"{tool.snake_name}\", args)")
             lines.append("}")
             lines.append("")
 
@@ -478,10 +569,10 @@ func main() {{
     if err != nil {{
         log.Fatal(err)
     }}
-    defer client.Close(ctx)
+    defer client.Close()
 
     // Initialize the geometry kernel (0.5mm voxels)
-    _, err = client.PicoGKInit(ctx, picogk.PicoGKInitRequest{{
+    _, err = client.PicoGKInit(picogk.PicoGKInitRequest{{
         VoxelSizeMM: float64Ptr(0.5),
     }})
     if err != nil {{
@@ -489,7 +580,7 @@ func main() {{
     }}
 
     // Create a sphere
-    res, err := client.CreateSphere(ctx, picogk.CreateSphereRequest{{
+    res, err := client.CreateSphere(picogk.CreateSphereRequest{{
         X:      0,
         Y:      0,
         Z:      0,
@@ -502,7 +593,7 @@ func main() {{
     fmt.Println(res)
 
     // Create a box cutout
-    _, err = client.CreateBox(ctx, picogk.CreateBoxRequest{{
+    _, err = client.CreateBox(picogk.CreateBoxRequest{{
         MinX: -10, MinY: -10, MinZ: -40,
         MaxX:  10, MaxY:  10, MaxZ: 40,
         Id:   stringPtr("cutout"),
@@ -512,7 +603,7 @@ func main() {{
     }}
 
     // Subtract box from sphere
-    _, err = client.BooleanSubtract(ctx, picogk.BooleanSubtractRequest{{
+    _, err = client.BooleanSubtract(picogk.BooleanSubtractRequest{{
         A:  "body",
         B:  "cutout",
         Id: stringPtr("result"),
@@ -522,7 +613,7 @@ func main() {{
     }}
 
     // Smooth the result
-    _, err = client.Smooth(ctx, picogk.SmoothRequest{{
+    _, err = client.Smooth(picogk.SmoothRequest{{
         ObjectId: "result",
         Distance: 2.0,
         Id:       stringPtr("smoothed"),
@@ -532,14 +623,14 @@ func main() {{
     }}
 
     // Convert to mesh and export STL
-    _, err = client.VoxelsToMesh(ctx, picogk.VoxelsToMeshRequest{{
+    _, err = client.VoxelsToMesh(picogk.VoxelsToMeshRequest{{
         VoxelsId: "smoothed",
         Id:       stringPtr("mesh"),
     }})
     if err != nil {{
         log.Fatal(err)
     }}
-    _, err = client.SaveStl(ctx, picogk.SaveStlRequest{{
+    _, err = client.SaveStl(picogk.SaveStlRequest{{
         MeshId: "mesh",
         Path:   "/tmp/part.stl",
     }})
@@ -548,7 +639,7 @@ func main() {{
     }}
 
     // Render a preview
-    _, err = client.RenderToImage(ctx, picogk.RenderToImageRequest{{
+    _, err = client.RenderToImage(picogk.RenderToImageRequest{{
         ObjectId: "smoothed",
         Path:     "/tmp/preview.png",
     }})
@@ -576,7 +667,7 @@ The SDK exposes all {tool_count} PicoGK MCP tools via builder-pattern request st
 
 Each tool has:
 - A `XxxRequest` struct with typed fields (optional params are pointers)
-- A `Client.Xxx(ctx, req)` method returning `(string, error)`
+- A `client.Xxx(req)` method returning `(string, error)`
 - Full doc comments
 
 ## Architecture

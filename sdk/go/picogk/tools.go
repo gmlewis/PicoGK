@@ -52,7 +52,7 @@ type BooleanIntersect struct {
 	ID string `json:"id,omitempty"`
 }
 
-// BooleanIntersect calls the boolean_intersect MCP tool.
+// BooleanIntersectFn calls the boolean_intersect MCP tool.
 // Boolean INTERSECTION: keep only the overlapping volume of two voxel objects. Returns a new object ID.
 func (c *Client) BooleanIntersectFn(req BooleanIntersect) (string, error) {
 	args := map[string]any{}
@@ -71,7 +71,7 @@ type BooleanAddAll struct {
 	ID        string   `json:"id,omitempty"`
 }
 
-// BooleanAddAll calls the boolean_add_all MCP tool.
+// BooleanAddAllFn calls the boolean_add_all MCP tool.
 // Combine multiple voxel objects into one. All volumes are merged. Returns a new object ID.
 func (c *Client) BooleanAddAllFn(req BooleanAddAll) (string, error) {
 	args := map[string]any{}
@@ -90,7 +90,7 @@ type BooleanSubtractAll struct {
 	ID          string   `json:"id,omitempty"`
 }
 
-// BooleanSubtractAll calls the boolean_subtract_all MCP tool.
+// BooleanSubtractAllFn calls the boolean_subtract_all MCP tool.
 // Subtract multiple voxel objects from a single object in one call. Equivalent to calling boolean_subtract repeatedly, but more efficient for multi-hole drilling or multi-cutout operations. Returns a new object ID.
 func (c *Client) BooleanSubtractAllFn(req BooleanSubtractAll) (string, error) {
 	args := map[string]any{}
@@ -112,7 +112,7 @@ type SaveSTL struct {
 	Units  string `json:"units,omitempty"`
 }
 
-// SaveSTL calls the save_stl MCP tool.
+// SaveSTLFn calls the save_stl MCP tool.
 // Save a mesh to an STL file. The mesh is typically obtained from voxels_to_mesh. Units are millimeters by default.
 func (c *Client) SaveSTLFn(req SaveSTL) (string, error) {
 	args := map[string]any{}
@@ -132,7 +132,7 @@ type SaveVDB struct {
 	FieldName string `json:"fieldName,omitempty"`
 }
 
-// SaveVDB calls the save_vdb MCP tool.
+// SaveVDBFn calls the save_vdb MCP tool.
 // Save voxels to an OpenVDB file. VDB files preserve the full voxel field data.
 func (c *Client) SaveVDBFn(req SaveVDB) (string, error) {
 	args := map[string]any{}
@@ -152,7 +152,7 @@ type LoadVDB struct {
 	ID        string `json:"id,omitempty"`
 }
 
-// LoadVDB calls the load_vdb MCP tool.
+// LoadVDBFn calls the load_vdb MCP tool.
 // Load voxels from an OpenVDB file. Returns the object ID.
 func (c *Client) LoadVDBFn(req LoadVDB) (string, error) {
 	args := map[string]any{}
@@ -172,7 +172,7 @@ type ListVDBFields struct {
 	Path string `json:"path"`
 }
 
-// ListVDBFields calls the list_vdb_fields MCP tool.
+// ListVDBFieldsFn calls the list_vdb_fields MCP tool.
 // List all fields in a VDB file with their names, types, and indices. Useful for inspecting multi-field VDB files before loading a specific field with load_vdb. Returns field count and a table of index, name, type, and PicoGK compatibility.
 func (c *Client) ListVDBFieldsFn(req ListVDBFields) (string, error) {
 	args := map[string]any{}
@@ -188,7 +188,7 @@ type SaveSVG struct {
 	LayerHeight *float64 `json:"layerHeight,omitempty"`
 }
 
-// SaveSVG calls the save_svg MCP tool.
+// SaveSVGFn calls the save_svg MCP tool.
 // Vectorize voxels into 2D slice contours and save as SVG. Each slice is written to its own file: <path>.NNNN.svg (zero-padded 4 digits). Useful for 2D manufacturing or visualization. Returns the count of files written.
 func (c *Client) SaveSVGFn(req SaveSVG) (string, error) {
 	args := map[string]any{}
@@ -206,11 +206,11 @@ type SaveCLI struct {
 	VoxelsID       string   `json:"voxelsId"`
 	Path           string   `json:"path"`
 	LayerHeight    *float64 `json:"layerHeight,omitempty"`
-	Format         *string  `json:"format,omitempty"`
+	Format         string   `json:"format,omitempty"`
 	UseAbsXYOrigin *bool    `json:"useAbsXYOrigin,omitempty"`
 }
 
-// SaveCLI calls the save_cli MCP tool.
+// SaveCLIFn calls the save_cli MCP tool.
 // Save voxels to a CLI (Common Layer Interface) file for 3D printing. Vectorizes the voxel field into 2D layers and writes the CLI format. Returns the file path and slice count.
 func (c *Client) SaveCLIFn(req SaveCLI) (string, error) {
 	args := map[string]any{}
@@ -219,8 +219,8 @@ func (c *Client) SaveCLIFn(req SaveCLI) (string, error) {
 	if req.LayerHeight != nil {
 		args["layerHeight"] = *req.LayerHeight
 	}
-	if req.Format != nil {
-		args["format"] = *req.Format
+	if req.Format != "" {
+		args["format"] = req.Format
 	}
 	if req.UseAbsXYOrigin != nil {
 		args["useAbsXYOrigin"] = *req.UseAbsXYOrigin
@@ -236,7 +236,7 @@ type CreateLattice struct {
 	ID string `json:"id,omitempty"`
 }
 
-// CreateLattice calls the create_lattice MCP tool.
+// CreateLatticeFn calls the create_lattice MCP tool.
 // Create an empty lattice structure. Add beams and sphere nodes to build it, then convert to voxels. Returns the object ID.
 func (c *Client) CreateLatticeFn(req CreateLattice) (string, error) {
 	args := map[string]any{}
@@ -261,7 +261,7 @@ type LatticeAddBeam struct {
 	RoundCap  *bool   `json:"roundCap,omitempty"`
 }
 
-// LatticeAddBeam calls the lattice_add_beam MCP tool.
+// LatticeAddBeamFn calls the lattice_add_beam MCP tool.
 // Add a tapered beam (strut) between two points in a lattice. Each end has its own radius. Returns a confirmation.
 func (c *Client) LatticeAddBeamFn(req LatticeAddBeam) (string, error) {
 	args := map[string]any{}
@@ -290,7 +290,7 @@ type LatticeAddSphere struct {
 	Radius    float64 `json:"radius"`
 }
 
-// LatticeAddSphere calls the lattice_add_sphere MCP tool.
+// LatticeAddSphereFn calls the lattice_add_sphere MCP tool.
 // Add a sphere node at a point in a lattice. Returns a confirmation.
 func (c *Client) LatticeAddSphereFn(req LatticeAddSphere) (string, error) {
 	args := map[string]any{}
@@ -309,7 +309,7 @@ type LatticeToVoxels struct {
 	ID        string `json:"id,omitempty"`
 }
 
-// LatticeToVoxels calls the lattice_to_voxels MCP tool.
+// LatticeToVoxelsFn calls the lattice_to_voxels MCP tool.
 // Convert a lattice to voxels. Renders the lattice beams and nodes into a voxel field. Returns a new voxel object ID.
 func (c *Client) LatticeToVoxelsFn(req LatticeToVoxels) (string, error) {
 	args := map[string]any{}
@@ -328,7 +328,7 @@ type CreateMesh struct {
 	ID string `json:"id,omitempty"`
 }
 
-// CreateMesh calls the create_mesh MCP tool.
+// CreateMeshFn calls the create_mesh MCP tool.
 // Create an empty mesh. Add vertices and triangles to build geometry. Returns the object ID.
 func (c *Client) CreateMeshFn(req CreateMesh) (string, error) {
 	args := map[string]any{}
@@ -347,7 +347,7 @@ type MeshAddVertex struct {
 	Z      float64 `json:"z"`
 }
 
-// MeshAddVertex calls the mesh_add_vertex MCP tool.
+// MeshAddVertexFn calls the mesh_add_vertex MCP tool.
 // Add a vertex to a mesh. Returns the vertex index (0-based) for use in triangle creation.
 func (c *Client) MeshAddVertexFn(req MeshAddVertex) (string, error) {
 	args := map[string]any{}
@@ -367,7 +367,7 @@ type MeshAddTriangle struct {
 	C      int    `json:"c"`
 }
 
-// MeshAddTriangle calls the mesh_add_triangle MCP tool.
+// MeshAddTriangleFn calls the mesh_add_triangle MCP tool.
 // Add a triangle to a mesh using vertex indices. Returns the triangle index.
 func (c *Client) MeshAddTriangleFn(req MeshAddTriangle) (string, error) {
 	args := map[string]any{}
@@ -393,7 +393,7 @@ type MeshAddTriangleVertices struct {
 	Z3     float64 `json:"z3"`
 }
 
-// MeshAddTriangleVertices calls the mesh_add_triangle_vertices MCP tool.
+// MeshAddTriangleVerticesFn calls the mesh_add_triangle_vertices MCP tool.
 // Add a triangle to a mesh by specifying three vertex positions directly. The vertices are added automatically. Returns the triangle index.
 func (c *Client) MeshAddTriangleVerticesFn(req MeshAddTriangleVertices) (string, error) {
 	args := map[string]any{}
@@ -429,7 +429,7 @@ type MeshAddQuad struct {
 	Flipped *bool   `json:"flipped,omitempty"`
 }
 
-// MeshAddQuad calls the mesh_add_quad MCP tool.
+// MeshAddQuadFn calls the mesh_add_quad MCP tool.
 // Add a quad to a mesh by specifying four vertex positions directly. The vertices are added automatically and two triangles are created. Use bFlipped=true to reverse the winding order. Returns the starting triangle index.
 func (c *Client) MeshAddQuadFn(req MeshAddQuad) (string, error) {
 	args := map[string]any{}
@@ -459,7 +459,7 @@ type VoxelsToMesh struct {
 	ID       string `json:"id,omitempty"`
 }
 
-// VoxelsToMesh calls the voxels_to_mesh MCP tool.
+// VoxelsToMeshFn calls the voxels_to_mesh MCP tool.
 // Convert a voxel object to a mesh using marching cubes. Returns a new mesh object ID.
 func (c *Client) VoxelsToMeshFn(req VoxelsToMesh) (string, error) {
 	args := map[string]any{}
@@ -477,7 +477,7 @@ type MeshToVoxels struct {
 	ID     string `json:"id,omitempty"`
 }
 
-// MeshToVoxels calls the mesh_to_voxels MCP tool.
+// MeshToVoxelsFn calls the mesh_to_voxels MCP tool.
 // Convert a mesh to voxels. Returns a new voxel object ID.
 func (c *Client) MeshToVoxelsFn(req MeshToVoxels) (string, error) {
 	args := map[string]any{}
@@ -495,7 +495,7 @@ type MeshFromSTL struct {
 	ID   string `json:"id,omitempty"`
 }
 
-// MeshFromSTL calls the mesh_from_stl MCP tool.
+// MeshFromSTLFn calls the mesh_from_stl MCP tool.
 // Load a mesh from an STL file on disk. Returns the object ID.
 func (c *Client) MeshFromSTLFn(req MeshFromSTL) (string, error) {
 	args := map[string]any{}
@@ -517,7 +517,7 @@ type MeshTransform struct {
 	ID         string   `json:"id,omitempty"`
 }
 
-// MeshTransform calls the mesh_transform MCP tool.
+// MeshTransformFn calls the mesh_transform MCP tool.
 // Transform a mesh: apply uniform scale and/or translation. Returns a new mesh object ID.
 func (c *Client) MeshTransformFn(req MeshTransform) (string, error) {
 	args := map[string]any{}
@@ -553,7 +553,7 @@ type MeshMirror struct {
 	ID     string  `json:"id,omitempty"`
 }
 
-// MeshMirror calls the mesh_mirror MCP tool.
+// MeshMirrorFn calls the mesh_mirror MCP tool.
 // Mirror a mesh across a plane defined by a point and normal. Returns a new mesh object ID.
 func (c *Client) MeshMirrorFn(req MeshMirror) (string, error) {
 	args := map[string]any{}
@@ -577,7 +577,7 @@ type MeshAppend struct {
 	SourceID string `json:"sourceId"`
 }
 
-// MeshAppend calls the mesh_append MCP tool.
+// MeshAppendFn calls the mesh_append MCP tool.
 // Append one mesh into another (modifies the target). Returns the target mesh ID.
 func (c *Client) MeshAppendFn(req MeshAppend) (string, error) {
 	args := map[string]any{}
@@ -598,7 +598,7 @@ type CreateSphere struct {
 	ID     string  `json:"id,omitempty"`
 }
 
-// CreateSphere calls the create_sphere MCP tool.
+// CreateSphereFn calls the create_sphere MCP tool.
 // Create a sphere voxel object. Returns the object ID.
 func (c *Client) CreateSphereFn(req CreateSphere) (string, error) {
 	args := map[string]any{}
@@ -624,7 +624,7 @@ type CreateBox struct {
 	ID   string  `json:"id,omitempty"`
 }
 
-// CreateBox calls the create_box MCP tool.
+// CreateBoxFn calls the create_box MCP tool.
 // Create a box (axis-aligned cuboid) from minimum and maximum corner coordinates. Returns the object ID.
 func (c *Client) CreateBoxFn(req CreateBox) (string, error) {
 	args := map[string]any{}
@@ -654,7 +654,7 @@ type CreateCylinder struct {
 	ID     string   `json:"id,omitempty"`
 }
 
-// CreateCylinder calls the create_cylinder MCP tool.
+// CreateCylinderFn calls the create_cylinder MCP tool.
 // Create a cylinder. By default it runs along the +Z axis from (x,y,z) to (x,y,z+height). Pass dirX/dirY/dirZ to orient the axis differently (the vector is normalized automatically). The cylinder has flat end caps. Returns the object ID.
 func (c *Client) CreateCylinderFn(req CreateCylinder) (string, error) {
 	args := map[string]any{}
@@ -691,7 +691,7 @@ type CreateCapsule struct {
 	ID     string  `json:"id,omitempty"`
 }
 
-// CreateCapsule calls the create_capsule MCP tool.
+// CreateCapsuleFn calls the create_capsule MCP tool.
 // Create a capsule (a sphere-swept line segment). Returns the object ID.
 func (c *Client) CreateCapsuleFn(req CreateCapsule) (string, error) {
 	args := map[string]any{}
@@ -719,7 +719,7 @@ type CreateTorus struct {
 	ID          string   `json:"id,omitempty"`
 }
 
-// CreateTorus calls the create_torus MCP tool.
+// CreateTorusFn calls the create_torus MCP tool.
 // Create a torus (donut shape) by revolving a circle around the Z axis. Returns the object ID.
 func (c *Client) CreateTorusFn(req CreateTorus) (string, error) {
 	args := map[string]any{}
@@ -748,7 +748,7 @@ type GetBoundingBox struct {
 	ObjectID string `json:"objectId"`
 }
 
-// GetBoundingBox calls the get_bounding_box MCP tool.
+// GetBoundingBoxFn calls the get_bounding_box MCP tool.
 // Get the axis-aligned bounding box of any object. Returns min/max corners in mm. Retries internally with exponential backoff if the object was just created/transformed and the internal mesh conversion is not yet settled.
 func (c *Client) GetBoundingBoxFn(req GetBoundingBox) (string, error) {
 	args := map[string]any{}
@@ -762,7 +762,7 @@ type GetVolume struct {
 	ObjectID string `json:"objectId"`
 }
 
-// GetVolume calls the get_volume MCP tool.
+// GetVolumeFn calls the get_volume MCP tool.
 // Calculate the volume and bounding box of a voxel object. Retries internally with exponential backoff if the object was just created/transformed.
 func (c *Client) GetVolumeFn(req GetVolume) (string, error) {
 	args := map[string]any{}
@@ -776,7 +776,7 @@ type GetMeshInfo struct {
 	ObjectID string `json:"objectId"`
 }
 
-// GetMeshInfo calls the get_mesh_info MCP tool.
+// GetMeshInfoFn calls the get_mesh_info MCP tool.
 // Get information about a mesh: vertex count, triangle count, bounding box.
 func (c *Client) GetMeshInfoFn(req GetMeshInfo) (string, error) {
 	args := map[string]any{}
@@ -793,7 +793,7 @@ type PointInside struct {
 	Z        float64 `json:"z"`
 }
 
-// PointInside calls the point_inside MCP tool.
+// PointInsideFn calls the point_inside MCP tool.
 // Check if a 3D point is inside a voxel object.
 func (c *Client) PointInsideFn(req PointInside) (string, error) {
 	args := map[string]any{}
@@ -813,7 +813,7 @@ type SurfaceNormal struct {
 	Z        float64 `json:"z"`
 }
 
-// SurfaceNormal calls the surface_normal MCP tool.
+// SurfaceNormalFn calls the surface_normal MCP tool.
 // Get the surface normal vector at a point on a voxel object's surface.
 func (c *Client) SurfaceNormalFn(req SurfaceNormal) (string, error) {
 	args := map[string]any{}
@@ -833,7 +833,7 @@ type ClosestPoint struct {
 	Z        float64 `json:"z"`
 }
 
-// ClosestPoint calls the closest_point MCP tool.
+// ClosestPointFn calls the closest_point MCP tool.
 // Find the closest point on a voxel object's surface to a given point.
 func (c *Client) ClosestPointFn(req ClosestPoint) (string, error) {
 	args := map[string]any{}
@@ -849,7 +849,7 @@ func (c *Client) ClosestPointFn(req ClosestPoint) (string, error) {
 type ListObjects struct {
 }
 
-// ListObjects calls the list_objects MCP tool.
+// ListObjectsFn calls the list_objects MCP tool.
 // List all objects in the current session with their IDs, types, and descriptions.
 func (c *Client) ListObjectsFn(req ListObjects) (string, error) {
 	args := map[string]any{}
@@ -862,7 +862,7 @@ type DeleteObject struct {
 	ObjectID string `json:"objectId"`
 }
 
-// DeleteObject calls the delete_object MCP tool.
+// DeleteObjectFn calls the delete_object MCP tool.
 // Delete an object from the session. Frees memory and removes the object from the registry.
 func (c *Client) DeleteObjectFn(req DeleteObject) (string, error) {
 	args := map[string]any{}
@@ -876,7 +876,7 @@ type GetVoxelDimensions struct {
 	ObjectID string `json:"objectId"`
 }
 
-// GetVoxelDimensions calls the get_voxel_dimensions MCP tool.
+// GetVoxelDimensionsFn calls the get_voxel_dimensions MCP tool.
 // Get the voxel dimensions (grid size) of a voxel object.
 func (c *Client) GetVoxelDimensionsFn(req GetVoxelDimensions) (string, error) {
 	args := map[string]any{}
@@ -890,7 +890,7 @@ type VoxelsIsEmpty struct {
 	ObjectID string `json:"objectId"`
 }
 
-// VoxelsIsEmpty calls the voxels_is_empty MCP tool.
+// VoxelsIsEmptyFn calls the voxels_is_empty MCP tool.
 // Check if a voxel object is empty (contains no volume). Useful for detecting failed operations — e.g. an intersection that produced no overlap, or a subtraction that removed all material.
 func (c *Client) VoxelsIsEmptyFn(req VoxelsIsEmpty) (string, error) {
 	args := map[string]any{}
@@ -904,7 +904,7 @@ type VoxelsMemUsage struct {
 	ObjectID string `json:"objectId"`
 }
 
-// VoxelsMemUsage calls the voxels_mem_usage MCP tool.
+// VoxelsMemUsageFn calls the voxels_mem_usage MCP tool.
 // Get the memory usage of a voxel object in bytes. Useful for monitoring memory consumption when building complex models.
 func (c *Client) VoxelsMemUsageFn(req VoxelsMemUsage) (string, error) {
 	args := map[string]any{}
@@ -919,7 +919,7 @@ type VoxelsIsEqual struct {
 	ObjectIDB string `json:"objectIdB"`
 }
 
-// VoxelsIsEqual calls the voxels_is_equal MCP tool.
+// VoxelsIsEqualFn calls the voxels_is_equal MCP tool.
 // Compare two voxel objects for equality. Returns true if they contain the same voxel data. Useful for verifying that a transform or round-trip preserved the shape.
 func (c *Client) VoxelsIsEqualFn(req VoxelsIsEqual) (string, error) {
 	args := map[string]any{}
@@ -940,7 +940,7 @@ type RayCast struct {
 	DirZ     float64 `json:"dirZ"`
 }
 
-// RayCast calls the ray_cast MCP tool.
+// RayCastFn calls the ray_cast MCP tool.
 // Cast a ray from a point in a given direction and find where it hits the surface of a voxel object. Useful for measuring wall thickness, checking bore clearance, and probing internal geometry. Returns the hit point and the distance from the origin, or an error if no intersection is found.
 func (c *Client) RayCastFn(req RayCast) (string, error) {
 	args := map[string]any{}
@@ -966,7 +966,7 @@ type MeasureThickness struct {
 	DirZ     float64 `json:"dirZ"`
 }
 
-// MeasureThickness calls the measure_thickness MCP tool.
+// MeasureThicknessFn calls the measure_thickness MCP tool.
 // Cast a ray from a point in both +direction and -direction and report both hit points and the total span between them. Measures the through-thickness of the object along the ray axis (surface to surface through the interior, which may cross internal cavities). For local wall thickness of a shell, place the origin inside the wall material and note that the total span includes all internal voids.
 func (c *Client) MeasureThicknessFn(req MeasureThickness) (string, error) {
 	args := map[string]any{}
@@ -987,7 +987,7 @@ type DuplicateObject struct {
 	ID       string `json:"id,omitempty"`
 }
 
-// DuplicateObject calls the duplicate_object MCP tool.
+// DuplicateObjectFn calls the duplicate_object MCP tool.
 // Create a duplicate (deep copy) of an existing object. Works with voxel and mesh objects. Returns the new object ID.
 func (c *Client) DuplicateObjectFn(req DuplicateObject) (string, error) {
 	args := map[string]any{}
@@ -1005,7 +1005,7 @@ type DeleteObjects struct {
 	KeepOnly  *bool    `json:"keepOnly,omitempty"`
 }
 
-// DeleteObjects calls the delete_objects MCP tool.
+// DeleteObjectsFn calls the delete_objects MCP tool.
 // Delete multiple objects from the session in one call. Useful for cleaning up intermediate objects after a complex build. Returns the count of objects actually deleted.
 func (c *Client) DeleteObjectsFn(req DeleteObjects) (string, error) {
 	args := map[string]any{}
@@ -1021,15 +1021,15 @@ func (c *Client) DeleteObjectsFn(req DeleteObjects) (string, error) {
 // RenderToImage holds parameters for the render_to_image tool.
 // Render an object to a PNG image using an isometric projection with Lambertian shading. The agent can use this to visually inspect geometry. Returns the file path of the rendered image.
 type RenderToImage struct {
-	ObjectID        string  `json:"objectId"`
-	Path            string  `json:"path"`
-	Width           *int    `json:"width,omitempty"`
-	Height          *int    `json:"height,omitempty"`
-	BackgroundColor *string `json:"backgroundColor,omitempty"`
-	ObjectColor     *string `json:"objectColor,omitempty"`
+	ObjectID        string `json:"objectId"`
+	Path            string `json:"path"`
+	Width           *int   `json:"width,omitempty"`
+	Height          *int   `json:"height,omitempty"`
+	BackgroundColor string `json:"backgroundColor,omitempty"`
+	ObjectColor     string `json:"objectColor,omitempty"`
 }
 
-// RenderToImage calls the render_to_image MCP tool.
+// RenderToImageFn calls the render_to_image MCP tool.
 // Render an object to a PNG image using an isometric projection with Lambertian shading. The agent can use this to visually inspect geometry. Returns the file path of the rendered image.
 func (c *Client) RenderToImageFn(req RenderToImage) (string, error) {
 	args := map[string]any{}
@@ -1041,11 +1041,11 @@ func (c *Client) RenderToImageFn(req RenderToImage) (string, error) {
 	if req.Height != nil {
 		args["height"] = *req.Height
 	}
-	if req.BackgroundColor != nil {
-		args["backgroundColor"] = *req.BackgroundColor
+	if req.BackgroundColor != "" {
+		args["backgroundColor"] = req.BackgroundColor
 	}
-	if req.ObjectColor != nil {
-		args["objectColor"] = *req.ObjectColor
+	if req.ObjectColor != "" {
+		args["objectColor"] = req.ObjectColor
 	}
 	return c.callTool("render_to_image", args)
 }
@@ -1056,18 +1056,18 @@ type RenderSlice struct {
 	VoxelsID  string  `json:"voxelsId"`
 	ZPosition float64 `json:"zPosition"`
 	Path      string  `json:"path"`
-	Mode      *string `json:"mode,omitempty"`
+	Mode      string  `json:"mode,omitempty"`
 }
 
-// RenderSlice calls the render_slice MCP tool.
+// RenderSliceFn calls the render_slice MCP tool.
 // Render a Z-slice of a voxel object to a PNG image. Shows the cross-section at a specific height. Returns the file path.
 func (c *Client) RenderSliceFn(req RenderSlice) (string, error) {
 	args := map[string]any{}
 	args["voxelsId"] = req.VoxelsID
 	args["zPosition"] = req.ZPosition
 	args["path"] = req.Path
-	if req.Mode != nil {
-		args["mode"] = *req.Mode
+	if req.Mode != "" {
+		args["mode"] = req.Mode
 	}
 	return c.callTool("render_slice", args)
 }
@@ -1080,7 +1080,7 @@ type Init struct {
 	VoxelSizeMM *float64 `json:"voxelSizeMM,omitempty"`
 }
 
-// Init calls the picogk_init MCP tool.
+// InitFn calls the picogk_init MCP tool.
 // Initialize the PicoGK geometry kernel. Must be called before any other tool. Sets the voxel resolution in millimeters. Smaller values = higher resolution but more memory. Typical range: 0.1mm (fine) to 5.0mm (coarse).
 func (c *Client) InitFn(req Init) (string, error) {
 	args := map[string]any{}
@@ -1095,7 +1095,7 @@ func (c *Client) InitFn(req Init) (string, error) {
 type Info struct {
 }
 
-// PicogkInfo calls the picogk_info MCP tool.
+// InfoFn calls the picogk_info MCP tool.
 // Get information about the PicoGK library and current session state. Returns version, memory usage, and counts of allocated objects.
 func (c *Client) InfoFn(req Info) (string, error) {
 	args := map[string]any{}
@@ -1107,7 +1107,7 @@ func (c *Client) InfoFn(req Info) (string, error) {
 type Shutdown struct {
 }
 
-// Shutdown calls the picogk_shutdown MCP tool.
+// ShutdownFn calls the picogk_shutdown MCP tool.
 // Shut down the PicoGK session and release all resources. All object references become invalid after this call.
 func (c *Client) ShutdownFn(req Shutdown) (string, error) {
 	args := map[string]any{}
@@ -1124,7 +1124,7 @@ type Offset struct {
 	ID       string  `json:"id,omitempty"`
 }
 
-// Offset calls the offset MCP tool.
+// OffsetFn calls the offset MCP tool.
 // Offset a voxel surface outward (positive) or inward (negative) by a distance. Use for thickening, thinning, or creating clearance. Returns a new object ID.
 func (c *Client) OffsetFn(req Offset) (string, error) {
 	args := map[string]any{}
@@ -1145,7 +1145,7 @@ type DoubleOffset struct {
 	ID       string  `json:"id,omitempty"`
 }
 
-// DoubleOffset calls the double_offset MCP tool.
+// DoubleOffsetFn calls the double_offset MCP tool.
 // Offset a voxel surface twice: first by offset1, then by offset2. Enables precise morphological operations not possible with a single offset — e.g. offset out by 2mm then back by 1.5mm to remove thin features while preserving wall thickness. Returns a new object ID.
 func (c *Client) DoubleOffsetFn(req DoubleOffset) (string, error) {
 	args := map[string]any{}
@@ -1167,7 +1167,7 @@ type OverOffset struct {
 	ID               string   `json:"id,omitempty"`
 }
 
-// OverOffset calls the over_offset MCP tool.
+// OverOffsetFn calls the over_offset MCP tool.
 // Offset a voxel surface by a first distance, then settle the surface at a specified final distance from the original. More precise than fillet: lets you say 'offset by 3mm, then move the surface to exactly 0.5mm from where it started.' Useful for controlled material removal. Returns a new object ID.
 func (c *Client) OverOffsetFn(req OverOffset) (string, error) {
 	args := map[string]any{}
@@ -1190,7 +1190,7 @@ type Smooth struct {
 	ID       string  `json:"id,omitempty"`
 }
 
-// Smooth calls the smooth MCP tool.
+// SmoothFn calls the smooth MCP tool.
 // Smooth/round a voxel surface by applying triple offset. Good for removing sharp edges. Returns a new object ID.
 func (c *Client) SmoothFn(req Smooth) (string, error) {
 	args := map[string]any{}
@@ -1215,7 +1215,7 @@ type Trim struct {
 	ID       string  `json:"id,omitempty"`
 }
 
-// Trim calls the trim MCP tool.
+// TrimFn calls the trim MCP tool.
 // Trim a voxel object to fit within a bounding box. Everything outside the box is removed. Returns a new object ID.
 func (c *Client) TrimFn(req Trim) (string, error) {
 	args := map[string]any{}
@@ -1242,7 +1242,7 @@ type Shell struct {
 	ID          string   `json:"id,omitempty"`
 }
 
-// Shell calls the shell MCP tool.
+// ShellFn calls the shell MCP tool.
 // Create a hollow shell from a voxel object. Both positive and negative offsets are applied. Returns a new object ID.
 func (c *Client) ShellFn(req Shell) (string, error) {
 	args := map[string]any{}
@@ -1266,7 +1266,7 @@ type Fillet struct {
 	ID       string  `json:"id,omitempty"`
 }
 
-// Fillet calls the fillet MCP tool.
+// FilletFn calls the fillet MCP tool.
 // Fillets (rounds) the surface of a voxel object. Same as smooth but semantically for rounding edges. Returns a new object ID.
 func (c *Client) FilletFn(req Fillet) (string, error) {
 	args := map[string]any{}
@@ -1287,7 +1287,7 @@ type ProjectZSlice struct {
 	ID       string  `json:"id,omitempty"`
 }
 
-// ProjectZSlice calls the project_z_slice MCP tool.
+// ProjectZSliceFn calls the project_z_slice MCP tool.
 // Project voxels onto a Z-plane (top-down silhouette). Useful for creating 2D cross-sections. Returns a new object ID.
 func (c *Client) ProjectZSliceFn(req ProjectZSlice) (string, error) {
 	args := map[string]any{}
@@ -1314,7 +1314,7 @@ type TransformVoxels struct {
 	ID         string   `json:"id,omitempty"`
 }
 
-// TransformVoxels calls the transform_voxels MCP tool.
+// TransformVoxelsFn calls the transform_voxels MCP tool.
 // Transform a voxel object by translating, rotating, and/or scaling it. Rotations are applied first (around the world origin 0,0,0 — not the object's center), then translation. To rotate an object in place, first translate it to the origin, rotate, then translate back. Uses native PicoGK signed-distance-field re-rasterization (no expensive mesh round-trip), so it is efficient for large voxel fields. Returns a new object ID.
 func (c *Client) TransformVoxelsFn(req TransformVoxels) (string, error) {
 	args := map[string]any{}
@@ -1361,7 +1361,7 @@ type CircularPattern struct {
 	ID         string   `json:"id,omitempty"`
 }
 
-// CircularPattern calls the circular_pattern MCP tool.
+// CircularPatternFn calls the circular_pattern MCP tool.
 // Create a circular (polar) pattern of a voxel object: rotate copies around an axis through a center point and union them into a single result. Uses SDF re-rasterization (no mesh round-trips) for each copy. Returns a new object ID containing all copies combined. Example: 4 bolt holes around a flange center at 90° intervals.
 func (c *Client) CircularPatternFn(req CircularPattern) (string, error) {
 	args := map[string]any{}
