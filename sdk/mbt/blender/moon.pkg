@@ -1,0 +1,9 @@
+// blender package configuration
+// DO NOT EDIT — this file is auto-generated.
+
+import {
+  "moonbitlang/async/process",
+  "moonbitlang/core/json",
+  "moonbitlang/core/env",
+  "moonbitlang/core/encoding/utf8" @utf8,
+}

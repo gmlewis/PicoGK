@@ -1,0 +1,11 @@
+// blender-scene example package
+// DO NOT EDIT — auto-generated
+
+import {
+  "gmlewis/blender" @blender,
+  "moonbitlang/async",
+}
+
+options(
+  "is-main": true,
+)

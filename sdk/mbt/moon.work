@@ -3,6 +3,8 @@
 // DO NOT EDIT — auto-generated
 
 members = [
+  "blender",
   "picogk",
+  "examples/blender-scene",
   "examples/full-api",
 ]
