@@ -4,7 +4,7 @@
 Extracts all MCP tools (methods marked with [McpServerTool]) from the
 PicoGK.Mcp/Tools/*.cs files and returns structured ToolDef objects.
 
-Used by generate-go-mcp-sdk.py and generate-mbt-mcp-sdk.py.
+Used by generate-go-picogk-sdk.py and generate-mbt-picogk-sdk.py.
 """
 
 from __future__ import annotations

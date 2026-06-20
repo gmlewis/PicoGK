@@ -257,8 +257,8 @@ See `sdk/mbt/picogk/README.md` for full documentation.
 When the MCP tools change (new tools added, params modified), regenerate both SDKs:
 
 ```bash
-./scripts/generate-go-mcp-sdk.py --verbose
-./scripts/generate-mbt-mcp-sdk.py --verbose
+./scripts/generate-go-picogk-sdk.py --verbose
+./scripts/generate-mbt-picogk-sdk.py --verbose
 ```
 
 Both scripts parse `PicoGK.Mcp/Tools/*.cs` to extract tool names, parameter types,

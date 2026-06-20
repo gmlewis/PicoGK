@@ -82,10 +82,10 @@ be installed separately (see the main PicoGK README for build instructions).
 ## Auto-Generation
 
 This SDK is auto-generated from the PicoGK C# MCP tool definitions by
-`scripts/generate-mbt-mcp-sdk.py`. To regenerate:
+`scripts/generate-mbt-picogk-sdk.py`. To regenerate:
 
 ```bash
-./scripts/generate-mbt-mcp-sdk.py --verbose
+./scripts/generate-mbt-picogk-sdk.py --verbose
 ```
 
 **DO NOT EDIT** the generated files — changes will be overwritten. Edit the
