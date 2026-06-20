@@ -101,13 +101,17 @@ func (c *Client) Close() error {
 	return nil
 }
 
-// expandPath expands a leading ~ to the user's home directory.
+// expandPath expands a leading ~ to the user's home directory
+// and resolves relative paths to absolute paths.
 func expandPath(path string) string {
 	if strings.HasPrefix(path, "~") {
 		home, err := os.UserHomeDir()
 		if err == nil {
 			path = filepath.Join(home, path[1:])
 		}
+	}
+	if abs, err := filepath.Abs(path); err == nil {
+		path = abs
 	}
 	return path
 }

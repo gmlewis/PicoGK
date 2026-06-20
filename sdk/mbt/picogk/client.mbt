@@ -73,6 +73,22 @@ fn expand_path(path : String) -> String {
   }
 }
 
+///
+/// resolve_path resolves a path to an absolute path.
+/// If the path starts with ~, it expands to the home directory.
+/// If the path is already absolute (starts with /), it is returned as-is.
+/// Otherwise, it is prepended with the current working directory.
+///
+fn resolve_path(path : String) -> String {
+  let expanded = expand_path(path)
+  if expanded.has_prefix("/") {
+    expanded
+  } else {
+    let cwd = @env.get_env_var("PWD").unwrap_or(".")
+    cwd + "/" + expanded
+  }
+}
+
 // --- JSON-RPC internals ---
 
 ///

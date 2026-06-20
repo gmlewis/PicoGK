@@ -239,13 +239,17 @@ func (c *Client) Close() error {
 	return nil
 }
 
-// expandPath expands a leading ~ to the user's home directory.
+// expandPath expands a leading ~ to the user's home directory
+// and resolves relative paths to absolute paths.
 func expandPath(path string) string {
 	if strings.HasPrefix(path, "~") {
 		home, err := os.UserHomeDir()
 		if err == nil {
 			path = filepath.Join(home, path[1:])
 		}
+	}
+	if abs, err := filepath.Abs(path); err == nil {
+		path = abs
 	}
 	return path
 }
@@ -424,6 +428,11 @@ func (c *Client) Do(cmd any) (label, result string, err error) {
     return "\n".join(lines)
 
 
+def is_path_param(param_name: str) -> bool:
+    """Check if a parameter is a file path parameter."""
+    return param_name == "path" or param_name.endswith("_path")
+
+
 def gen_tools_go(tools: list[ToolDef]) -> str:
     """Generate the tools.go file with one builder struct + method per tool."""
     lines: list[str] = []
@@ -431,7 +440,13 @@ def gen_tools_go(tools: list[ToolDef]) -> str:
     lines.append("")
     lines.append("package picogk")
     lines.append("")
+    lines.append("import (")
+    lines.append("\t\"fmt\"")
+    lines.append("\t\"path/filepath\"")
+    lines.append(")")
     lines.append("")
+    lines.append("")
+
 
     # Group tools by category
     categories: dict[str, list[ToolDef]] = {}
@@ -475,16 +490,14 @@ def gen_tools_go(tools: list[ToolDef]) -> str:
             # Generate method on Client
             lines.append(f"// {go_name}Fn calls the {tool.snake_name} MCP tool.")
             lines.append(f"// {tool.description}")
-            if tool.required_params:
-                req_params_str = ", ".join(
-                    p.name for p in tool.required_params
-                )
             lines.append(f"func (c *Client) {go_name}Fn(req {go_name}) (string, error) {{")
 
             # Build args map
             lines.append("\targs := map[string]any{}")
             for p in tool.params:
                 field = go_field_name(p.name)
+                is_path = is_path_param(p.name) and p.cs_type in ("string", "string?")
+
                 if p.has_default:
                     if p.cs_type == "string[]":
                         lines.append(f"\tif req.{field} != nil {{")
@@ -492,7 +505,14 @@ def gen_tools_go(tools: list[ToolDef]) -> str:
                         lines.append(f"\t}}")
                     elif p.cs_type == "string" or p.cs_type == "string?":
                         lines.append(f"\tif req.{field} != \"\" {{")
-                        lines.append(f"\t\targs[\"{p.name}\"] = req.{field}")
+                        if is_path:
+                            lines.append(f"\t\tp, err := filepath.Abs(req.{field})")
+                            lines.append(f"\t\tif err != nil {{")
+                            lines.append(f"\t\t\treturn \"\", fmt.Errorf(\"resolving path: %w\", err)")
+                            lines.append(f"\t\t}}")
+                            lines.append(f"\t\targs[\"{p.name}\"] = p")
+                        else:
+                            lines.append(f"\t\targs[\"{p.name}\"] = req.{field}")
                         lines.append(f"\t}}")
                     else:
                         lines.append(f"\tif req.{field} != nil {{")
@@ -501,6 +521,12 @@ def gen_tools_go(tools: list[ToolDef]) -> str:
                 else:
                     if p.cs_type == "string[]":
                         lines.append(f"\targs[\"{p.name}\"] = req.{field}")
+                    elif is_path:
+                        lines.append(f"\tp, err := filepath.Abs(req.{field})")
+                        lines.append(f"\tif err != nil {{")
+                        lines.append(f"\t\treturn \"\", fmt.Errorf(\"resolving path: %w\", err)")
+                        lines.append(f"\t}}")
+                        lines.append(f"\targs[\"{p.name}\"] = p")
                     else:
                         lines.append(f"\targs[\"{p.name}\"] = req.{field}")
 
@@ -706,11 +732,14 @@ def main():
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args()
 
+    # Ensure output path is absolute
+    output = args.output.resolve()
+
     tools = parse_mcp_tools()
     print(f"Parsed {len(tools)} tools from PicoGK.Mcp/Tools/*.cs")
 
     # Create output directories
-    pkg_dir = args.output / "picogk"
+    pkg_dir = output / "picogk"
     pkg_dir.mkdir(parents=True, exist_ok=True)
 
     # Generate files

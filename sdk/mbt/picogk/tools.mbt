@@ -86,7 +86,7 @@ pub async fn Client::boolean_subtract_all(self : Client, a : String, subtractIds
 pub async fn Client::save_stl(self : Client, meshId : String, path : String, units : String?) -> String raise {
   let args : Map[String, Json] = {}
   args.set("meshId", Json::string(meshId))
-  args.set("path", Json::string(path))
+  args.set("path", Json::string(resolve_path(path)))
   match units {
     Some(v) => args.set("units", Json::string(v))
     None => ()
@@ -101,7 +101,7 @@ pub async fn Client::save_stl(self : Client, meshId : String, path : String, uni
 pub async fn Client::save_vdb(self : Client, voxelsId : String, path : String, fieldName : String?) -> String raise {
   let args : Map[String, Json] = {}
   args.set("voxelsId", Json::string(voxelsId))
-  args.set("path", Json::string(path))
+  args.set("path", Json::string(resolve_path(path)))
   match fieldName {
     Some(v) => args.set("fieldName", Json::string(v))
     None => ()
@@ -115,7 +115,7 @@ pub async fn Client::save_vdb(self : Client, voxelsId : String, path : String, f
 ///
 pub async fn Client::load_vdb(self : Client, path : String, fieldName : String?, id : String?) -> String raise {
   let args : Map[String, Json] = {}
-  args.set("path", Json::string(path))
+  args.set("path", Json::string(resolve_path(path)))
   match fieldName {
     Some(v) => args.set("fieldName", Json::string(v))
     None => ()
@@ -133,7 +133,7 @@ pub async fn Client::load_vdb(self : Client, path : String, fieldName : String?,
 ///
 pub async fn Client::list_vdb_fields(self : Client, path : String) -> String raise {
   let args : Map[String, Json] = {}
-  args.set("path", Json::string(path))
+  args.set("path", Json::string(resolve_path(path)))
   self.call_tool("list_vdb_fields", args)
 }
 
@@ -144,7 +144,7 @@ pub async fn Client::list_vdb_fields(self : Client, path : String) -> String rai
 pub async fn Client::save_svg(self : Client, voxelsId : String, path : String, layerHeight : Double?) -> String raise {
   let args : Map[String, Json] = {}
   args.set("voxelsId", Json::string(voxelsId))
-  args.set("path", Json::string(path))
+  args.set("path", Json::string(resolve_path(path)))
   match layerHeight {
     Some(v) => args.set("layerHeight", Json::number(v))
     None => ()
@@ -159,7 +159,7 @@ pub async fn Client::save_svg(self : Client, voxelsId : String, path : String, l
 pub async fn Client::save_cli(self : Client, voxelsId : String, path : String, layerHeight : Double?, format : String?, useAbsXYOrigin : Bool?) -> String raise {
   let args : Map[String, Json] = {}
   args.set("voxelsId", Json::string(voxelsId))
-  args.set("path", Json::string(path))
+  args.set("path", Json::string(resolve_path(path)))
   match layerHeight {
     Some(v) => args.set("layerHeight", Json::number(v))
     None => ()
@@ -360,7 +360,7 @@ pub async fn Client::mesh_to_voxels(self : Client, meshId : String, id : String?
 ///
 pub async fn Client::mesh_from_stl(self : Client, path : String, id : String?) -> String raise {
   let args : Map[String, Json] = {}
-  args.set("path", Json::string(path))
+  args.set("path", Json::string(resolve_path(path)))
   match id {
     Some(v) => args.set("id", Json::string(v))
     None => ()
@@ -744,7 +744,7 @@ pub async fn Client::delete_objects(self : Client, objectIds : Array[String], ke
 pub async fn Client::render_to_image(self : Client, objectId : String, path : String, width : Int?, height : Int?, backgroundColor : String?, objectColor : String?) -> String raise {
   let args : Map[String, Json] = {}
   args.set("objectId", Json::string(objectId))
-  args.set("path", Json::string(path))
+  args.set("path", Json::string(resolve_path(path)))
   match width {
     Some(v) => args.set("width", Json::number(v.to_double()))
     None => ()
@@ -772,7 +772,7 @@ pub async fn Client::render_slice(self : Client, voxelsId : String, zPosition : 
   let args : Map[String, Json] = {}
   args.set("voxelsId", Json::string(voxelsId))
   args.set("zPosition", Json::number(zPosition))
-  args.set("path", Json::string(path))
+  args.set("path", Json::string(resolve_path(path)))
   match mode {
     Some(v) => args.set("mode", Json::string(v))
     None => ()

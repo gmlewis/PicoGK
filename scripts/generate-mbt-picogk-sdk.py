@@ -177,6 +177,22 @@ def gen_client_mbt(tools: list[ToolDef]) -> str:
     lines.append("  }")
     lines.append("}")
     lines.append("")
+    lines.append("///")
+    lines.append("/// resolve_path resolves a path to an absolute path.")
+    lines.append("/// If the path starts with ~, it expands to the home directory.")
+    lines.append("/// If the path is already absolute (starts with /), it is returned as-is.")
+    lines.append("/// Otherwise, it is prepended with the current working directory.")
+    lines.append("///")
+    lines.append("fn resolve_path(path : String) -> String {")
+    lines.append('  let expanded = expand_path(path)')
+    lines.append('  if expanded.has_prefix("/") {')
+    lines.append("    expanded")
+    lines.append("  } else {")
+    lines.append('    let cwd = @env.get_env_var("PWD").unwrap_or(".")')
+    lines.append('    cwd + "/" + expanded')
+    lines.append("  }")
+    lines.append("}")
+    lines.append("")
     lines.append("// --- JSON-RPC internals ---")
     lines.append("")
     lines.append("///")
@@ -292,6 +308,11 @@ def gen_client_mbt(tools: list[ToolDef]) -> str:
     return "\n".join(lines)
 
 
+def is_path_param(param_name: str) -> bool:
+    """Check if a parameter is a file path parameter."""
+    return param_name == "path" or param_name.endswith("_path")
+
+
 def gen_tools_mbt(tools: list[ToolDef]) -> str:
     """Generate the tools.mbt file with one method per tool."""
     lines: list[str] = []
@@ -324,6 +345,8 @@ def gen_tools_mbt(tools: list[ToolDef]) -> str:
             for p in tool.params:
                 field = mbt_field_name(p.name)
                 json_key = p.name
+                is_path = is_path_param(p.name) and p.cs_type in ("string", "string?")
+
                 if p.has_default:
                     if p.cs_type == "string[]":
                         args_lines.append(f"  match {field} {{")
@@ -347,7 +370,10 @@ def gen_tools_mbt(tools: list[ToolDef]) -> str:
                         args_lines.append(f"  }}")
                     elif p.cs_type in ("string", "string?"):
                         args_lines.append(f"  match {field} {{")
-                        args_lines.append(f"    Some(v) => args.set(\"{json_key}\", Json::string(v))")
+                        if is_path:
+                            args_lines.append(f"    Some(v) => args.set(\"{json_key}\", Json::string(resolve_path(v)))")
+                        else:
+                            args_lines.append(f"    Some(v) => args.set(\"{json_key}\", Json::string(v))")
                         args_lines.append(f"    None => ()")
                         args_lines.append(f"  }}")
                 else:
@@ -358,7 +384,10 @@ def gen_tools_mbt(tools: list[ToolDef]) -> str:
                     elif p.cs_type == "bool":
                         args_lines.append(f"  args.set(\"{json_key}\", Json::boolean({field}))")
                     elif p.cs_type in ("string", "string?"):
-                        args_lines.append(f"  args.set(\"{json_key}\", Json::string({field}))")
+                        if is_path:
+                            args_lines.append(f"  args.set(\"{json_key}\", Json::string(resolve_path({field})))")
+                        else:
+                            args_lines.append(f"  args.set(\"{json_key}\", Json::string({field}))")
                     elif p.cs_type == "string[]":
                         args_lines.append(f"  args.set(\"{json_key}\", Json::array({field}.map(fn(s) {{ Json::string(s) }})))")
 
@@ -545,11 +574,14 @@ def main():
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args()
 
+    # Ensure output path is absolute
+    output = args.output.resolve()
+
     tools = parse_mcp_tools()
     print(f"Parsed {len(tools)} tools from PicoGK.Mcp/Tools/*.cs")
 
     # Create output directories
-    pkg_dir = args.output / "picogk"
+    pkg_dir = output / "picogk"
     pkg_dir.mkdir(parents=True, exist_ok=True)
 
     # Generate files

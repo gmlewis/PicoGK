@@ -1,5 +1,5 @@
 // picogk: PicoGK MCP SDK for MoonBit
-// To regenerate, run: ./scripts/generate-mbt-mcp-sdk.py
+// To regenerate, run: ./scripts/generate-mbt-picogk-sdk.py
 // DO NOT EDIT — this file is auto-generated.
 
 name = "gmlewis/picogk"

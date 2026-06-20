@@ -2,6 +2,11 @@
 
 package picogk
 
+import (
+	"fmt"
+	"path/filepath"
+)
+
 // --- Booleans ---
 
 // BooleanAdd holds parameters for the boolean_add tool.
@@ -117,7 +122,11 @@ type SaveSTL struct {
 func (c *Client) SaveSTLFn(req SaveSTL) (string, error) {
 	args := map[string]any{}
 	args["meshId"] = req.MeshID
-	args["path"] = req.Path
+	p, err := filepath.Abs(req.Path)
+	if err != nil {
+		return "", fmt.Errorf("resolving path: %w", err)
+	}
+	args["path"] = p
 	if req.Units != "" {
 		args["units"] = req.Units
 	}
@@ -137,7 +146,11 @@ type SaveVDB struct {
 func (c *Client) SaveVDBFn(req SaveVDB) (string, error) {
 	args := map[string]any{}
 	args["voxelsId"] = req.VoxelsID
-	args["path"] = req.Path
+	p, err := filepath.Abs(req.Path)
+	if err != nil {
+		return "", fmt.Errorf("resolving path: %w", err)
+	}
+	args["path"] = p
 	if req.FieldName != "" {
 		args["fieldName"] = req.FieldName
 	}
@@ -156,7 +169,11 @@ type LoadVDB struct {
 // Load voxels from an OpenVDB file. Returns the object ID.
 func (c *Client) LoadVDBFn(req LoadVDB) (string, error) {
 	args := map[string]any{}
-	args["path"] = req.Path
+	p, err := filepath.Abs(req.Path)
+	if err != nil {
+		return "", fmt.Errorf("resolving path: %w", err)
+	}
+	args["path"] = p
 	if req.FieldName != "" {
 		args["fieldName"] = req.FieldName
 	}
@@ -176,7 +193,11 @@ type ListVDBFields struct {
 // List all fields in a VDB file with their names, types, and indices. Useful for inspecting multi-field VDB files before loading a specific field with load_vdb. Returns field count and a table of index, name, type, and PicoGK compatibility.
 func (c *Client) ListVDBFieldsFn(req ListVDBFields) (string, error) {
 	args := map[string]any{}
-	args["path"] = req.Path
+	p, err := filepath.Abs(req.Path)
+	if err != nil {
+		return "", fmt.Errorf("resolving path: %w", err)
+	}
+	args["path"] = p
 	return c.callTool("list_vdb_fields", args)
 }
 
@@ -193,7 +214,11 @@ type SaveSVG struct {
 func (c *Client) SaveSVGFn(req SaveSVG) (string, error) {
 	args := map[string]any{}
 	args["voxelsId"] = req.VoxelsID
-	args["path"] = req.Path
+	p, err := filepath.Abs(req.Path)
+	if err != nil {
+		return "", fmt.Errorf("resolving path: %w", err)
+	}
+	args["path"] = p
 	if req.LayerHeight != nil {
 		args["layerHeight"] = *req.LayerHeight
 	}
@@ -215,7 +240,11 @@ type SaveCLI struct {
 func (c *Client) SaveCLIFn(req SaveCLI) (string, error) {
 	args := map[string]any{}
 	args["voxelsId"] = req.VoxelsID
-	args["path"] = req.Path
+	p, err := filepath.Abs(req.Path)
+	if err != nil {
+		return "", fmt.Errorf("resolving path: %w", err)
+	}
+	args["path"] = p
 	if req.LayerHeight != nil {
 		args["layerHeight"] = *req.LayerHeight
 	}
@@ -499,7 +528,11 @@ type MeshFromSTL struct {
 // Load a mesh from an STL file on disk. Returns the object ID.
 func (c *Client) MeshFromSTLFn(req MeshFromSTL) (string, error) {
 	args := map[string]any{}
-	args["path"] = req.Path
+	p, err := filepath.Abs(req.Path)
+	if err != nil {
+		return "", fmt.Errorf("resolving path: %w", err)
+	}
+	args["path"] = p
 	if req.ID != "" {
 		args["id"] = req.ID
 	}
@@ -1034,7 +1067,11 @@ type RenderToImage struct {
 func (c *Client) RenderToImageFn(req RenderToImage) (string, error) {
 	args := map[string]any{}
 	args["objectId"] = req.ObjectID
-	args["path"] = req.Path
+	p, err := filepath.Abs(req.Path)
+	if err != nil {
+		return "", fmt.Errorf("resolving path: %w", err)
+	}
+	args["path"] = p
 	if req.Width != nil {
 		args["width"] = *req.Width
 	}
@@ -1065,7 +1102,11 @@ func (c *Client) RenderSliceFn(req RenderSlice) (string, error) {
 	args := map[string]any{}
 	args["voxelsId"] = req.VoxelsID
 	args["zPosition"] = req.ZPosition
-	args["path"] = req.Path
+	p, err := filepath.Abs(req.Path)
+	if err != nil {
+		return "", fmt.Errorf("resolving path: %w", err)
+	}
+	args["path"] = p
 	if req.Mode != "" {
 		args["mode"] = req.Mode
 	}
