@@ -80,14 +80,14 @@ func buildPart(client *picogk.Client) (string, error) {
 
 ## Using `KeepOnly` for bulk cleanup
 
-`DeleteObjects` with `KeepOnly: new(true)` deletes **everything except** the
+`DeleteObjects` with `KeepOnly: picogk.Ptr(true)` deletes **everything except** the
 listed objects — useful for a final cleanup that preserves only the output:
 
 ```go
     // ... many intermediate objects created ...
 
     // Keep only the final result:
-    do(picogk.DeleteObjects{ObjectIDs: []string{"finalPart"}, KeepOnly: new(true)})
+    do(picogk.DeleteObjects{ObjectIDs: []string{"finalPart"}, KeepOnly: picogk.Ptr(true)})
 ```
 
 ## Checking for empty results

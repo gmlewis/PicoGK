@@ -37,7 +37,7 @@ func main() {
 
     do := func(cmd any) { client.Must(cmd) }
 
-    client.Must(picogk.Init{VoxelSizeMM: new(0.3)})
+    client.Must(picogk.Init{VoxelSizeMM: picogk.Ptr(0.3)})
 
     // Build a part.
     do(picogk.CreateSphere{X: 0, Y: 0, Z: 0, Radius: 10, ID: "part"})

@@ -8,7 +8,10 @@ the JSON-RPC call to the MCP server and returns the result string.
 
 - **Required fields** are non-pointer types (e.g. `Radius float64`).
 - **Optional fields** are pointer types (e.g. `VoxelSizeMM *float64`). Use
-  `new(value)` to create a pointer to a literal — e.g. `new(0.5)`.
+  `picogk.Ptr(value)` to create a pointer — e.g. `picogk.Ptr(0.5)`.
+- **Boolean results**: tools like `PointInside`, `VoxelsIsEmpty`, and
+  `VoxelsIsEqual` return strings containing "True"/"False". Use
+  `picogk.ResultBool(result)` to parse them.
 - **Object IDs**: most creation/transform tools accept an optional `ID string`
   field. When set, the server uses it as the object's name; when empty, the
   server assigns an auto-generated ID.

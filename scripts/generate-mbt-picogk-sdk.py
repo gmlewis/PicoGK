@@ -397,6 +397,16 @@ def gen_tools_mbt(tools: list[ToolDef]) -> str:
             lines.append(f"///")
             lines.append(f"/// {method_name} — {tool.snake_name}")
             lines.append(f"/// {desc}")
+            # Add per-parameter documentation
+            if tool.params:
+                lines.append(f"///")
+                lines.append(f"/// Parameters:")
+                for p in tool.params:
+                    req_opt = "optional" if p.has_default else "required"
+                    p_desc = p.description if p.description else p.name
+                    p_desc = p_desc.replace('\n', '\n  ///')
+                    mbt_t = mbt_type_for_optional(p.cs_type) if p.has_default else mbt_type(p.cs_type)
+                    lines.append(f"///   - {mbt_field_name(p.name)} : {mbt_t} ({req_opt}) — {p_desc}")
             lines.append(f"///")
 
             # Function signature — all tools are async

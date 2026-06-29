@@ -7,6 +7,11 @@
 /// boolean_add — boolean_add
 /// Boolean UNION: combine two voxel objects. Both volumes are kept, overlapping regions are merged. Returns a new object ID.
 ///
+/// Parameters:
+///   - a : String (required) — ID of first object
+///   - b : String (required) — ID of second object
+///   - id : String? (optional) — Optional ID for the result
+///
 pub async fn Client::boolean_add(self : Client, a : String, b : String, id : String?) -> String raise {
   let args : Map[String, Json] = {}
   args.set("a", Json::string(a))
@@ -21,6 +26,11 @@ pub async fn Client::boolean_add(self : Client, a : String, b : String, id : Str
 ///
 /// boolean_subtract — boolean_subtract
 /// Boolean SUBTRACTION: subtract voxels of B from A. Removes the volume of B from A. Returns a new object ID.
+///
+/// Parameters:
+///   - a : String (required) — ID of the object to subtract FROM
+///   - b : String (required) — ID of the object to subtract
+///   - id : String? (optional) — Optional ID for the result
 ///
 pub async fn Client::boolean_subtract(self : Client, a : String, b : String, id : String?) -> String raise {
   let args : Map[String, Json] = {}
@@ -37,6 +47,11 @@ pub async fn Client::boolean_subtract(self : Client, a : String, b : String, id 
 /// boolean_intersect — boolean_intersect
 /// Boolean INTERSECTION: keep only the overlapping volume of two voxel objects. Returns a new object ID.
 ///
+/// Parameters:
+///   - a : String (required) — ID of first object
+///   - b : String (required) — ID of second object
+///   - id : String? (optional) — Optional ID for the result
+///
 pub async fn Client::boolean_intersect(self : Client, a : String, b : String, id : String?) -> String raise {
   let args : Map[String, Json] = {}
   args.set("a", Json::string(a))
@@ -52,6 +67,10 @@ pub async fn Client::boolean_intersect(self : Client, a : String, b : String, id
 /// boolean_add_all — boolean_add_all
 /// Combine multiple voxel objects into one. All volumes are merged. Returns a new object ID.
 ///
+/// Parameters:
+///   - objectIds : Array[String] (required) — List of object IDs to combine
+///   - id : String? (optional) — Optional ID for the result
+///
 pub async fn Client::boolean_add_all(self : Client, objectIds : Array[String], id : String?) -> String raise {
   let args : Map[String, Json] = {}
   args.set("objectIds", Json::array(objectIds.map(fn(s) { Json::string(s) })))
@@ -65,6 +84,11 @@ pub async fn Client::boolean_add_all(self : Client, objectIds : Array[String], i
 ///
 /// boolean_subtract_all — boolean_subtract_all
 /// Subtract multiple voxel objects from a single object in one call. Equivalent to calling boolean_subtract repeatedly, but more efficient for multi-hole drilling or multi-cutout operations. Returns a new object ID.
+///
+/// Parameters:
+///   - a : String (required) — ID of the object to subtract FROM
+///   - subtractIds : Array[String] (required) — List of object IDs to subtract from A
+///   - id : String? (optional) — Optional ID for the result
 ///
 pub async fn Client::boolean_subtract_all(self : Client, a : String, subtractIds : Array[String], id : String?) -> String raise {
   let args : Map[String, Json] = {}
@@ -83,6 +107,11 @@ pub async fn Client::boolean_subtract_all(self : Client, a : String, subtractIds
 /// save_stl — save_stl
 /// Save a mesh to an STL file. The mesh is typically obtained from voxels_to_mesh. Units are millimeters by default.
 ///
+/// Parameters:
+///   - meshId : String (required) — ID of the mesh object
+///   - path : String (required) — Full path for the output STL file
+///   - units : String? (optional) — Units: MM, CM, M, FT, IN (default: MM)
+///
 pub async fn Client::save_stl(self : Client, meshId : String, path : String, units : String?) -> String raise {
   let args : Map[String, Json] = {}
   args.set("meshId", Json::string(meshId))
@@ -98,6 +127,11 @@ pub async fn Client::save_stl(self : Client, meshId : String, path : String, uni
 /// save_vdb — save_vdb
 /// Save voxels to an OpenVDB file. VDB files preserve the full voxel field data.
 ///
+/// Parameters:
+///   - voxelsId : String (required) — ID of the voxel object
+///   - path : String (required) — Full path for the output VDB file
+///   - fieldName : String? (optional) — Optional name for the field inside the VDB file
+///
 pub async fn Client::save_vdb(self : Client, voxelsId : String, path : String, fieldName : String?) -> String raise {
   let args : Map[String, Json] = {}
   args.set("voxelsId", Json::string(voxelsId))
@@ -112,6 +146,11 @@ pub async fn Client::save_vdb(self : Client, voxelsId : String, path : String, f
 ///
 /// load_vdb — load_vdb
 /// Load voxels from an OpenVDB file. Returns the object ID.
+///
+/// Parameters:
+///   - path : String (required) — Full path to the VDB file
+///   - fieldName : String? (optional) — Optional field name to load (loads first field if not specified)
+///   - id : String? (optional) — Optional ID to assign
 ///
 pub async fn Client::load_vdb(self : Client, path : String, fieldName : String?, id : String?) -> String raise {
   let args : Map[String, Json] = {}
@@ -131,6 +170,9 @@ pub async fn Client::load_vdb(self : Client, path : String, fieldName : String?,
 /// list_vdb_fields — list_vdb_fields
 /// List all fields in a VDB file with their names, types, and indices. Useful for inspecting multi-field VDB files before loading a specific field with load_vdb. Returns field count and a table of index, name, type, and PicoGK compatibility.
 ///
+/// Parameters:
+///   - path : String (required) — Full path to the VDB file
+///
 pub async fn Client::list_vdb_fields(self : Client, path : String) -> String raise {
   let args : Map[String, Json] = {}
   args.set("path", Json::string(resolve_path(path)))
@@ -140,6 +182,11 @@ pub async fn Client::list_vdb_fields(self : Client, path : String) -> String rai
 ///
 /// save_svg — save_svg
 /// Vectorize voxels into 2D slice contours and save as SVG. Each slice is written to its own file: <path>.NNNN.svg (zero-padded 4 digits). Useful for 2D manufacturing or visualization. Returns the count of files written.
+///
+/// Parameters:
+///   - voxelsId : String (required) — ID of the voxel object
+///   - path : String (required) — Output path. The slice index is inserted before the extension: 'out.svg' -> 'out.0001.svg'; if no extension, '.NNNN.svg' is appended
+///   - layerHeight : Double? (optional) — Layer height in mm for slicing
 ///
 pub async fn Client::save_svg(self : Client, voxelsId : String, path : String, layerHeight : Double?) -> String raise {
   let args : Map[String, Json] = {}
@@ -155,6 +202,13 @@ pub async fn Client::save_svg(self : Client, voxelsId : String, path : String, l
 ///
 /// save_cli — save_cli
 /// Save voxels to a CLI (Common Layer Interface) file for 3D printing. Vectorizes the voxel field into 2D layers and writes the CLI format. Returns the file path and slice count.
+///
+/// Parameters:
+///   - voxelsId : String (required) — ID of the voxel object
+///   - path : String (required) — Full path for the output CLI file
+///   - layerHeight : Double? (optional) — Layer height in mm for slicing (0 = use voxel size)
+///   - format : String? (optional) — Format: 'FirstLayerWithContent' (default) or 'UseEmptyFirstLayer' (adds an empty zero-height layer so readers can infer layer height)
+///   - useAbsXYOrigin : Bool? (optional) — If true, use absolute X/Y origin; if false (default), slices are relative to the voxel field boundaries
 ///
 pub async fn Client::save_cli(self : Client, voxelsId : String, path : String, layerHeight : Double?, format : String?, useAbsXYOrigin : Bool?) -> String raise {
   let args : Map[String, Json] = {}
@@ -181,6 +235,9 @@ pub async fn Client::save_cli(self : Client, voxelsId : String, path : String, l
 /// create_lattice — create_lattice
 /// Create an empty lattice structure. Add beams and sphere nodes to build it, then convert to voxels. Returns the object ID.
 ///
+/// Parameters:
+///   - id : String? (optional) — Optional ID to assign
+///
 pub async fn Client::create_lattice(self : Client, id : String?) -> String raise {
   let args : Map[String, Json] = {}
   match id {
@@ -193,6 +250,18 @@ pub async fn Client::create_lattice(self : Client, id : String?) -> String raise
 ///
 /// lattice_add_beam — lattice_add_beam
 /// Add a tapered beam (strut) between two points in a lattice. Each end has its own radius. Returns a confirmation.
+///
+/// Parameters:
+///   - latticeId : String (required) — ID of the lattice object
+///   - x1 : Double (required) — Start point X
+///   - y1 : Double (required) — Start point Y
+///   - z1 : Double (required) — Start point Z
+///   - radius1 : Double (required) — Start radius in mm
+///   - x2 : Double (required) — End point X
+///   - y2 : Double (required) — End point Y
+///   - z2 : Double (required) — End point Z
+///   - radius2 : Double (required) — End radius in mm
+///   - roundCap : Bool? (optional) — Use round caps (default true)
 ///
 pub async fn Client::lattice_add_beam(self : Client, latticeId : String, x1 : Double, y1 : Double, z1 : Double, radius1 : Double, x2 : Double, y2 : Double, z2 : Double, radius2 : Double, roundCap : Bool?) -> String raise {
   let args : Map[String, Json] = {}
@@ -216,6 +285,13 @@ pub async fn Client::lattice_add_beam(self : Client, latticeId : String, x1 : Do
 /// lattice_add_sphere — lattice_add_sphere
 /// Add a sphere node at a point in a lattice. Returns a confirmation.
 ///
+/// Parameters:
+///   - latticeId : String (required) — ID of the lattice object
+///   - x : Double (required) — Center X
+///   - y : Double (required) — Center Y
+///   - z : Double (required) — Center Z
+///   - radius : Double (required) — Radius in mm
+///
 pub async fn Client::lattice_add_sphere(self : Client, latticeId : String, x : Double, y : Double, z : Double, radius : Double) -> String raise {
   let args : Map[String, Json] = {}
   args.set("latticeId", Json::string(latticeId))
@@ -229,6 +305,10 @@ pub async fn Client::lattice_add_sphere(self : Client, latticeId : String, x : D
 ///
 /// lattice_to_voxels — lattice_to_voxels
 /// Convert a lattice to voxels. Renders the lattice beams and nodes into a voxel field. Returns a new voxel object ID.
+///
+/// Parameters:
+///   - latticeId : String (required) — ID of the lattice object
+///   - id : String? (optional) — Optional ID for the result
 ///
 pub async fn Client::lattice_to_voxels(self : Client, latticeId : String, id : String?) -> String raise {
   let args : Map[String, Json] = {}
@@ -246,6 +326,9 @@ pub async fn Client::lattice_to_voxels(self : Client, latticeId : String, id : S
 /// create_mesh — create_mesh
 /// Create an empty mesh. Add vertices and triangles to build geometry. Returns the object ID.
 ///
+/// Parameters:
+///   - id : String? (optional) — Optional ID to assign
+///
 pub async fn Client::create_mesh(self : Client, id : String?) -> String raise {
   let args : Map[String, Json] = {}
   match id {
@@ -258,6 +341,12 @@ pub async fn Client::create_mesh(self : Client, id : String?) -> String raise {
 ///
 /// mesh_add_vertex — mesh_add_vertex
 /// Add a vertex to a mesh. Returns the vertex index (0-based) for use in triangle creation.
+///
+/// Parameters:
+///   - meshId : String (required) — ID of the mesh
+///   - x : Double (required) — X coordinate
+///   - y : Double (required) — Y coordinate
+///   - z : Double (required) — Z coordinate
 ///
 pub async fn Client::mesh_add_vertex(self : Client, meshId : String, x : Double, y : Double, z : Double) -> String raise {
   let args : Map[String, Json] = {}
@@ -272,6 +361,12 @@ pub async fn Client::mesh_add_vertex(self : Client, meshId : String, x : Double,
 /// mesh_add_triangle — mesh_add_triangle
 /// Add a triangle to a mesh using vertex indices. Returns the triangle index.
 ///
+/// Parameters:
+///   - meshId : String (required) — ID of the mesh
+///   - a : Int (required) — Index of first vertex
+///   - b : Int (required) — Index of second vertex
+///   - c : Int (required) — Index of third vertex
+///
 pub async fn Client::mesh_add_triangle(self : Client, meshId : String, a : Int, b : Int, c : Int) -> String raise {
   let args : Map[String, Json] = {}
   args.set("meshId", Json::string(meshId))
@@ -284,6 +379,18 @@ pub async fn Client::mesh_add_triangle(self : Client, meshId : String, a : Int, 
 ///
 /// mesh_add_triangle_vertices — mesh_add_triangle_vertices
 /// Add a triangle to a mesh by specifying three vertex positions directly. The vertices are added automatically. Returns the triangle index.
+///
+/// Parameters:
+///   - meshId : String (required) — ID of the mesh
+///   - x1 : Double (required) — Vertex 1 X
+///   - y1 : Double (required) — Vertex 1 Y
+///   - z1 : Double (required) — Vertex 1 Z
+///   - x2 : Double (required) — Vertex 2 X
+///   - y2 : Double (required) — Vertex 2 Y
+///   - z2 : Double (required) — Vertex 2 Z
+///   - x3 : Double (required) — Vertex 3 X
+///   - y3 : Double (required) — Vertex 3 Y
+///   - z3 : Double (required) — Vertex 3 Z
 ///
 pub async fn Client::mesh_add_triangle_vertices(self : Client, meshId : String, x1 : Double, y1 : Double, z1 : Double, x2 : Double, y2 : Double, z2 : Double, x3 : Double, y3 : Double, z3 : Double) -> String raise {
   let args : Map[String, Json] = {}
@@ -303,6 +410,22 @@ pub async fn Client::mesh_add_triangle_vertices(self : Client, meshId : String, 
 ///
 /// mesh_add_quad — mesh_add_quad
 /// Add a quad to a mesh by specifying four vertex positions directly. The vertices are added automatically and two triangles are created. Use bFlipped=true to reverse the winding order. Returns the starting triangle index.
+///
+/// Parameters:
+///   - meshId : String (required) — ID of the mesh
+///   - x0 : Double (required) — Vertex 0 X
+///   - y0 : Double (required) — Vertex 0 Y
+///   - z0 : Double (required) — Vertex 0 Z
+///   - x1 : Double (required) — Vertex 1 X
+///   - y1 : Double (required) — Vertex 1 Y
+///   - z1 : Double (required) — Vertex 1 Z
+///   - x2 : Double (required) — Vertex 2 X
+///   - y2 : Double (required) — Vertex 2 Y
+///   - z2 : Double (required) — Vertex 2 Z
+///   - x3 : Double (required) — Vertex 3 X
+///   - y3 : Double (required) — Vertex 3 Y
+///   - z3 : Double (required) — Vertex 3 Z
+///   - flipped : Bool? (optional) — If true, reverse the winding order of the two triangles
 ///
 pub async fn Client::mesh_add_quad(self : Client, meshId : String, x0 : Double, y0 : Double, z0 : Double, x1 : Double, y1 : Double, z1 : Double, x2 : Double, y2 : Double, z2 : Double, x3 : Double, y3 : Double, z3 : Double, flipped : Bool?) -> String raise {
   let args : Map[String, Json] = {}
@@ -330,6 +453,10 @@ pub async fn Client::mesh_add_quad(self : Client, meshId : String, x0 : Double, 
 /// voxels_to_mesh — voxels_to_mesh
 /// Convert a voxel object to a mesh using marching cubes. Returns a new mesh object ID.
 ///
+/// Parameters:
+///   - voxelsId : String (required) — ID of the voxel object
+///   - id : String? (optional) — Optional ID for the result
+///
 pub async fn Client::voxels_to_mesh(self : Client, voxelsId : String, id : String?) -> String raise {
   let args : Map[String, Json] = {}
   args.set("voxelsId", Json::string(voxelsId))
@@ -343,6 +470,10 @@ pub async fn Client::voxels_to_mesh(self : Client, voxelsId : String, id : Strin
 ///
 /// mesh_to_voxels — mesh_to_voxels
 /// Convert a mesh to voxels. Returns a new voxel object ID.
+///
+/// Parameters:
+///   - meshId : String (required) — ID of the mesh object
+///   - id : String? (optional) — Optional ID for the result
 ///
 pub async fn Client::mesh_to_voxels(self : Client, meshId : String, id : String?) -> String raise {
   let args : Map[String, Json] = {}
@@ -358,6 +489,10 @@ pub async fn Client::mesh_to_voxels(self : Client, meshId : String, id : String?
 /// mesh_from_stl — mesh_from_stl
 /// Load a mesh from an STL file on disk. Returns the object ID.
 ///
+/// Parameters:
+///   - path : String (required) — Full path to the STL file
+///   - id : String? (optional) — Optional ID to assign
+///
 pub async fn Client::mesh_from_stl(self : Client, path : String, id : String?) -> String raise {
   let args : Map[String, Json] = {}
   args.set("path", Json::string(resolve_path(path)))
@@ -371,6 +506,14 @@ pub async fn Client::mesh_from_stl(self : Client, path : String, id : String?) -
 ///
 /// mesh_transform — mesh_transform
 /// Transform a mesh: apply uniform scale and/or translation. Returns a new mesh object ID.
+///
+/// Parameters:
+///   - meshId : String (required) — ID of the source mesh
+///   - scale : Double? (optional) — Scale factor (1.0 = no scale)
+///   - translateX : Double? (optional) — Translation X
+///   - translateY : Double? (optional) — Translation Y
+///   - translateZ : Double? (optional) — Translation Z
+///   - id : String? (optional) — Optional ID for the result
 ///
 pub async fn Client::mesh_transform(self : Client, meshId : String, scale : Double?, translateX : Double?, translateY : Double?, translateZ : Double?, id : String?) -> String raise {
   let args : Map[String, Json] = {}
@@ -402,6 +545,16 @@ pub async fn Client::mesh_transform(self : Client, meshId : String, scale : Doub
 /// mesh_mirror — mesh_mirror
 /// Mirror a mesh across a plane defined by a point and normal. Returns a new mesh object ID.
 ///
+/// Parameters:
+///   - meshId : String (required) — ID of the source mesh
+///   - ptX : Double (required) — A point on the mirror plane X
+///   - ptY : Double (required) — A point on the mirror plane Y
+///   - ptZ : Double (required) — A point on the mirror plane Z
+///   - nX : Double (required) — Mirror plane normal X
+///   - nY : Double (required) — Mirror plane normal Y
+///   - nZ : Double (required) — Mirror plane normal Z
+///   - id : String? (optional) — Optional ID for the result
+///
 pub async fn Client::mesh_mirror(self : Client, meshId : String, ptX : Double, ptY : Double, ptZ : Double, nX : Double, nY : Double, nZ : Double, id : String?) -> String raise {
   let args : Map[String, Json] = {}
   args.set("meshId", Json::string(meshId))
@@ -422,6 +575,10 @@ pub async fn Client::mesh_mirror(self : Client, meshId : String, ptX : Double, p
 /// mesh_append — mesh_append
 /// Append one mesh into another (modifies the target). Returns the target mesh ID.
 ///
+/// Parameters:
+///   - targetId : String (required) — ID of the target mesh (will be modified)
+///   - sourceId : String (required) — ID of the source mesh (will be appended)
+///
 pub async fn Client::mesh_append(self : Client, targetId : String, sourceId : String) -> String raise {
   let args : Map[String, Json] = {}
   args.set("targetId", Json::string(targetId))
@@ -434,6 +591,13 @@ pub async fn Client::mesh_append(self : Client, targetId : String, sourceId : St
 ///
 /// create_sphere — create_sphere
 /// Create a sphere voxel object. Returns the object ID.
+///
+/// Parameters:
+///   - x : Double (required) — X coordinate of center in mm
+///   - y : Double (required) — Y coordinate of center in mm
+///   - z : Double (required) — Z coordinate of center in mm
+///   - radius : Double (required) — Radius in mm
+///   - id : String? (optional) — Optional ID to assign to this object
 ///
 pub async fn Client::create_sphere(self : Client, x : Double, y : Double, z : Double, radius : Double, id : String?) -> String raise {
   let args : Map[String, Json] = {}
@@ -451,6 +615,15 @@ pub async fn Client::create_sphere(self : Client, x : Double, y : Double, z : Do
 ///
 /// create_box — create_box
 /// Create a box (axis-aligned cuboid) from minimum and maximum corner coordinates. Returns the object ID.
+///
+/// Parameters:
+///   - minX : Double (required) — Minimum X
+///   - minY : Double (required) — Minimum Y
+///   - minZ : Double (required) — Minimum Z
+///   - maxX : Double (required) — Maximum X
+///   - maxY : Double (required) — Maximum Y
+///   - maxZ : Double (required) — Maximum Z
+///   - id : String? (optional) — Optional ID to assign to this object
 ///
 pub async fn Client::create_box(self : Client, minX : Double, minY : Double, minZ : Double, maxX : Double, maxY : Double, maxZ : Double, id : String?) -> String raise {
   let args : Map[String, Json] = {}
@@ -470,6 +643,17 @@ pub async fn Client::create_box(self : Client, minX : Double, minY : Double, min
 ///
 /// create_cylinder — create_cylinder
 /// Create a cylinder. By default it runs along the +Z axis from (x,y,z) to (x,y,z+height). Pass dirX/dirY/dirZ to orient the axis differently (the vector is normalized automatically). The cylinder has flat end caps. Returns the object ID.
+///
+/// Parameters:
+///   - x : Double (required) — X coordinate of the bottom center
+///   - y : Double (required) — Y coordinate of the bottom center
+///   - z : Double (required) — Z coordinate of the bottom center
+///   - radius : Double (required) — Radius in mm
+///   - height : Double (required) — Height in mm (along the axis)
+///   - dirX : Double? (optional) — Axis direction X (default 0 = +Z)
+///   - dirY : Double? (optional) — Axis direction Y (default 0 = +Z)
+///   - dirZ : Double? (optional) — Axis direction Z (default 1 = +Z). If all three are 0, +Z is used.
+///   - id : String? (optional) — Optional ID to assign
 ///
 pub async fn Client::create_cylinder(self : Client, x : Double, y : Double, z : Double, radius : Double, height : Double, dirX : Double?, dirY : Double?, dirZ : Double?, id : String?) -> String raise {
   let args : Map[String, Json] = {}
@@ -501,6 +685,16 @@ pub async fn Client::create_cylinder(self : Client, x : Double, y : Double, z : 
 /// create_capsule — create_capsule
 /// Create a capsule (a sphere-swept line segment). Returns the object ID.
 ///
+/// Parameters:
+///   - x1 : Double (required) — Start point X
+///   - y1 : Double (required) — Start point Y
+///   - z1 : Double (required) — Start point Z
+///   - x2 : Double (required) — End point X
+///   - y2 : Double (required) — End point Y
+///   - z2 : Double (required) — End point Z
+///   - radius : Double (required) — Radius in mm
+///   - id : String? (optional) — Optional ID to assign
+///
 pub async fn Client::create_capsule(self : Client, x1 : Double, y1 : Double, z1 : Double, x2 : Double, y2 : Double, z2 : Double, radius : Double, id : String?) -> String raise {
   let args : Map[String, Json] = {}
   args.set("x1", Json::number(x1))
@@ -520,6 +714,14 @@ pub async fn Client::create_capsule(self : Client, x1 : Double, y1 : Double, z1 
 ///
 /// create_torus — create_torus
 /// Create a torus (donut shape) by revolving a circle around the Z axis. Returns the object ID.
+///
+/// Parameters:
+///   - majorRadius : Double (required) — Major radius (distance from center to tube center) in mm
+///   - minorRadius : Double (required) — Minor radius (tube radius) in mm
+///   - x : Double? (optional) — X offset of center
+///   - y : Double? (optional) — Y offset of center
+///   - z : Double? (optional) — Z offset of center
+///   - id : String? (optional) — Optional ID to assign
 ///
 pub async fn Client::create_torus(self : Client, majorRadius : Double, minorRadius : Double, x : Double?, y : Double?, z : Double?, id : String?) -> String raise {
   let args : Map[String, Json] = {}
@@ -550,6 +752,9 @@ pub async fn Client::create_torus(self : Client, majorRadius : Double, minorRadi
 /// get_bounding_box — get_bounding_box
 /// Get the axis-aligned bounding box of any object. Returns min/max corners in mm. Retries internally with exponential backoff if the object was just created/transformed and the internal mesh conversion is not yet settled.
 ///
+/// Parameters:
+///   - objectId : String (required) — ID of the object to query
+///
 pub async fn Client::get_bounding_box(self : Client, objectId : String) -> String raise {
   let args : Map[String, Json] = {}
   args.set("objectId", Json::string(objectId))
@@ -559,6 +764,9 @@ pub async fn Client::get_bounding_box(self : Client, objectId : String) -> Strin
 ///
 /// get_volume — get_volume
 /// Calculate the volume and bounding box of a voxel object. Retries internally with exponential backoff if the object was just created/transformed.
+///
+/// Parameters:
+///   - objectId : String (required) — ID of the voxel object
 ///
 pub async fn Client::get_volume(self : Client, objectId : String) -> String raise {
   let args : Map[String, Json] = {}
@@ -570,6 +778,9 @@ pub async fn Client::get_volume(self : Client, objectId : String) -> String rais
 /// get_mesh_info — get_mesh_info
 /// Get information about a mesh: vertex count, triangle count, bounding box.
 ///
+/// Parameters:
+///   - objectId : String (required) — ID of the mesh object
+///
 pub async fn Client::get_mesh_info(self : Client, objectId : String) -> String raise {
   let args : Map[String, Json] = {}
   args.set("objectId", Json::string(objectId))
@@ -579,6 +790,12 @@ pub async fn Client::get_mesh_info(self : Client, objectId : String) -> String r
 ///
 /// point_inside — point_inside
 /// Check if a 3D point is inside a voxel object.
+///
+/// Parameters:
+///   - objectId : String (required) — ID of the voxel object
+///   - x : Double (required) — X coordinate
+///   - y : Double (required) — Y coordinate
+///   - z : Double (required) — Z coordinate
 ///
 pub async fn Client::point_inside(self : Client, objectId : String, x : Double, y : Double, z : Double) -> String raise {
   let args : Map[String, Json] = {}
@@ -593,6 +810,12 @@ pub async fn Client::point_inside(self : Client, objectId : String, x : Double, 
 /// surface_normal — surface_normal
 /// Get the surface normal vector at a point on a voxel object's surface.
 ///
+/// Parameters:
+///   - objectId : String (required) — ID of the voxel object
+///   - x : Double (required) — X coordinate
+///   - y : Double (required) — Y coordinate
+///   - z : Double (required) — Z coordinate
+///
 pub async fn Client::surface_normal(self : Client, objectId : String, x : Double, y : Double, z : Double) -> String raise {
   let args : Map[String, Json] = {}
   args.set("objectId", Json::string(objectId))
@@ -605,6 +828,12 @@ pub async fn Client::surface_normal(self : Client, objectId : String, x : Double
 ///
 /// closest_point — closest_point
 /// Find the closest point on a voxel object's surface to a given point.
+///
+/// Parameters:
+///   - objectId : String (required) — ID of the voxel object
+///   - x : Double (required) — X coordinate of query point
+///   - y : Double (required) — Y coordinate of query point
+///   - z : Double (required) — Z coordinate of query point
 ///
 pub async fn Client::closest_point(self : Client, objectId : String, x : Double, y : Double, z : Double) -> String raise {
   let args : Map[String, Json] = {}
@@ -628,6 +857,9 @@ pub async fn Client::list_objects(self : Client) -> String raise {
 /// delete_object — delete_object
 /// Delete an object from the session. Frees memory and removes the object from the registry.
 ///
+/// Parameters:
+///   - objectId : String (required) — ID of the object to delete
+///
 pub async fn Client::delete_object(self : Client, objectId : String) -> String raise {
   let args : Map[String, Json] = {}
   args.set("objectId", Json::string(objectId))
@@ -637,6 +869,9 @@ pub async fn Client::delete_object(self : Client, objectId : String) -> String r
 ///
 /// get_voxel_dimensions — get_voxel_dimensions
 /// Get the voxel dimensions (grid size) of a voxel object.
+///
+/// Parameters:
+///   - objectId : String (required) — ID of the voxel object
 ///
 pub async fn Client::get_voxel_dimensions(self : Client, objectId : String) -> String raise {
   let args : Map[String, Json] = {}
@@ -648,6 +883,9 @@ pub async fn Client::get_voxel_dimensions(self : Client, objectId : String) -> S
 /// voxels_is_empty — voxels_is_empty
 /// Check if a voxel object is empty (contains no volume). Useful for detecting failed operations — e.g. an intersection that produced no overlap, or a subtraction that removed all material.
 ///
+/// Parameters:
+///   - objectId : String (required) — ID of the voxel object
+///
 pub async fn Client::voxels_is_empty(self : Client, objectId : String) -> String raise {
   let args : Map[String, Json] = {}
   args.set("objectId", Json::string(objectId))
@@ -657,6 +895,9 @@ pub async fn Client::voxels_is_empty(self : Client, objectId : String) -> String
 ///
 /// voxels_mem_usage — voxels_mem_usage
 /// Get the memory usage of a voxel object in bytes. Useful for monitoring memory consumption when building complex models.
+///
+/// Parameters:
+///   - objectId : String (required) — ID of the voxel object
 ///
 pub async fn Client::voxels_mem_usage(self : Client, objectId : String) -> String raise {
   let args : Map[String, Json] = {}
@@ -668,6 +909,10 @@ pub async fn Client::voxels_mem_usage(self : Client, objectId : String) -> Strin
 /// voxels_is_equal — voxels_is_equal
 /// Compare two voxel objects for equality. Returns true if they contain the same voxel data. Useful for verifying that a transform or round-trip preserved the shape.
 ///
+/// Parameters:
+///   - objectIdA : String (required) — ID of the first voxel object
+///   - objectIdB : String (required) — ID of the second voxel object
+///
 pub async fn Client::voxels_is_equal(self : Client, objectIdA : String, objectIdB : String) -> String raise {
   let args : Map[String, Json] = {}
   args.set("objectIdA", Json::string(objectIdA))
@@ -678,6 +923,15 @@ pub async fn Client::voxels_is_equal(self : Client, objectIdA : String, objectId
 ///
 /// ray_cast — ray_cast
 /// Cast a ray from a point in a given direction and find where it hits the surface of a voxel object. Useful for measuring wall thickness, checking bore clearance, and probing internal geometry. Returns the hit point and the distance from the origin, or an error if no intersection is found.
+///
+/// Parameters:
+///   - objectId : String (required) — ID of the voxel object
+///   - x : Double (required) — Origin X of the ray
+///   - y : Double (required) — Origin Y of the ray
+///   - z : Double (required) — Origin Z of the ray
+///   - dirX : Double (required) — Ray direction X (need not be normalized)
+///   - dirY : Double (required) — Ray direction Y
+///   - dirZ : Double (required) — Ray direction Z
 ///
 pub async fn Client::ray_cast(self : Client, objectId : String, x : Double, y : Double, z : Double, dirX : Double, dirY : Double, dirZ : Double) -> String raise {
   let args : Map[String, Json] = {}
@@ -695,6 +949,15 @@ pub async fn Client::ray_cast(self : Client, objectId : String, x : Double, y : 
 /// measure_thickness — measure_thickness
 /// Cast a ray from a point in both +direction and -direction and report both hit points and the total span between them. Measures the through-thickness of the object along the ray axis (surface to surface through the interior, which may cross internal cavities). For local wall thickness of a shell, place the origin inside the wall material and note that the total span includes all internal voids.
 ///
+/// Parameters:
+///   - objectId : String (required) — ID of the voxel object
+///   - x : Double (required) — Origin X (ideally inside the wall/material)
+///   - y : Double (required) — Origin Y
+///   - z : Double (required) — Origin Z
+///   - dirX : Double (required) — Measurement direction X (need not be normalized)
+///   - dirY : Double (required) — Measurement direction Y
+///   - dirZ : Double (required) — Measurement direction Z
+///
 pub async fn Client::measure_thickness(self : Client, objectId : String, x : Double, y : Double, z : Double, dirX : Double, dirY : Double, dirZ : Double) -> String raise {
   let args : Map[String, Json] = {}
   args.set("objectId", Json::string(objectId))
@@ -711,6 +974,10 @@ pub async fn Client::measure_thickness(self : Client, objectId : String, x : Dou
 /// duplicate_object — duplicate_object
 /// Create a duplicate (deep copy) of an existing object. Works with voxel and mesh objects. Returns the new object ID.
 ///
+/// Parameters:
+///   - objectId : String (required) — ID of the object to duplicate
+///   - id : String? (optional) — Optional ID for the copy
+///
 pub async fn Client::duplicate_object(self : Client, objectId : String, id : String?) -> String raise {
   let args : Map[String, Json] = {}
   args.set("objectId", Json::string(objectId))
@@ -724,6 +991,10 @@ pub async fn Client::duplicate_object(self : Client, objectId : String, id : Str
 ///
 /// delete_objects — delete_objects
 /// Delete multiple objects from the session in one call. Useful for cleaning up intermediate objects after a complex build. Returns the count of objects actually deleted.
+///
+/// Parameters:
+///   - objectIds : Array[String] (required) — List of object IDs to delete
+///   - keepOnly : Bool? (optional) — If true, delete ALL objects EXCEPT those in objectIds (keep-only mode). Default false = delete the listed objects.
 ///
 pub async fn Client::delete_objects(self : Client, objectIds : Array[String], keepOnly : Bool?) -> String raise {
   let args : Map[String, Json] = {}
@@ -740,6 +1011,14 @@ pub async fn Client::delete_objects(self : Client, objectIds : Array[String], ke
 ///
 /// render_to_image — render_to_image
 /// Render an object to a PNG image using an isometric projection with Lambertian shading. The agent can use this to visually inspect geometry. Returns the file path of the rendered image.
+///
+/// Parameters:
+///   - objectId : String (required) — ID of the object to render (voxels or mesh)
+///   - path : String (required) — Full path for the output PNG file
+///   - width : Int? (optional) — Image width in pixels
+///   - height : Int? (optional) — Image height in pixels
+///   - backgroundColor : String? (optional) — Background color as hex (default: white)
+///   - objectColor : String? (optional) — Object color as hex (default: steel blue)
 ///
 pub async fn Client::render_to_image(self : Client, objectId : String, path : String, width : Int?, height : Int?, backgroundColor : String?, objectColor : String?) -> String raise {
   let args : Map[String, Json] = {}
@@ -768,6 +1047,12 @@ pub async fn Client::render_to_image(self : Client, objectId : String, path : St
 /// render_slice — render_slice
 /// Render a Z-slice of a voxel object to a PNG image. Shows the cross-section at a specific height. Returns the file path.
 ///
+/// Parameters:
+///   - voxelsId : String (required) — ID of the voxel object
+///   - zPosition : Double (required) — Z position in mm
+///   - path : String (required) — Full path for the output PNG file
+///   - mode : String? (optional) — Slice mode: Sdf, Bw, or Antialiased (default: Antialiased)
+///
 pub async fn Client::render_slice(self : Client, voxelsId : String, zPosition : Double, path : String, mode : String?) -> String raise {
   let args : Map[String, Json] = {}
   args.set("voxelsId", Json::string(voxelsId))
@@ -785,6 +1070,9 @@ pub async fn Client::render_slice(self : Client, voxelsId : String, zPosition : 
 ///
 /// picogk_init — picogk_init
 /// Initialize the PicoGK geometry kernel. Must be called before any other tool. Sets the voxel resolution in millimeters. Smaller values = higher resolution but more memory. Typical range: 0.1mm (fine) to 5.0mm (coarse).
+///
+/// Parameters:
+///   - voxelSizeMM : Double? (optional) — Voxel size in millimeters. Controls resolution. Use 0.5 for general purpose, 0.1 for fine detail, 2.0+ for large parts.
 ///
 pub async fn Client::picogk_init(self : Client, voxelSizeMM : Double?) -> String raise {
   let args : Map[String, Json] = {}
@@ -819,6 +1107,11 @@ pub async fn Client::picogk_shutdown(self : Client) -> String raise {
 /// offset — offset
 /// Offset a voxel surface outward (positive) or inward (negative) by a distance. Use for thickening, thinning, or creating clearance. Returns a new object ID.
 ///
+/// Parameters:
+///   - objectId : String (required) — ID of the source object
+///   - distance : Double (required) — Offset distance in mm. Positive = expand, negative = shrink.
+///   - id : String? (optional) — Optional ID for the result
+///
 pub async fn Client::offset(self : Client, objectId : String, distance : Double, id : String?) -> String raise {
   let args : Map[String, Json] = {}
   args.set("objectId", Json::string(objectId))
@@ -833,6 +1126,12 @@ pub async fn Client::offset(self : Client, objectId : String, distance : Double,
 ///
 /// double_offset — double_offset
 /// Offset a voxel surface twice: first by offset1, then by offset2. Enables precise morphological operations not possible with a single offset — e.g. offset out by 2mm then back by 1.5mm to remove thin features while preserving wall thickness. Returns a new object ID.
+///
+/// Parameters:
+///   - objectId : String (required) — ID of the source object
+///   - offset1 : Double (required) — First offset distance in mm (positive = expand, negative = shrink)
+///   - offset2 : Double (required) — Second offset distance in mm (applied after the first offset)
+///   - id : String? (optional) — Optional ID for the result
 ///
 pub async fn Client::double_offset(self : Client, objectId : String, offset1 : Double, offset2 : Double, id : String?) -> String raise {
   let args : Map[String, Json] = {}
@@ -849,6 +1148,12 @@ pub async fn Client::double_offset(self : Client, objectId : String, offset1 : D
 ///
 /// over_offset — over_offset
 /// Offset a voxel surface by a first distance, then settle the surface at a specified final distance from the original. More precise than fillet: lets you say 'offset by 3mm, then move the surface to exactly 0.5mm from where it started.' Useful for controlled material removal. Returns a new object ID.
+///
+/// Parameters:
+///   - objectId : String (required) — ID of the source object
+///   - firstOffset : Double (required) — First offset distance in mm (positive = expand)
+///   - finalSurfaceDist : Double? (optional) — Final surface distance from the original surface in mm (default 0 = settle back to original)
+///   - id : String? (optional) — Optional ID for the result
 ///
 pub async fn Client::over_offset(self : Client, objectId : String, firstOffset : Double, finalSurfaceDist : Double?, id : String?) -> String raise {
   let args : Map[String, Json] = {}
@@ -869,6 +1174,11 @@ pub async fn Client::over_offset(self : Client, objectId : String, firstOffset :
 /// smooth — smooth
 /// Smooth/round a voxel surface by applying triple offset. Good for removing sharp edges. Returns a new object ID.
 ///
+/// Parameters:
+///   - objectId : String (required) — ID of the source object
+///   - distance : Double (required) — Smoothing distance in mm. Larger = smoother.
+///   - id : String? (optional) — Optional ID for the result
+///
 pub async fn Client::smooth(self : Client, objectId : String, distance : Double, id : String?) -> String raise {
   let args : Map[String, Json] = {}
   args.set("objectId", Json::string(objectId))
@@ -883,6 +1193,16 @@ pub async fn Client::smooth(self : Client, objectId : String, distance : Double,
 ///
 /// trim — trim
 /// Trim a voxel object to fit within a bounding box. Everything outside the box is removed. Returns a new object ID.
+///
+/// Parameters:
+///   - objectId : String (required) — ID of the source object
+///   - minX : Double (required) — Minimum X of trim box
+///   - minY : Double (required) — Minimum Y of trim box
+///   - minZ : Double (required) — Minimum Z of trim box
+///   - maxX : Double (required) — Maximum X of trim box
+///   - maxY : Double (required) — Maximum Y of trim box
+///   - maxZ : Double (required) — Maximum Z of trim box
+///   - id : String? (optional) — Optional ID for the result
 ///
 pub async fn Client::trim(self : Client, objectId : String, minX : Double, minY : Double, minZ : Double, maxX : Double, maxY : Double, maxZ : Double, id : String?) -> String raise {
   let args : Map[String, Json] = {}
@@ -904,6 +1224,13 @@ pub async fn Client::trim(self : Client, objectId : String, minX : Double, minY 
 /// shell — shell
 /// Create a hollow shell from a voxel object. Both positive and negative offsets are applied. Returns a new object ID.
 ///
+/// Parameters:
+///   - objectId : String (required) — ID of the source object
+///   - innerOffset : Double (required) — Inner wall offset in mm (positive = thinner walls)
+///   - outerOffset : Double (required) — Outer wall offset in mm (positive = thicker walls)
+///   - smooth : Double? (optional) — Smoothing for the shell walls in mm (0 = no smoothing)
+///   - id : String? (optional) — Optional ID for the result
+///
 pub async fn Client::shell(self : Client, objectId : String, innerOffset : Double, outerOffset : Double, smooth : Double?, id : String?) -> String raise {
   let args : Map[String, Json] = {}
   args.set("objectId", Json::string(objectId))
@@ -924,6 +1251,11 @@ pub async fn Client::shell(self : Client, objectId : String, innerOffset : Doubl
 /// fillet — fillet
 /// Fillets (rounds) the surface of a voxel object. Same as smooth but semantically for rounding edges. Returns a new object ID.
 ///
+/// Parameters:
+///   - objectId : String (required) — ID of the source object
+///   - radius : Double (required) — Fillet radius in mm
+///   - id : String? (optional) — Optional ID for the result
+///
 pub async fn Client::fillet(self : Client, objectId : String, radius : Double, id : String?) -> String raise {
   let args : Map[String, Json] = {}
   args.set("objectId", Json::string(objectId))
@@ -938,6 +1270,12 @@ pub async fn Client::fillet(self : Client, objectId : String, radius : Double, i
 ///
 /// project_z_slice — project_z_slice
 /// Project voxels onto a Z-plane (top-down silhouette). Useful for creating 2D cross-sections. Returns a new object ID.
+///
+/// Parameters:
+///   - objectId : String (required) — ID of the source object
+///   - startZ : Double (required) — Start Z position in mm
+///   - endZ : Double (required) — End Z position in mm
+///   - id : String? (optional) — Optional ID for the result
 ///
 pub async fn Client::project_z_slice(self : Client, objectId : String, startZ : Double, endZ : Double, id : String?) -> String raise {
   let args : Map[String, Json] = {}
@@ -954,6 +1292,17 @@ pub async fn Client::project_z_slice(self : Client, objectId : String, startZ : 
 ///
 /// transform_voxels — transform_voxels
 /// Transform a voxel object by translating, rotating, and/or scaling it. Rotations are applied first (around the world origin 0,0,0 — not the object's center), then translation. To rotate an object in place, first translate it to the origin, rotate, then translate back. Uses native PicoGK signed-distance-field re-rasterization (no expensive mesh round-trip), so it is efficient for large voxel fields. Returns a new object ID.
+///
+/// Parameters:
+///   - objectId : String (required) — ID of the source voxel object
+///   - translateX : Double? (optional) — Translation X in mm
+///   - translateY : Double? (optional) — Translation Y in mm
+///   - translateZ : Double? (optional) — Translation Z in mm
+///   - rotateX : Double? (optional) — Rotation around X axis in degrees (pitch)
+///   - rotateY : Double? (optional) — Rotation around Y axis in degrees (yaw)
+///   - rotateZ : Double? (optional) — Rotation around Z axis in degrees (roll)
+///   - scale : Double? (optional) — Uniform scale factor (1.0 = no change). Applied before rotation/translation.
+///   - id : String? (optional) — Optional ID for the result
 ///
 pub async fn Client::transform_voxels(self : Client, objectId : String, translateX : Double?, translateY : Double?, translateZ : Double?, rotateX : Double?, rotateY : Double?, rotateZ : Double?, scale : Double?, id : String?) -> String raise {
   let args : Map[String, Json] = {}
@@ -996,6 +1345,18 @@ pub async fn Client::transform_voxels(self : Client, objectId : String, translat
 ///
 /// circular_pattern — circular_pattern
 /// Create a circular (polar) pattern of a voxel object: rotate copies around an axis through a center point and union them into a single result. Uses SDF re-rasterization (no mesh round-trips) for each copy. Returns a new object ID containing all copies combined. Example: 4 bolt holes around a flange center at 90° intervals.
+///
+/// Parameters:
+///   - objectId : String (required) — ID of the source voxel object to pattern
+///   - count : Int (required) — Number of copies (including the original at angle 0)
+///   - totalAngle : Double? (optional) — Total angular span in degrees (default 360 = full circle)
+///   - centerX : Double? (optional) — Center point X of the rotation axis
+///   - centerY : Double? (optional) — Center point Y of the rotation axis
+///   - centerZ : Double? (optional) — Center point Z of the rotation axis
+///   - axisX : Double? (optional) — Rotation axis direction X (default 0 = +Z axis)
+///   - axisY : Double? (optional) — Rotation axis direction Y (default 0 = +Z axis)
+///   - axisZ : Double? (optional) — Rotation axis direction Z (default 1 = +Z axis)
+///   - id : String? (optional) — Optional ID for the result
 ///
 pub async fn Client::circular_pattern(self : Client, objectId : String, count : Int, totalAngle : Double?, centerX : Double?, centerY : Double?, centerZ : Double?, axisX : Double?, axisY : Double?, axisZ : Double?, id : String?) -> String raise {
   let args : Map[String, Json] = {}

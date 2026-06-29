@@ -50,7 +50,7 @@ func main() {
     }
     defer client.Close()
 
-    client.Must(picogk.Init{VoxelSizeMM: new(0.2)})
+    client.Must(picogk.Init{VoxelSizeMM: picogk.Ptr(0.2)})
 
     client.Must(picogk.CreateSphere{X: 0, Y: 0, Z: 0, Radius: 10, ID: "body"})
     client.Must(picogk.CreateSphere{X: 6, Y: 0, Z: 0, Radius: 6, ID: "hole"})

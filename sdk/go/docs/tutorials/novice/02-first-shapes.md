@@ -27,7 +27,7 @@ func main() {
     if err != nil { log.Fatal(err) }
     defer client.Close()
 
-    client.Must(picogk.Init{VoxelSizeMM: new(0.2)})
+    client.Must(picogk.Init{VoxelSizeMM: picogk.Ptr(0.2)})
 
     do := func(cmd any) { client.Must(cmd) }
 
@@ -70,8 +70,8 @@ func main() {
     do(picogk.RenderToImage{
         ObjectID:       "ball",
         Path:           "/tmp/ball.png",
-        Width:          new(1280),
-        Height:         new(960),
+        Width:          picogk.Ptr(1280),
+        Height:         picogk.Ptr(960),
         BackgroundColor: "#292933",
         ObjectColor:    "#5999e6",
     })
@@ -108,7 +108,7 @@ func main() {
     if err != nil { log.Fatal(err) }
     defer client.Close()
 
-    client.Must(picogk.Init{VoxelSizeMM: new(0.2)})
+    client.Must(picogk.Init{VoxelSizeMM: picogk.Ptr(0.2)})
 
     // Build a rod, mesh it, save STL.
     client.Must(picogk.CreateCapsule{X1: -15, Y1: 0, Z1: 0, X2: 15, Y2: 0, Z2: 0, Radius: 3, ID: "rod"})

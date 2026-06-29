@@ -409,6 +409,28 @@ func (c *Client) Must(cmd any) (label, result string) {
 	return label, result
 }
 
+// --- Pointer helpers for optional parameters ---
+//
+// Use these to set optional pointer fields on command structs:
+//
+//	client.Must(picogk.Init{VoxelSizeMM: picogk.Ptr(0.5)})
+//	client.Must(picogk.CreateCylinder{X: 0, Y: 0, Z: 0, R: 5, H: 40, DirX: picogk.Ptr(1.0)})
+//	client.Must(picogk.DeleteObjects{ObjectIDs: []string{"a"}, KeepOnly: picogk.Ptr(true)})
+
+// Ptr returns a pointer to v. Use it for optional *float64, *int, *bool fields.
+func Ptr[T any](v T) *T { return &v }
+
+// --- Result parsing helpers ---
+//
+// Some MCP tools return human-readable strings that contain boolean values
+// (e.g. "True" / "False") or numeric values. These helpers extract them.
+
+// ResultBool parses a tool result string and returns true if it contains
+// "True" (case-insensitive). Useful for PointInside, VoxelsIsEmpty, VoxelsIsEqual.
+func ResultBool(result string) bool {
+	return strings.Contains(strings.ToLower(result), "true")
+}
+
 // Do executes an MCP tool call, returning a string result and an error.
 func (c *Client) Do(cmd any) (label, result string, err error) {
 	switch req := cmd.(type) {""")
@@ -467,6 +489,12 @@ def gen_tools_go(tools: list[ToolDef]) -> str:
                 go_t = go_type(p.cs_type)
                 field = go_field_name(p.name)
                 json_tag = p.name
+                # Add per-parameter doc comment if description is available
+                if p.description:
+                    # Escape the description for Go comments
+                    desc = p.description.replace('\n', '\n\t//')
+                    req_opt = "Optional" if p.has_default else "Required"
+                    lines.append(f"\t// {field} — {req_opt}. {desc}")
                 if p.has_default:
                     # Use pointer for optional params so we can distinguish "not set"
                     if p.cs_type == "float":
@@ -588,113 +616,118 @@ import (
 )
 
 func main() {{
+    log.SetFlags(0)
     ctx := context.Background()
 
-    // Launch the PicoGK MCP server (default path: $HOME/.local/bin/picogk-mcp/PicoGK.Mcp)
+    // Launch the PicoGK MCP server (default: $HOME/.local/bin/picogk-mcp/PicoGK.Mcp)
     client, err := picogk.NewClient(ctx, "")
     if err != nil {{
         log.Fatal(err)
     }}
     defer client.Close()
 
+    do := func(cmd any) {{ client.Must(cmd) }}
+
     // Initialize the geometry kernel (0.5mm voxels)
-    _, err = client.PicoGKInit(picogk.PicoGKInitRequest{{
-        VoxelSizeMM: float64Ptr(0.5),
-    }})
-    if err != nil {{
-        log.Fatal(err)
-    }}
+    do(picogk.Init{{VoxelSizeMM: picogk.Ptr(0.5)}})
 
     // Create a sphere
-    res, err := client.CreateSphere(picogk.CreateSphereRequest{{
-        X:      0,
-        Y:      0,
-        Z:      0,
-        Radius: 30,
-        Id:     stringPtr("body"),
-    }})
-    if err != nil {{
-        log.Fatal(err)
-    }}
-    fmt.Println(res)
+    do(picogk.CreateSphere{{X: 0, Y: 0, Z: 0, Radius: 30, ID: "body"}})
 
     // Create a box cutout
-    _, err = client.CreateBox(picogk.CreateBoxRequest{{
-        MinX: -10, MinY: -10, MinZ: -40,
-        MaxX:  10, MaxY:  10, MaxZ: 40,
-        Id:   stringPtr("cutout"),
-    }})
-    if err != nil {{
-        log.Fatal(err)
-    }}
+    do(picogk.CreateBox{{MinX: -10, MinY: -10, MinZ: -40, MaxX: 10, MaxY: 10, MaxZ: 40, ID: "cutout"}})
 
     // Subtract box from sphere
-    _, err = client.BooleanSubtract(picogk.BooleanSubtractRequest{{
-        A:  "body",
-        B:  "cutout",
-        Id: stringPtr("result"),
-    }})
-    if err != nil {{
-        log.Fatal(err)
-    }}
+    do(picogk.BooleanSubtract{{A: "body", B: "cutout", ID: "result"}})
 
     // Smooth the result
-    _, err = client.Smooth(picogk.SmoothRequest{{
-        ObjectId: "result",
-        Distance: 2.0,
-        Id:       stringPtr("smoothed"),
-    }})
-    if err != nil {{
-        log.Fatal(err)
-    }}
+    do(picogk.Smooth{{ObjectID: "result", Distance: 2.0, ID: "smoothed"}})
 
     // Convert to mesh and export STL
-    _, err = client.VoxelsToMesh(picogk.VoxelsToMeshRequest{{
-        VoxelsId: "smoothed",
-        Id:       stringPtr("mesh"),
-    }})
-    if err != nil {{
-        log.Fatal(err)
-    }}
-    _, err = client.SaveStl(picogk.SaveStlRequest{{
-        MeshId: "mesh",
-        Path:   "/tmp/part.stl",
-    }})
-    if err != nil {{
-        log.Fatal(err)
-    }}
+    do(picogk.VoxelsToMesh{{VoxelsID: "smoothed", ID: "mesh"}})
+    do(picogk.SaveSTL{{MeshID: "mesh", Path: "/tmp/part.stl"}})
 
     // Render a preview
-    _, err = client.RenderToImage(picogk.RenderToImageRequest{{
-        ObjectId: "smoothed",
-        Path:     "/tmp/preview.png",
-    }})
-    if err != nil {{
-        log.Fatal(err)
-    }}
+    do(picogk.RenderToImage{{ObjectID: "smoothed", Path: "/tmp/preview.png"}})
 
     fmt.Println("Done! Part exported to /tmp/part.stl")
 }}
+```
 
-// Helper: create a float64 pointer
-func float64Ptr(v float64) *float64 {{ return &v }}
+## Usage patterns
 
-// Helper: create a string pointer
-func stringPtr(v string) *string {{ return &v }}
+### The Do/Must dispatcher
+
+Every tool is a struct. Pass it to `client.Do(cmd)` or `client.Must(cmd)`:
+
+```go
+// Do returns (label, result string, err error)
+label, result, err := client.Do(picogk.GetVolume{{ObjectID: "body"}})
+if err != nil {{
+    log.Fatal(err)
+}}
+fmt.Println(label, result)
+
+// Must returns (label, result string) and calls log.Fatal on error
+label, result := client.Must(picogk.GetVolume{{ObjectID: "body"}})
+fmt.Println(label, result)
+```
+
+### Optional parameters
+
+Optional fields are pointer types (`*float64`, `*int`, `*bool`). Use `picogk.Ptr(v)`
+to create a pointer:
+
+```go
+// Ptr helper works for any type:
+do(picogk.Init{{VoxelSizeMM: picogk.Ptr(0.5)}})
+do(picogk.Shell{{ObjectID: "part", InnerOffset: 1.5, OuterOffset: 0, Smooth: picogk.Ptr(0.5)}})
+do(picogk.DeleteObjects{{ObjectIDs: []string{{"final"}}, KeepOnly: picogk.Ptr(true)}})
+do(picogk.RenderToImage{{ObjectID: "part", Path: "/tmp/out.png", Width: picogk.Ptr(1280), Height: picogk.Ptr(960)}})
+```
+
+On Go 1.26+ you can also use `new(0.5)` syntax directly:
+
+```go
+do(picogk.Init{{VoxelSizeMM: new(0.5)}})
+```
+
+### Parsing boolean results
+
+Some tools return "True"/"False" in the result string. Use `picogk.ResultBool`:
+
+```go
+_, result := client.Must(picogk.PointInside{{ObjectID: "body", X: 0, Y: 0, Z: 0}})
+inside := picogk.ResultBool(result)  // true
+
+_, result = client.Must(picogk.VoxelsIsEmpty{{ObjectID: "body"}})
+empty := picogk.ResultBool(result)   // false
+
+_, result = client.Must(picogk.VoxelsIsEqual{{ObjectIDA: "a", ObjectIDB: "b"}})
+equal := picogk.ResultBool(result)
+```
+
+### Direct method calls
+
+Each struct also has a corresponding `XxxFn` method if you prefer:
+
+```go
+result, err := client.GetVolumeFn(picogk.GetVolume{{ObjectID: "body"}})
 ```
 
 ## API Overview
 
-The SDK exposes all {tool_count} PicoGK MCP tools via builder-pattern request structs:
+The SDK exposes all {tool_count} PicoGK MCP tools via command structs:
 
 | Category | Tools |
 |----------|-------|
 {cat_table}
 
 Each tool has:
-- A `XxxRequest` struct with typed fields (optional params are pointers)
-- A `client.Xxx(req)` method returning `(string, error)`
-- Full doc comments
+- A command struct (e.g. `picogk.CreateSphere`) with typed, documented fields
+- Optional fields are pointers — use `picogk.Ptr(v)` to set them
+- Pass to `client.Do(cmd)` or `client.Must(cmd)`
+- Full doc comments on the struct and every field
 
 ## Architecture
 

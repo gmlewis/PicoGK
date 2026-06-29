@@ -27,7 +27,7 @@ func main() {
 
     do := func(cmd any) { client.Must(cmd) }
 
-    client.Must(picogk.Init{VoxelSizeMM: new(0.2)})
+    client.Must(picogk.Init{VoxelSizeMM: picogk.Ptr(0.2)})
 
     // Build a hollow part.
     do(picogk.CreateSphere{X: 0, Y: 0, Z: 0, Radius: 12, ID: "body"})
@@ -39,8 +39,8 @@ func main() {
     do(picogk.RenderToImage{
         ObjectID:        "shelled",
         Path:            "/tmp/part.png",
-        Width:           new(1280),
-        Height:          new(960),
+        Width:           picogk.Ptr(1280),
+        Height:          picogk.Ptr(960),
         BackgroundColor: "#292933",
         ObjectColor:     "#5999e6",
     })

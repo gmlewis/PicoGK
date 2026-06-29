@@ -23,7 +23,7 @@ func main() {
 
     do := func(cmd any) { client.Must(cmd) }
 
-    client.Must(picogk.Init{VoxelSizeMM: new(0.3)})
+    client.Must(picogk.Init{VoxelSizeMM: picogk.Ptr(0.3)})
 
     // Voxels -> Mesh
     do(picogk.CreateSphere{X: 0, Y: 0, Z: 0, Radius: 10, ID: "part"})
@@ -83,7 +83,7 @@ func main() {
 
 ```go
     // Scale and translate:
-    do(picogk.MeshTransform{MeshID: "mesh", Scale: new(2.0), TranslateX: new(50.0), ID: "mesh2x"})
+    do(picogk.MeshTransform{MeshID: "mesh", Scale: picogk.Ptr(2.0), TranslateX: picogk.Ptr(50.0), ID: "mesh2x"})
 
     // Mirror across the YZ plane (normal = +X):
     do(picogk.MeshMirror{MeshID: "mesh", PtX: 0, PtY: 0, PtZ: 0, NX: 1, NY: 0, NZ: 0, ID: "mirrored"})
@@ -138,10 +138,10 @@ Lattices are beam-and-node structures that rasterize into voxel fields:
 
 ```go
     // CLI (Common Layer Interface) for 3D printing:
-    do(picogk.SaveCLI{VoxelsID: "part", Path: "/tmp/part.cli", LayerHeight: new(2.0)})
+    do(picogk.SaveCLI{VoxelsID: "part", Path: "/tmp/part.cli", LayerHeight: picogk.Ptr(2.0)})
 
     // SVG slice contours (one file per layer):
-    do(picogk.SaveSVG{VoxelsID: "part", Path: "/tmp/part.svg", LayerHeight: new(2.0)})
+    do(picogk.SaveSVG{VoxelsID: "part", Path: "/tmp/part.svg", LayerHeight: picogk.Ptr(2.0)})
 ```
 
 ## Next steps

@@ -49,7 +49,7 @@ func main() {
 
     do := func(cmd any) { client.Must(cmd) }
 
-    client.Must(picogk.Init{VoxelSizeMM: new(0.3)})
+    client.Must(picogk.Init{VoxelSizeMM: picogk.Ptr(0.3)})
 
     // Build a lattice that approximates gyroid infill inside a sphere.
     do(picogk.CreateLattice{ID: "lat"})
@@ -106,7 +106,7 @@ Instead of composing inside an SDF callback, use boolean operations:
     // A sphere with a cylindrical bore:
     do(picogk.CreateSphere{X: 0, Y: 0, Z: 0, Radius: 12, ID: "ball"})
     do(picogk.CreateCylinder{X: -15, Y: 0, Z: 0, Radius: 4, Height: 30,
-        DirX: new(1.0), DirY: new(0.0), DirZ: new(0.0), ID: "bore"})
+        DirX: picogk.Ptr(1.0), DirY: picogk.Ptr(0.0), DirZ: picogk.Ptr(0.0), ID: "bore"})
     do(picogk.BooleanSubtract{A: "ball", B: "bore", ID: "boredBall"})
 ```
 

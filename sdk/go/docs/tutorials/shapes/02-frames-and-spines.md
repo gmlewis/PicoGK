@@ -24,7 +24,7 @@ primitive or use `TransformVoxels`:
     // Python:  Cylinder(LocalFrame((0,0,0), local_z=(0,1,0)), length=30, radius=8)
     // Go: cylinder along Y axis
     do(picogk.CreateCylinder{X: 0, Y: -15, Z: 0, Radius: 8, Height: 30,
-        DirX: new(0.0), DirY: new(1.0), DirZ: new(0.0), ID: "cylY"})
+        DirX: picogk.Ptr(0.0), DirY: picogk.Ptr(1.0), DirZ: picogk.Ptr(0.0), ID: "cylY"})
 ```
 
 ## Swept shapes (approximation)
@@ -127,9 +127,9 @@ for bolt-hole patterns, radial struts, etc.:
     do(picogk.CircularPattern{
         ObjectID:   "strut",
         Count:      6,
-        TotalAngle: new(360.0),
-        CenterX:    new(0.0), CenterY: new(0.0), CenterZ: new(0.0),
-        AxisX:      new(0.0), AxisY: new(0.0), AxisZ: new(1.0),
+        TotalAngle: picogk.Ptr(360.0),
+        CenterX:    picogk.Ptr(0.0), CenterY: picogk.Ptr(0.0), CenterZ: picogk.Ptr(0.0),
+        AxisX:      picogk.Ptr(0.0), AxisY: picogk.Ptr(0.0), AxisZ: picogk.Ptr(1.0),
         ID:         "pattern",
     })
 ```

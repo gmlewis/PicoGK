@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- **Go 1.22+** (Go 1.26+ recommended for `new(value)` pointer syntax)
+- **Go 1.22+**
 - **PicoGK MCP server** at `~/.local/bin/picogk-mcp/PicoGK.Mcp`
 
 ### Install Go
@@ -69,7 +69,7 @@ func main() {
     defer client.Close()
 
     // Initialize the kernel with a 0.2mm voxel grid.
-    client.Must(picogk.Init{VoxelSizeMM: new(0.2)})
+    client.Must(picogk.Init{VoxelSizeMM: picogk.Ptr(0.2)})
 
     // Print runtime info.
     label, info := client.Must(picogk.Info{})
@@ -103,9 +103,8 @@ volume: {"volumeMM3":4188.79,...}
    performs the JSON-RPC `initialize` handshake.
 2. `client.Must(cmd)` sends a tool call and returns `(label, result)`. On
    error, it calls `log.Fatal`.
-3. `picogk.Init{VoxelSizeMM: new(0.2)}` initializes the voxel grid. The
-   `new(0.2)` syntax creates a `*float64` pointing to `0.2` — this is Go 1.26+
-   syntax for optional fields.
+3. `picogk.Init{VoxelSizeMM: picogk.Ptr(0.2)}` initializes the voxel grid. The
+   `picogk.Ptr()` helper creates a `*float64` — required for optional fields.
 4. `defer client.Close()` shuts down the subprocess on exit.
 
 ## Next steps

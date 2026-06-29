@@ -52,7 +52,7 @@ func makeCylinder(do func(any), id string, cx, cy, cz, radius, height float64) s
 // makeTorus creates a torus centered at (cx, cy, cz).
 func makeTorus(do func(any), id string, cx, cy, cz, majorR, minorR float64) string {
     do(picogk.CreateTorus{MajorRadius: majorR, MinorRadius: minorR,
-        X: new(cx), Y: new(cy), Z: new(cz), ID: id})
+        X: picogk.Ptr(cx), Y: picogk.Ptr(cy), Z: picogk.Ptr(cz), ID: id})
     return id
 }
 ```
@@ -67,7 +67,7 @@ func main() {
     defer client.Close()
 
     do := func(cmd any) { client.Must(cmd) }
-    client.Must(picogk.Init{VoxelSizeMM: new(0.5)})
+    client.Must(picogk.Init{VoxelSizeMM: picogk.Ptr(0.5)})
 
     // Sphere at origin, radius 10.
     ball := makeSphere(do, "ball", 0, 0, 0, 10)
@@ -110,11 +110,11 @@ Since there's no `LocalFrame` type, position shapes by either:
 ```go
     // Create at origin, then translate:
     do(picogk.CreateSphere{X: 0, Y: 0, Z: 0, Radius: 10, ID: "ball"})
-    do(picogk.TransformVoxels{ObjectID: "ball", TranslateX: new(50.0), TranslateY: new(20.0), ID: "moved"})
+    do(picogk.TransformVoxels{ObjectID: "ball", TranslateX: picogk.Ptr(50.0), TranslateY: picogk.Ptr(20.0), ID: "moved"})
 
     // Create at origin, rotate 45° around Z, then translate:
-    do(picogk.TransformVoxels{ObjectID: "ball", RotateZ: new(45.0),
-        TranslateX: new(50.0), TranslateY: new(20.0), ID: "rotated"})
+    do(picogk.TransformVoxels{ObjectID: "ball", RotateZ: picogk.Ptr(45.0),
+        TranslateX: picogk.Ptr(50.0), TranslateY: picogk.Ptr(20.0), ID: "rotated"})
 ```
 
 ## Modulated shapes

@@ -58,7 +58,7 @@ func main() {
 
 	// --- Session ---
 	fmt.Println("--- Session ---")
-	do(picogk.Init{VoxelSizeMM: new(0.2)})
+	do(picogk.Init{VoxelSizeMM: picogk.Ptr(0.2)})
 	doPrint(picogk.Info{})
 
 	// 1) A sphere with a smaller sphere subtracted, then hollowed to a shell.

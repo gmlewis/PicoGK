@@ -12,8 +12,11 @@ import (
 // BooleanAdd holds parameters for the boolean_add tool.
 // Boolean UNION: combine two voxel objects. Both volumes are kept, overlapping regions are merged. Returns a new object ID.
 type BooleanAdd struct {
-	A  string `json:"a"`
-	B  string `json:"b"`
+	// A — Required. ID of first object
+	A string `json:"a"`
+	// B — Required. ID of second object
+	B string `json:"b"`
+	// ID — Optional. Optional ID for the result
 	ID string `json:"id,omitempty"`
 }
 
@@ -32,8 +35,11 @@ func (c *Client) BooleanAddFn(req BooleanAdd) (string, error) {
 // BooleanSubtract holds parameters for the boolean_subtract tool.
 // Boolean SUBTRACTION: subtract voxels of B from A. Removes the volume of B from A. Returns a new object ID.
 type BooleanSubtract struct {
-	A  string `json:"a"`
-	B  string `json:"b"`
+	// A — Required. ID of the object to subtract FROM
+	A string `json:"a"`
+	// B — Required. ID of the object to subtract
+	B string `json:"b"`
+	// ID — Optional. Optional ID for the result
 	ID string `json:"id,omitempty"`
 }
 
@@ -52,8 +58,11 @@ func (c *Client) BooleanSubtractFn(req BooleanSubtract) (string, error) {
 // BooleanIntersect holds parameters for the boolean_intersect tool.
 // Boolean INTERSECTION: keep only the overlapping volume of two voxel objects. Returns a new object ID.
 type BooleanIntersect struct {
-	A  string `json:"a"`
-	B  string `json:"b"`
+	// A — Required. ID of first object
+	A string `json:"a"`
+	// B — Required. ID of second object
+	B string `json:"b"`
+	// ID — Optional. Optional ID for the result
 	ID string `json:"id,omitempty"`
 }
 
@@ -72,8 +81,10 @@ func (c *Client) BooleanIntersectFn(req BooleanIntersect) (string, error) {
 // BooleanAddAll holds parameters for the boolean_add_all tool.
 // Combine multiple voxel objects into one. All volumes are merged. Returns a new object ID.
 type BooleanAddAll struct {
+	// ObjectIDs — Required. List of object IDs to combine
 	ObjectIDs []string `json:"objectIds"`
-	ID        string   `json:"id,omitempty"`
+	// ID — Optional. Optional ID for the result
+	ID string `json:"id,omitempty"`
 }
 
 // BooleanAddAllFn calls the boolean_add_all MCP tool.
@@ -90,9 +101,12 @@ func (c *Client) BooleanAddAllFn(req BooleanAddAll) (string, error) {
 // BooleanSubtractAll holds parameters for the boolean_subtract_all tool.
 // Subtract multiple voxel objects from a single object in one call. Equivalent to calling boolean_subtract repeatedly, but more efficient for multi-hole drilling or multi-cutout operations. Returns a new object ID.
 type BooleanSubtractAll struct {
-	A           string   `json:"a"`
+	// A — Required. ID of the object to subtract FROM
+	A string `json:"a"`
+	// SubtractIDs — Required. List of object IDs to subtract from A
 	SubtractIDs []string `json:"subtractIds"`
-	ID          string   `json:"id,omitempty"`
+	// ID — Optional. Optional ID for the result
+	ID string `json:"id,omitempty"`
 }
 
 // BooleanSubtractAllFn calls the boolean_subtract_all MCP tool.
@@ -112,9 +126,12 @@ func (c *Client) BooleanSubtractAllFn(req BooleanSubtractAll) (string, error) {
 // SaveSTL holds parameters for the save_stl tool.
 // Save a mesh to an STL file. The mesh is typically obtained from voxels_to_mesh. Units are millimeters by default.
 type SaveSTL struct {
+	// MeshID — Required. ID of the mesh object
 	MeshID string `json:"meshId"`
-	Path   string `json:"path"`
-	Units  string `json:"units,omitempty"`
+	// Path — Required. Full path for the output STL file
+	Path string `json:"path"`
+	// Units — Optional. Units: MM, CM, M, FT, IN (default: MM)
+	Units string `json:"units,omitempty"`
 }
 
 // SaveSTLFn calls the save_stl MCP tool.
@@ -136,8 +153,11 @@ func (c *Client) SaveSTLFn(req SaveSTL) (string, error) {
 // SaveVDB holds parameters for the save_vdb tool.
 // Save voxels to an OpenVDB file. VDB files preserve the full voxel field data.
 type SaveVDB struct {
-	VoxelsID  string `json:"voxelsId"`
-	Path      string `json:"path"`
+	// VoxelsID — Required. ID of the voxel object
+	VoxelsID string `json:"voxelsId"`
+	// Path — Required. Full path for the output VDB file
+	Path string `json:"path"`
+	// FieldName — Optional. Optional name for the field inside the VDB file
 	FieldName string `json:"fieldName,omitempty"`
 }
 
@@ -160,9 +180,12 @@ func (c *Client) SaveVDBFn(req SaveVDB) (string, error) {
 // LoadVDB holds parameters for the load_vdb tool.
 // Load voxels from an OpenVDB file. Returns the object ID.
 type LoadVDB struct {
-	Path      string `json:"path"`
+	// Path — Required. Full path to the VDB file
+	Path string `json:"path"`
+	// FieldName — Optional. Optional field name to load (loads first field if not specified)
 	FieldName string `json:"fieldName,omitempty"`
-	ID        string `json:"id,omitempty"`
+	// ID — Optional. Optional ID to assign
+	ID string `json:"id,omitempty"`
 }
 
 // LoadVDBFn calls the load_vdb MCP tool.
@@ -186,6 +209,7 @@ func (c *Client) LoadVDBFn(req LoadVDB) (string, error) {
 // ListVDBFields holds parameters for the list_vdb_fields tool.
 // List all fields in a VDB file with their names, types, and indices. Useful for inspecting multi-field VDB files before loading a specific field with load_vdb. Returns field count and a table of index, name, type, and PicoGK compatibility.
 type ListVDBFields struct {
+	// Path — Required. Full path to the VDB file
 	Path string `json:"path"`
 }
 
@@ -204,8 +228,11 @@ func (c *Client) ListVDBFieldsFn(req ListVDBFields) (string, error) {
 // SaveSVG holds parameters for the save_svg tool.
 // Vectorize voxels into 2D slice contours and save as SVG. Each slice is written to its own file: <path>.NNNN.svg (zero-padded 4 digits). Useful for 2D manufacturing or visualization. Returns the count of files written.
 type SaveSVG struct {
-	VoxelsID    string   `json:"voxelsId"`
-	Path        string   `json:"path"`
+	// VoxelsID — Required. ID of the voxel object
+	VoxelsID string `json:"voxelsId"`
+	// Path — Required. Output path. The slice index is inserted before the extension: 'out.svg' -> 'out.0001.svg'; if no extension, '.NNNN.svg' is appended
+	Path string `json:"path"`
+	// LayerHeight — Optional. Layer height in mm for slicing
 	LayerHeight *float64 `json:"layerHeight,omitempty"`
 }
 
@@ -228,11 +255,16 @@ func (c *Client) SaveSVGFn(req SaveSVG) (string, error) {
 // SaveCLI holds parameters for the save_cli tool.
 // Save voxels to a CLI (Common Layer Interface) file for 3D printing. Vectorizes the voxel field into 2D layers and writes the CLI format. Returns the file path and slice count.
 type SaveCLI struct {
-	VoxelsID       string   `json:"voxelsId"`
-	Path           string   `json:"path"`
-	LayerHeight    *float64 `json:"layerHeight,omitempty"`
-	Format         string   `json:"format,omitempty"`
-	UseAbsXYOrigin *bool    `json:"useAbsXYOrigin,omitempty"`
+	// VoxelsID — Required. ID of the voxel object
+	VoxelsID string `json:"voxelsId"`
+	// Path — Required. Full path for the output CLI file
+	Path string `json:"path"`
+	// LayerHeight — Optional. Layer height in mm for slicing (0 = use voxel size)
+	LayerHeight *float64 `json:"layerHeight,omitempty"`
+	// Format — Optional. Format: 'FirstLayerWithContent' (default) or 'UseEmptyFirstLayer' (adds an empty zero-height layer so readers can infer layer height)
+	Format string `json:"format,omitempty"`
+	// UseAbsXYOrigin — Optional. If true, use absolute X/Y origin; if false (default), slices are relative to the voxel field boundaries
+	UseAbsXYOrigin *bool `json:"useAbsXYOrigin,omitempty"`
 }
 
 // SaveCLIFn calls the save_cli MCP tool.
@@ -262,6 +294,7 @@ func (c *Client) SaveCLIFn(req SaveCLI) (string, error) {
 // CreateLattice holds parameters for the create_lattice tool.
 // Create an empty lattice structure. Add beams and sphere nodes to build it, then convert to voxels. Returns the object ID.
 type CreateLattice struct {
+	// ID — Optional. Optional ID to assign
 	ID string `json:"id,omitempty"`
 }
 
@@ -278,16 +311,26 @@ func (c *Client) CreateLatticeFn(req CreateLattice) (string, error) {
 // LatticeAddBeam holds parameters for the lattice_add_beam tool.
 // Add a tapered beam (strut) between two points in a lattice. Each end has its own radius. Returns a confirmation.
 type LatticeAddBeam struct {
-	LatticeID string  `json:"latticeId"`
-	X1        float64 `json:"x1"`
-	Y1        float64 `json:"y1"`
-	Z1        float64 `json:"z1"`
-	Radius1   float64 `json:"radius1"`
-	X2        float64 `json:"x2"`
-	Y2        float64 `json:"y2"`
-	Z2        float64 `json:"z2"`
-	Radius2   float64 `json:"radius2"`
-	RoundCap  *bool   `json:"roundCap,omitempty"`
+	// LatticeID — Required. ID of the lattice object
+	LatticeID string `json:"latticeId"`
+	// X1 — Required. Start point X
+	X1 float64 `json:"x1"`
+	// Y1 — Required. Start point Y
+	Y1 float64 `json:"y1"`
+	// Z1 — Required. Start point Z
+	Z1 float64 `json:"z1"`
+	// Radius1 — Required. Start radius in mm
+	Radius1 float64 `json:"radius1"`
+	// X2 — Required. End point X
+	X2 float64 `json:"x2"`
+	// Y2 — Required. End point Y
+	Y2 float64 `json:"y2"`
+	// Z2 — Required. End point Z
+	Z2 float64 `json:"z2"`
+	// Radius2 — Required. End radius in mm
+	Radius2 float64 `json:"radius2"`
+	// RoundCap — Optional. Use round caps (default true)
+	RoundCap *bool `json:"roundCap,omitempty"`
 }
 
 // LatticeAddBeamFn calls the lattice_add_beam MCP tool.
@@ -312,11 +355,16 @@ func (c *Client) LatticeAddBeamFn(req LatticeAddBeam) (string, error) {
 // LatticeAddSphere holds parameters for the lattice_add_sphere tool.
 // Add a sphere node at a point in a lattice. Returns a confirmation.
 type LatticeAddSphere struct {
-	LatticeID string  `json:"latticeId"`
-	X         float64 `json:"x"`
-	Y         float64 `json:"y"`
-	Z         float64 `json:"z"`
-	Radius    float64 `json:"radius"`
+	// LatticeID — Required. ID of the lattice object
+	LatticeID string `json:"latticeId"`
+	// X — Required. Center X
+	X float64 `json:"x"`
+	// Y — Required. Center Y
+	Y float64 `json:"y"`
+	// Z — Required. Center Z
+	Z float64 `json:"z"`
+	// Radius — Required. Radius in mm
+	Radius float64 `json:"radius"`
 }
 
 // LatticeAddSphereFn calls the lattice_add_sphere MCP tool.
@@ -334,8 +382,10 @@ func (c *Client) LatticeAddSphereFn(req LatticeAddSphere) (string, error) {
 // LatticeToVoxels holds parameters for the lattice_to_voxels tool.
 // Convert a lattice to voxels. Renders the lattice beams and nodes into a voxel field. Returns a new voxel object ID.
 type LatticeToVoxels struct {
+	// LatticeID — Required. ID of the lattice object
 	LatticeID string `json:"latticeId"`
-	ID        string `json:"id,omitempty"`
+	// ID — Optional. Optional ID for the result
+	ID string `json:"id,omitempty"`
 }
 
 // LatticeToVoxelsFn calls the lattice_to_voxels MCP tool.
@@ -354,6 +404,7 @@ func (c *Client) LatticeToVoxelsFn(req LatticeToVoxels) (string, error) {
 // CreateMesh holds parameters for the create_mesh tool.
 // Create an empty mesh. Add vertices and triangles to build geometry. Returns the object ID.
 type CreateMesh struct {
+	// ID — Optional. Optional ID to assign
 	ID string `json:"id,omitempty"`
 }
 
@@ -370,10 +421,14 @@ func (c *Client) CreateMeshFn(req CreateMesh) (string, error) {
 // MeshAddVertex holds parameters for the mesh_add_vertex tool.
 // Add a vertex to a mesh. Returns the vertex index (0-based) for use in triangle creation.
 type MeshAddVertex struct {
-	MeshID string  `json:"meshId"`
-	X      float64 `json:"x"`
-	Y      float64 `json:"y"`
-	Z      float64 `json:"z"`
+	// MeshID — Required. ID of the mesh
+	MeshID string `json:"meshId"`
+	// X — Required. X coordinate
+	X float64 `json:"x"`
+	// Y — Required. Y coordinate
+	Y float64 `json:"y"`
+	// Z — Required. Z coordinate
+	Z float64 `json:"z"`
 }
 
 // MeshAddVertexFn calls the mesh_add_vertex MCP tool.
@@ -390,10 +445,14 @@ func (c *Client) MeshAddVertexFn(req MeshAddVertex) (string, error) {
 // MeshAddTriangle holds parameters for the mesh_add_triangle tool.
 // Add a triangle to a mesh using vertex indices. Returns the triangle index.
 type MeshAddTriangle struct {
+	// MeshID — Required. ID of the mesh
 	MeshID string `json:"meshId"`
-	A      int    `json:"a"`
-	B      int    `json:"b"`
-	C      int    `json:"c"`
+	// A — Required. Index of first vertex
+	A int `json:"a"`
+	// B — Required. Index of second vertex
+	B int `json:"b"`
+	// C — Required. Index of third vertex
+	C int `json:"c"`
 }
 
 // MeshAddTriangleFn calls the mesh_add_triangle MCP tool.
@@ -410,16 +469,26 @@ func (c *Client) MeshAddTriangleFn(req MeshAddTriangle) (string, error) {
 // MeshAddTriangleVertices holds parameters for the mesh_add_triangle_vertices tool.
 // Add a triangle to a mesh by specifying three vertex positions directly. The vertices are added automatically. Returns the triangle index.
 type MeshAddTriangleVertices struct {
-	MeshID string  `json:"meshId"`
-	X1     float64 `json:"x1"`
-	Y1     float64 `json:"y1"`
-	Z1     float64 `json:"z1"`
-	X2     float64 `json:"x2"`
-	Y2     float64 `json:"y2"`
-	Z2     float64 `json:"z2"`
-	X3     float64 `json:"x3"`
-	Y3     float64 `json:"y3"`
-	Z3     float64 `json:"z3"`
+	// MeshID — Required. ID of the mesh
+	MeshID string `json:"meshId"`
+	// X1 — Required. Vertex 1 X
+	X1 float64 `json:"x1"`
+	// Y1 — Required. Vertex 1 Y
+	Y1 float64 `json:"y1"`
+	// Z1 — Required. Vertex 1 Z
+	Z1 float64 `json:"z1"`
+	// X2 — Required. Vertex 2 X
+	X2 float64 `json:"x2"`
+	// Y2 — Required. Vertex 2 Y
+	Y2 float64 `json:"y2"`
+	// Z2 — Required. Vertex 2 Z
+	Z2 float64 `json:"z2"`
+	// X3 — Required. Vertex 3 X
+	X3 float64 `json:"x3"`
+	// Y3 — Required. Vertex 3 Y
+	Y3 float64 `json:"y3"`
+	// Z3 — Required. Vertex 3 Z
+	Z3 float64 `json:"z3"`
 }
 
 // MeshAddTriangleVerticesFn calls the mesh_add_triangle_vertices MCP tool.
@@ -442,20 +511,34 @@ func (c *Client) MeshAddTriangleVerticesFn(req MeshAddTriangleVertices) (string,
 // MeshAddQuad holds parameters for the mesh_add_quad tool.
 // Add a quad to a mesh by specifying four vertex positions directly. The vertices are added automatically and two triangles are created. Use bFlipped=true to reverse the winding order. Returns the starting triangle index.
 type MeshAddQuad struct {
-	MeshID  string  `json:"meshId"`
-	X0      float64 `json:"x0"`
-	Y0      float64 `json:"y0"`
-	Z0      float64 `json:"z0"`
-	X1      float64 `json:"x1"`
-	Y1      float64 `json:"y1"`
-	Z1      float64 `json:"z1"`
-	X2      float64 `json:"x2"`
-	Y2      float64 `json:"y2"`
-	Z2      float64 `json:"z2"`
-	X3      float64 `json:"x3"`
-	Y3      float64 `json:"y3"`
-	Z3      float64 `json:"z3"`
-	Flipped *bool   `json:"flipped,omitempty"`
+	// MeshID — Required. ID of the mesh
+	MeshID string `json:"meshId"`
+	// X0 — Required. Vertex 0 X
+	X0 float64 `json:"x0"`
+	// Y0 — Required. Vertex 0 Y
+	Y0 float64 `json:"y0"`
+	// Z0 — Required. Vertex 0 Z
+	Z0 float64 `json:"z0"`
+	// X1 — Required. Vertex 1 X
+	X1 float64 `json:"x1"`
+	// Y1 — Required. Vertex 1 Y
+	Y1 float64 `json:"y1"`
+	// Z1 — Required. Vertex 1 Z
+	Z1 float64 `json:"z1"`
+	// X2 — Required. Vertex 2 X
+	X2 float64 `json:"x2"`
+	// Y2 — Required. Vertex 2 Y
+	Y2 float64 `json:"y2"`
+	// Z2 — Required. Vertex 2 Z
+	Z2 float64 `json:"z2"`
+	// X3 — Required. Vertex 3 X
+	X3 float64 `json:"x3"`
+	// Y3 — Required. Vertex 3 Y
+	Y3 float64 `json:"y3"`
+	// Z3 — Required. Vertex 3 Z
+	Z3 float64 `json:"z3"`
+	// Flipped — Optional. If true, reverse the winding order of the two triangles
+	Flipped *bool `json:"flipped,omitempty"`
 }
 
 // MeshAddQuadFn calls the mesh_add_quad MCP tool.
@@ -484,8 +567,10 @@ func (c *Client) MeshAddQuadFn(req MeshAddQuad) (string, error) {
 // VoxelsToMesh holds parameters for the voxels_to_mesh tool.
 // Convert a voxel object to a mesh using marching cubes. Returns a new mesh object ID.
 type VoxelsToMesh struct {
+	// VoxelsID — Required. ID of the voxel object
 	VoxelsID string `json:"voxelsId"`
-	ID       string `json:"id,omitempty"`
+	// ID — Optional. Optional ID for the result
+	ID string `json:"id,omitempty"`
 }
 
 // VoxelsToMeshFn calls the voxels_to_mesh MCP tool.
@@ -502,8 +587,10 @@ func (c *Client) VoxelsToMeshFn(req VoxelsToMesh) (string, error) {
 // MeshToVoxels holds parameters for the mesh_to_voxels tool.
 // Convert a mesh to voxels. Returns a new voxel object ID.
 type MeshToVoxels struct {
+	// MeshID — Required. ID of the mesh object
 	MeshID string `json:"meshId"`
-	ID     string `json:"id,omitempty"`
+	// ID — Optional. Optional ID for the result
+	ID string `json:"id,omitempty"`
 }
 
 // MeshToVoxelsFn calls the mesh_to_voxels MCP tool.
@@ -520,8 +607,10 @@ func (c *Client) MeshToVoxelsFn(req MeshToVoxels) (string, error) {
 // MeshFromSTL holds parameters for the mesh_from_stl tool.
 // Load a mesh from an STL file on disk. Returns the object ID.
 type MeshFromSTL struct {
+	// Path — Required. Full path to the STL file
 	Path string `json:"path"`
-	ID   string `json:"id,omitempty"`
+	// ID — Optional. Optional ID to assign
+	ID string `json:"id,omitempty"`
 }
 
 // MeshFromSTLFn calls the mesh_from_stl MCP tool.
@@ -542,12 +631,18 @@ func (c *Client) MeshFromSTLFn(req MeshFromSTL) (string, error) {
 // MeshTransform holds parameters for the mesh_transform tool.
 // Transform a mesh: apply uniform scale and/or translation. Returns a new mesh object ID.
 type MeshTransform struct {
-	MeshID     string   `json:"meshId"`
-	Scale      *float64 `json:"scale,omitempty"`
+	// MeshID — Required. ID of the source mesh
+	MeshID string `json:"meshId"`
+	// Scale — Optional. Scale factor (1.0 = no scale)
+	Scale *float64 `json:"scale,omitempty"`
+	// TranslateX — Optional. Translation X
 	TranslateX *float64 `json:"translateX,omitempty"`
+	// TranslateY — Optional. Translation Y
 	TranslateY *float64 `json:"translateY,omitempty"`
+	// TranslateZ — Optional. Translation Z
 	TranslateZ *float64 `json:"translateZ,omitempty"`
-	ID         string   `json:"id,omitempty"`
+	// ID — Optional. Optional ID for the result
+	ID string `json:"id,omitempty"`
 }
 
 // MeshTransformFn calls the mesh_transform MCP tool.
@@ -576,14 +671,22 @@ func (c *Client) MeshTransformFn(req MeshTransform) (string, error) {
 // MeshMirror holds parameters for the mesh_mirror tool.
 // Mirror a mesh across a plane defined by a point and normal. Returns a new mesh object ID.
 type MeshMirror struct {
-	MeshID string  `json:"meshId"`
-	PtX    float64 `json:"ptX"`
-	PtY    float64 `json:"ptY"`
-	PtZ    float64 `json:"ptZ"`
-	NX     float64 `json:"nX"`
-	NY     float64 `json:"nY"`
-	NZ     float64 `json:"nZ"`
-	ID     string  `json:"id,omitempty"`
+	// MeshID — Required. ID of the source mesh
+	MeshID string `json:"meshId"`
+	// PtX — Required. A point on the mirror plane X
+	PtX float64 `json:"ptX"`
+	// PtY — Required. A point on the mirror plane Y
+	PtY float64 `json:"ptY"`
+	// PtZ — Required. A point on the mirror plane Z
+	PtZ float64 `json:"ptZ"`
+	// NX — Required. Mirror plane normal X
+	NX float64 `json:"nX"`
+	// NY — Required. Mirror plane normal Y
+	NY float64 `json:"nY"`
+	// NZ — Required. Mirror plane normal Z
+	NZ float64 `json:"nZ"`
+	// ID — Optional. Optional ID for the result
+	ID string `json:"id,omitempty"`
 }
 
 // MeshMirrorFn calls the mesh_mirror MCP tool.
@@ -606,7 +709,9 @@ func (c *Client) MeshMirrorFn(req MeshMirror) (string, error) {
 // MeshAppend holds parameters for the mesh_append tool.
 // Append one mesh into another (modifies the target). Returns the target mesh ID.
 type MeshAppend struct {
+	// TargetID — Required. ID of the target mesh (will be modified)
 	TargetID string `json:"targetId"`
+	// SourceID — Required. ID of the source mesh (will be appended)
 	SourceID string `json:"sourceId"`
 }
 
@@ -624,11 +729,16 @@ func (c *Client) MeshAppendFn(req MeshAppend) (string, error) {
 // CreateSphere holds parameters for the create_sphere tool.
 // Create a sphere voxel object. Returns the object ID.
 type CreateSphere struct {
-	X      float64 `json:"x"`
-	Y      float64 `json:"y"`
-	Z      float64 `json:"z"`
+	// X — Required. X coordinate of center in mm
+	X float64 `json:"x"`
+	// Y — Required. Y coordinate of center in mm
+	Y float64 `json:"y"`
+	// Z — Required. Z coordinate of center in mm
+	Z float64 `json:"z"`
+	// Radius — Required. Radius in mm
 	Radius float64 `json:"radius"`
-	ID     string  `json:"id,omitempty"`
+	// ID — Optional. Optional ID to assign to this object
+	ID string `json:"id,omitempty"`
 }
 
 // CreateSphereFn calls the create_sphere MCP tool.
@@ -648,13 +758,20 @@ func (c *Client) CreateSphereFn(req CreateSphere) (string, error) {
 // CreateBox holds parameters for the create_box tool.
 // Create a box (axis-aligned cuboid) from minimum and maximum corner coordinates. Returns the object ID.
 type CreateBox struct {
+	// MinX — Required. Minimum X
 	MinX float64 `json:"minX"`
+	// MinY — Required. Minimum Y
 	MinY float64 `json:"minY"`
+	// MinZ — Required. Minimum Z
 	MinZ float64 `json:"minZ"`
+	// MaxX — Required. Maximum X
 	MaxX float64 `json:"maxX"`
+	// MaxY — Required. Maximum Y
 	MaxY float64 `json:"maxY"`
+	// MaxZ — Required. Maximum Z
 	MaxZ float64 `json:"maxZ"`
-	ID   string  `json:"id,omitempty"`
+	// ID — Optional. Optional ID to assign to this object
+	ID string `json:"id,omitempty"`
 }
 
 // CreateBoxFn calls the create_box MCP tool.
@@ -676,15 +793,24 @@ func (c *Client) CreateBoxFn(req CreateBox) (string, error) {
 // CreateCylinder holds parameters for the create_cylinder tool.
 // Create a cylinder. By default it runs along the +Z axis from (x,y,z) to (x,y,z+height). Pass dirX/dirY/dirZ to orient the axis differently (the vector is normalized automatically). The cylinder has flat end caps. Returns the object ID.
 type CreateCylinder struct {
-	X      float64  `json:"x"`
-	Y      float64  `json:"y"`
-	Z      float64  `json:"z"`
-	Radius float64  `json:"radius"`
-	Height float64  `json:"height"`
-	DirX   *float64 `json:"dirX,omitempty"`
-	DirY   *float64 `json:"dirY,omitempty"`
-	DirZ   *float64 `json:"dirZ,omitempty"`
-	ID     string   `json:"id,omitempty"`
+	// X — Required. X coordinate of the bottom center
+	X float64 `json:"x"`
+	// Y — Required. Y coordinate of the bottom center
+	Y float64 `json:"y"`
+	// Z — Required. Z coordinate of the bottom center
+	Z float64 `json:"z"`
+	// Radius — Required. Radius in mm
+	Radius float64 `json:"radius"`
+	// Height — Required. Height in mm (along the axis)
+	Height float64 `json:"height"`
+	// DirX — Optional. Axis direction X (default 0 = +Z)
+	DirX *float64 `json:"dirX,omitempty"`
+	// DirY — Optional. Axis direction Y (default 0 = +Z)
+	DirY *float64 `json:"dirY,omitempty"`
+	// DirZ — Optional. Axis direction Z (default 1 = +Z). If all three are 0, +Z is used.
+	DirZ *float64 `json:"dirZ,omitempty"`
+	// ID — Optional. Optional ID to assign
+	ID string `json:"id,omitempty"`
 }
 
 // CreateCylinderFn calls the create_cylinder MCP tool.
@@ -714,14 +840,22 @@ func (c *Client) CreateCylinderFn(req CreateCylinder) (string, error) {
 // CreateCapsule holds parameters for the create_capsule tool.
 // Create a capsule (a sphere-swept line segment). Returns the object ID.
 type CreateCapsule struct {
-	X1     float64 `json:"x1"`
-	Y1     float64 `json:"y1"`
-	Z1     float64 `json:"z1"`
-	X2     float64 `json:"x2"`
-	Y2     float64 `json:"y2"`
-	Z2     float64 `json:"z2"`
+	// X1 — Required. Start point X
+	X1 float64 `json:"x1"`
+	// Y1 — Required. Start point Y
+	Y1 float64 `json:"y1"`
+	// Z1 — Required. Start point Z
+	Z1 float64 `json:"z1"`
+	// X2 — Required. End point X
+	X2 float64 `json:"x2"`
+	// Y2 — Required. End point Y
+	Y2 float64 `json:"y2"`
+	// Z2 — Required. End point Z
+	Z2 float64 `json:"z2"`
+	// Radius — Required. Radius in mm
 	Radius float64 `json:"radius"`
-	ID     string  `json:"id,omitempty"`
+	// ID — Optional. Optional ID to assign
+	ID string `json:"id,omitempty"`
 }
 
 // CreateCapsuleFn calls the create_capsule MCP tool.
@@ -744,12 +878,18 @@ func (c *Client) CreateCapsuleFn(req CreateCapsule) (string, error) {
 // CreateTorus holds parameters for the create_torus tool.
 // Create a torus (donut shape) by revolving a circle around the Z axis. Returns the object ID.
 type CreateTorus struct {
-	MajorRadius float64  `json:"majorRadius"`
-	MinorRadius float64  `json:"minorRadius"`
-	X           *float64 `json:"x,omitempty"`
-	Y           *float64 `json:"y,omitempty"`
-	Z           *float64 `json:"z,omitempty"`
-	ID          string   `json:"id,omitempty"`
+	// MajorRadius — Required. Major radius (distance from center to tube center) in mm
+	MajorRadius float64 `json:"majorRadius"`
+	// MinorRadius — Required. Minor radius (tube radius) in mm
+	MinorRadius float64 `json:"minorRadius"`
+	// X — Optional. X offset of center
+	X *float64 `json:"x,omitempty"`
+	// Y — Optional. Y offset of center
+	Y *float64 `json:"y,omitempty"`
+	// Z — Optional. Z offset of center
+	Z *float64 `json:"z,omitempty"`
+	// ID — Optional. Optional ID to assign
+	ID string `json:"id,omitempty"`
 }
 
 // CreateTorusFn calls the create_torus MCP tool.
@@ -778,6 +918,7 @@ func (c *Client) CreateTorusFn(req CreateTorus) (string, error) {
 // GetBoundingBox holds parameters for the get_bounding_box tool.
 // Get the axis-aligned bounding box of any object. Returns min/max corners in mm. Retries internally with exponential backoff if the object was just created/transformed and the internal mesh conversion is not yet settled.
 type GetBoundingBox struct {
+	// ObjectID — Required. ID of the object to query
 	ObjectID string `json:"objectId"`
 }
 
@@ -792,6 +933,7 @@ func (c *Client) GetBoundingBoxFn(req GetBoundingBox) (string, error) {
 // GetVolume holds parameters for the get_volume tool.
 // Calculate the volume and bounding box of a voxel object. Retries internally with exponential backoff if the object was just created/transformed.
 type GetVolume struct {
+	// ObjectID — Required. ID of the voxel object
 	ObjectID string `json:"objectId"`
 }
 
@@ -806,6 +948,7 @@ func (c *Client) GetVolumeFn(req GetVolume) (string, error) {
 // GetMeshInfo holds parameters for the get_mesh_info tool.
 // Get information about a mesh: vertex count, triangle count, bounding box.
 type GetMeshInfo struct {
+	// ObjectID — Required. ID of the mesh object
 	ObjectID string `json:"objectId"`
 }
 
@@ -820,10 +963,14 @@ func (c *Client) GetMeshInfoFn(req GetMeshInfo) (string, error) {
 // PointInside holds parameters for the point_inside tool.
 // Check if a 3D point is inside a voxel object.
 type PointInside struct {
-	ObjectID string  `json:"objectId"`
-	X        float64 `json:"x"`
-	Y        float64 `json:"y"`
-	Z        float64 `json:"z"`
+	// ObjectID — Required. ID of the voxel object
+	ObjectID string `json:"objectId"`
+	// X — Required. X coordinate
+	X float64 `json:"x"`
+	// Y — Required. Y coordinate
+	Y float64 `json:"y"`
+	// Z — Required. Z coordinate
+	Z float64 `json:"z"`
 }
 
 // PointInsideFn calls the point_inside MCP tool.
@@ -840,10 +987,14 @@ func (c *Client) PointInsideFn(req PointInside) (string, error) {
 // SurfaceNormal holds parameters for the surface_normal tool.
 // Get the surface normal vector at a point on a voxel object's surface.
 type SurfaceNormal struct {
-	ObjectID string  `json:"objectId"`
-	X        float64 `json:"x"`
-	Y        float64 `json:"y"`
-	Z        float64 `json:"z"`
+	// ObjectID — Required. ID of the voxel object
+	ObjectID string `json:"objectId"`
+	// X — Required. X coordinate
+	X float64 `json:"x"`
+	// Y — Required. Y coordinate
+	Y float64 `json:"y"`
+	// Z — Required. Z coordinate
+	Z float64 `json:"z"`
 }
 
 // SurfaceNormalFn calls the surface_normal MCP tool.
@@ -860,10 +1011,14 @@ func (c *Client) SurfaceNormalFn(req SurfaceNormal) (string, error) {
 // ClosestPoint holds parameters for the closest_point tool.
 // Find the closest point on a voxel object's surface to a given point.
 type ClosestPoint struct {
-	ObjectID string  `json:"objectId"`
-	X        float64 `json:"x"`
-	Y        float64 `json:"y"`
-	Z        float64 `json:"z"`
+	// ObjectID — Required. ID of the voxel object
+	ObjectID string `json:"objectId"`
+	// X — Required. X coordinate of query point
+	X float64 `json:"x"`
+	// Y — Required. Y coordinate of query point
+	Y float64 `json:"y"`
+	// Z — Required. Z coordinate of query point
+	Z float64 `json:"z"`
 }
 
 // ClosestPointFn calls the closest_point MCP tool.
@@ -892,6 +1047,7 @@ func (c *Client) ListObjectsFn(req ListObjects) (string, error) {
 // DeleteObject holds parameters for the delete_object tool.
 // Delete an object from the session. Frees memory and removes the object from the registry.
 type DeleteObject struct {
+	// ObjectID — Required. ID of the object to delete
 	ObjectID string `json:"objectId"`
 }
 
@@ -906,6 +1062,7 @@ func (c *Client) DeleteObjectFn(req DeleteObject) (string, error) {
 // GetVoxelDimensions holds parameters for the get_voxel_dimensions tool.
 // Get the voxel dimensions (grid size) of a voxel object.
 type GetVoxelDimensions struct {
+	// ObjectID — Required. ID of the voxel object
 	ObjectID string `json:"objectId"`
 }
 
@@ -920,6 +1077,7 @@ func (c *Client) GetVoxelDimensionsFn(req GetVoxelDimensions) (string, error) {
 // VoxelsIsEmpty holds parameters for the voxels_is_empty tool.
 // Check if a voxel object is empty (contains no volume). Useful for detecting failed operations — e.g. an intersection that produced no overlap, or a subtraction that removed all material.
 type VoxelsIsEmpty struct {
+	// ObjectID — Required. ID of the voxel object
 	ObjectID string `json:"objectId"`
 }
 
@@ -934,6 +1092,7 @@ func (c *Client) VoxelsIsEmptyFn(req VoxelsIsEmpty) (string, error) {
 // VoxelsMemUsage holds parameters for the voxels_mem_usage tool.
 // Get the memory usage of a voxel object in bytes. Useful for monitoring memory consumption when building complex models.
 type VoxelsMemUsage struct {
+	// ObjectID — Required. ID of the voxel object
 	ObjectID string `json:"objectId"`
 }
 
@@ -948,7 +1107,9 @@ func (c *Client) VoxelsMemUsageFn(req VoxelsMemUsage) (string, error) {
 // VoxelsIsEqual holds parameters for the voxels_is_equal tool.
 // Compare two voxel objects for equality. Returns true if they contain the same voxel data. Useful for verifying that a transform or round-trip preserved the shape.
 type VoxelsIsEqual struct {
+	// ObjectIDA — Required. ID of the first voxel object
 	ObjectIDA string `json:"objectIdA"`
+	// ObjectIDB — Required. ID of the second voxel object
 	ObjectIDB string `json:"objectIdB"`
 }
 
@@ -964,13 +1125,20 @@ func (c *Client) VoxelsIsEqualFn(req VoxelsIsEqual) (string, error) {
 // RayCast holds parameters for the ray_cast tool.
 // Cast a ray from a point in a given direction and find where it hits the surface of a voxel object. Useful for measuring wall thickness, checking bore clearance, and probing internal geometry. Returns the hit point and the distance from the origin, or an error if no intersection is found.
 type RayCast struct {
-	ObjectID string  `json:"objectId"`
-	X        float64 `json:"x"`
-	Y        float64 `json:"y"`
-	Z        float64 `json:"z"`
-	DirX     float64 `json:"dirX"`
-	DirY     float64 `json:"dirY"`
-	DirZ     float64 `json:"dirZ"`
+	// ObjectID — Required. ID of the voxel object
+	ObjectID string `json:"objectId"`
+	// X — Required. Origin X of the ray
+	X float64 `json:"x"`
+	// Y — Required. Origin Y of the ray
+	Y float64 `json:"y"`
+	// Z — Required. Origin Z of the ray
+	Z float64 `json:"z"`
+	// DirX — Required. Ray direction X (need not be normalized)
+	DirX float64 `json:"dirX"`
+	// DirY — Required. Ray direction Y
+	DirY float64 `json:"dirY"`
+	// DirZ — Required. Ray direction Z
+	DirZ float64 `json:"dirZ"`
 }
 
 // RayCastFn calls the ray_cast MCP tool.
@@ -990,13 +1158,20 @@ func (c *Client) RayCastFn(req RayCast) (string, error) {
 // MeasureThickness holds parameters for the measure_thickness tool.
 // Cast a ray from a point in both +direction and -direction and report both hit points and the total span between them. Measures the through-thickness of the object along the ray axis (surface to surface through the interior, which may cross internal cavities). For local wall thickness of a shell, place the origin inside the wall material and note that the total span includes all internal voids.
 type MeasureThickness struct {
-	ObjectID string  `json:"objectId"`
-	X        float64 `json:"x"`
-	Y        float64 `json:"y"`
-	Z        float64 `json:"z"`
-	DirX     float64 `json:"dirX"`
-	DirY     float64 `json:"dirY"`
-	DirZ     float64 `json:"dirZ"`
+	// ObjectID — Required. ID of the voxel object
+	ObjectID string `json:"objectId"`
+	// X — Required. Origin X (ideally inside the wall/material)
+	X float64 `json:"x"`
+	// Y — Required. Origin Y
+	Y float64 `json:"y"`
+	// Z — Required. Origin Z
+	Z float64 `json:"z"`
+	// DirX — Required. Measurement direction X (need not be normalized)
+	DirX float64 `json:"dirX"`
+	// DirY — Required. Measurement direction Y
+	DirY float64 `json:"dirY"`
+	// DirZ — Required. Measurement direction Z
+	DirZ float64 `json:"dirZ"`
 }
 
 // MeasureThicknessFn calls the measure_thickness MCP tool.
@@ -1016,8 +1191,10 @@ func (c *Client) MeasureThicknessFn(req MeasureThickness) (string, error) {
 // DuplicateObject holds parameters for the duplicate_object tool.
 // Create a duplicate (deep copy) of an existing object. Works with voxel and mesh objects. Returns the new object ID.
 type DuplicateObject struct {
+	// ObjectID — Required. ID of the object to duplicate
 	ObjectID string `json:"objectId"`
-	ID       string `json:"id,omitempty"`
+	// ID — Optional. Optional ID for the copy
+	ID string `json:"id,omitempty"`
 }
 
 // DuplicateObjectFn calls the duplicate_object MCP tool.
@@ -1034,8 +1211,10 @@ func (c *Client) DuplicateObjectFn(req DuplicateObject) (string, error) {
 // DeleteObjects holds parameters for the delete_objects tool.
 // Delete multiple objects from the session in one call. Useful for cleaning up intermediate objects after a complex build. Returns the count of objects actually deleted.
 type DeleteObjects struct {
+	// ObjectIDs — Required. List of object IDs to delete
 	ObjectIDs []string `json:"objectIds"`
-	KeepOnly  *bool    `json:"keepOnly,omitempty"`
+	// KeepOnly — Optional. If true, delete ALL objects EXCEPT those in objectIds (keep-only mode). Default false = delete the listed objects.
+	KeepOnly *bool `json:"keepOnly,omitempty"`
 }
 
 // DeleteObjectsFn calls the delete_objects MCP tool.
@@ -1054,12 +1233,18 @@ func (c *Client) DeleteObjectsFn(req DeleteObjects) (string, error) {
 // RenderToImage holds parameters for the render_to_image tool.
 // Render an object to a PNG image using an isometric projection with Lambertian shading. The agent can use this to visually inspect geometry. Returns the file path of the rendered image.
 type RenderToImage struct {
-	ObjectID        string `json:"objectId"`
-	Path            string `json:"path"`
-	Width           *int   `json:"width,omitempty"`
-	Height          *int   `json:"height,omitempty"`
+	// ObjectID — Required. ID of the object to render (voxels or mesh)
+	ObjectID string `json:"objectId"`
+	// Path — Required. Full path for the output PNG file
+	Path string `json:"path"`
+	// Width — Optional. Image width in pixels
+	Width *int `json:"width,omitempty"`
+	// Height — Optional. Image height in pixels
+	Height *int `json:"height,omitempty"`
+	// BackgroundColor — Optional. Background color as hex (default: white)
 	BackgroundColor string `json:"backgroundColor,omitempty"`
-	ObjectColor     string `json:"objectColor,omitempty"`
+	// ObjectColor — Optional. Object color as hex (default: steel blue)
+	ObjectColor string `json:"objectColor,omitempty"`
 }
 
 // RenderToImageFn calls the render_to_image MCP tool.
@@ -1090,10 +1275,14 @@ func (c *Client) RenderToImageFn(req RenderToImage) (string, error) {
 // RenderSlice holds parameters for the render_slice tool.
 // Render a Z-slice of a voxel object to a PNG image. Shows the cross-section at a specific height. Returns the file path.
 type RenderSlice struct {
-	VoxelsID  string  `json:"voxelsId"`
+	// VoxelsID — Required. ID of the voxel object
+	VoxelsID string `json:"voxelsId"`
+	// ZPosition — Required. Z position in mm
 	ZPosition float64 `json:"zPosition"`
-	Path      string  `json:"path"`
-	Mode      string  `json:"mode,omitempty"`
+	// Path — Required. Full path for the output PNG file
+	Path string `json:"path"`
+	// Mode — Optional. Slice mode: Sdf, Bw, or Antialiased (default: Antialiased)
+	Mode string `json:"mode,omitempty"`
 }
 
 // RenderSliceFn calls the render_slice MCP tool.
@@ -1118,6 +1307,7 @@ func (c *Client) RenderSliceFn(req RenderSlice) (string, error) {
 // Init holds parameters for the picogk_init tool.
 // Initialize the PicoGK geometry kernel. Must be called before any other tool. Sets the voxel resolution in millimeters. Smaller values = higher resolution but more memory. Typical range: 0.1mm (fine) to 5.0mm (coarse).
 type Init struct {
+	// VoxelSizeMM — Optional. Voxel size in millimeters. Controls resolution. Use 0.5 for general purpose, 0.1 for fine detail, 2.0+ for large parts.
 	VoxelSizeMM *float64 `json:"voxelSizeMM,omitempty"`
 }
 
@@ -1160,9 +1350,12 @@ func (c *Client) ShutdownFn(req Shutdown) (string, error) {
 // Offset holds parameters for the offset tool.
 // Offset a voxel surface outward (positive) or inward (negative) by a distance. Use for thickening, thinning, or creating clearance. Returns a new object ID.
 type Offset struct {
-	ObjectID string  `json:"objectId"`
+	// ObjectID — Required. ID of the source object
+	ObjectID string `json:"objectId"`
+	// Distance — Required. Offset distance in mm. Positive = expand, negative = shrink.
 	Distance float64 `json:"distance"`
-	ID       string  `json:"id,omitempty"`
+	// ID — Optional. Optional ID for the result
+	ID string `json:"id,omitempty"`
 }
 
 // OffsetFn calls the offset MCP tool.
@@ -1180,10 +1373,14 @@ func (c *Client) OffsetFn(req Offset) (string, error) {
 // DoubleOffset holds parameters for the double_offset tool.
 // Offset a voxel surface twice: first by offset1, then by offset2. Enables precise morphological operations not possible with a single offset — e.g. offset out by 2mm then back by 1.5mm to remove thin features while preserving wall thickness. Returns a new object ID.
 type DoubleOffset struct {
-	ObjectID string  `json:"objectId"`
-	Offset1  float64 `json:"offset1"`
-	Offset2  float64 `json:"offset2"`
-	ID       string  `json:"id,omitempty"`
+	// ObjectID — Required. ID of the source object
+	ObjectID string `json:"objectId"`
+	// Offset1 — Required. First offset distance in mm (positive = expand, negative = shrink)
+	Offset1 float64 `json:"offset1"`
+	// Offset2 — Required. Second offset distance in mm (applied after the first offset)
+	Offset2 float64 `json:"offset2"`
+	// ID — Optional. Optional ID for the result
+	ID string `json:"id,omitempty"`
 }
 
 // DoubleOffsetFn calls the double_offset MCP tool.
@@ -1202,10 +1399,14 @@ func (c *Client) DoubleOffsetFn(req DoubleOffset) (string, error) {
 // OverOffset holds parameters for the over_offset tool.
 // Offset a voxel surface by a first distance, then settle the surface at a specified final distance from the original. More precise than fillet: lets you say 'offset by 3mm, then move the surface to exactly 0.5mm from where it started.' Useful for controlled material removal. Returns a new object ID.
 type OverOffset struct {
-	ObjectID         string   `json:"objectId"`
-	FirstOffset      float64  `json:"firstOffset"`
+	// ObjectID — Required. ID of the source object
+	ObjectID string `json:"objectId"`
+	// FirstOffset — Required. First offset distance in mm (positive = expand)
+	FirstOffset float64 `json:"firstOffset"`
+	// FinalSurfaceDist — Optional. Final surface distance from the original surface in mm (default 0 = settle back to original)
 	FinalSurfaceDist *float64 `json:"finalSurfaceDist,omitempty"`
-	ID               string   `json:"id,omitempty"`
+	// ID — Optional. Optional ID for the result
+	ID string `json:"id,omitempty"`
 }
 
 // OverOffsetFn calls the over_offset MCP tool.
@@ -1226,9 +1427,12 @@ func (c *Client) OverOffsetFn(req OverOffset) (string, error) {
 // Smooth holds parameters for the smooth tool.
 // Smooth/round a voxel surface by applying triple offset. Good for removing sharp edges. Returns a new object ID.
 type Smooth struct {
-	ObjectID string  `json:"objectId"`
+	// ObjectID — Required. ID of the source object
+	ObjectID string `json:"objectId"`
+	// Distance — Required. Smoothing distance in mm. Larger = smoother.
 	Distance float64 `json:"distance"`
-	ID       string  `json:"id,omitempty"`
+	// ID — Optional. Optional ID for the result
+	ID string `json:"id,omitempty"`
 }
 
 // SmoothFn calls the smooth MCP tool.
@@ -1246,14 +1450,22 @@ func (c *Client) SmoothFn(req Smooth) (string, error) {
 // Trim holds parameters for the trim tool.
 // Trim a voxel object to fit within a bounding box. Everything outside the box is removed. Returns a new object ID.
 type Trim struct {
-	ObjectID string  `json:"objectId"`
-	MinX     float64 `json:"minX"`
-	MinY     float64 `json:"minY"`
-	MinZ     float64 `json:"minZ"`
-	MaxX     float64 `json:"maxX"`
-	MaxY     float64 `json:"maxY"`
-	MaxZ     float64 `json:"maxZ"`
-	ID       string  `json:"id,omitempty"`
+	// ObjectID — Required. ID of the source object
+	ObjectID string `json:"objectId"`
+	// MinX — Required. Minimum X of trim box
+	MinX float64 `json:"minX"`
+	// MinY — Required. Minimum Y of trim box
+	MinY float64 `json:"minY"`
+	// MinZ — Required. Minimum Z of trim box
+	MinZ float64 `json:"minZ"`
+	// MaxX — Required. Maximum X of trim box
+	MaxX float64 `json:"maxX"`
+	// MaxY — Required. Maximum Y of trim box
+	MaxY float64 `json:"maxY"`
+	// MaxZ — Required. Maximum Z of trim box
+	MaxZ float64 `json:"maxZ"`
+	// ID — Optional. Optional ID for the result
+	ID string `json:"id,omitempty"`
 }
 
 // TrimFn calls the trim MCP tool.
@@ -1276,11 +1488,16 @@ func (c *Client) TrimFn(req Trim) (string, error) {
 // Shell holds parameters for the shell tool.
 // Create a hollow shell from a voxel object. Both positive and negative offsets are applied. Returns a new object ID.
 type Shell struct {
-	ObjectID    string   `json:"objectId"`
-	InnerOffset float64  `json:"innerOffset"`
-	OuterOffset float64  `json:"outerOffset"`
-	Smooth      *float64 `json:"smooth,omitempty"`
-	ID          string   `json:"id,omitempty"`
+	// ObjectID — Required. ID of the source object
+	ObjectID string `json:"objectId"`
+	// InnerOffset — Required. Inner wall offset in mm (positive = thinner walls)
+	InnerOffset float64 `json:"innerOffset"`
+	// OuterOffset — Required. Outer wall offset in mm (positive = thicker walls)
+	OuterOffset float64 `json:"outerOffset"`
+	// Smooth — Optional. Smoothing for the shell walls in mm (0 = no smoothing)
+	Smooth *float64 `json:"smooth,omitempty"`
+	// ID — Optional. Optional ID for the result
+	ID string `json:"id,omitempty"`
 }
 
 // ShellFn calls the shell MCP tool.
@@ -1302,9 +1519,12 @@ func (c *Client) ShellFn(req Shell) (string, error) {
 // Fillet holds parameters for the fillet tool.
 // Fillets (rounds) the surface of a voxel object. Same as smooth but semantically for rounding edges. Returns a new object ID.
 type Fillet struct {
-	ObjectID string  `json:"objectId"`
-	Radius   float64 `json:"radius"`
-	ID       string  `json:"id,omitempty"`
+	// ObjectID — Required. ID of the source object
+	ObjectID string `json:"objectId"`
+	// Radius — Required. Fillet radius in mm
+	Radius float64 `json:"radius"`
+	// ID — Optional. Optional ID for the result
+	ID string `json:"id,omitempty"`
 }
 
 // FilletFn calls the fillet MCP tool.
@@ -1322,10 +1542,14 @@ func (c *Client) FilletFn(req Fillet) (string, error) {
 // ProjectZSlice holds parameters for the project_z_slice tool.
 // Project voxels onto a Z-plane (top-down silhouette). Useful for creating 2D cross-sections. Returns a new object ID.
 type ProjectZSlice struct {
-	ObjectID string  `json:"objectId"`
-	StartZ   float64 `json:"startZ"`
-	EndZ     float64 `json:"endZ"`
-	ID       string  `json:"id,omitempty"`
+	// ObjectID — Required. ID of the source object
+	ObjectID string `json:"objectId"`
+	// StartZ — Required. Start Z position in mm
+	StartZ float64 `json:"startZ"`
+	// EndZ — Required. End Z position in mm
+	EndZ float64 `json:"endZ"`
+	// ID — Optional. Optional ID for the result
+	ID string `json:"id,omitempty"`
 }
 
 // ProjectZSliceFn calls the project_z_slice MCP tool.
@@ -1344,15 +1568,24 @@ func (c *Client) ProjectZSliceFn(req ProjectZSlice) (string, error) {
 // TransformVoxels holds parameters for the transform_voxels tool.
 // Transform a voxel object by translating, rotating, and/or scaling it. Rotations are applied first (around the world origin 0,0,0 — not the object's center), then translation. To rotate an object in place, first translate it to the origin, rotate, then translate back. Uses native PicoGK signed-distance-field re-rasterization (no expensive mesh round-trip), so it is efficient for large voxel fields. Returns a new object ID.
 type TransformVoxels struct {
-	ObjectID   string   `json:"objectId"`
+	// ObjectID — Required. ID of the source voxel object
+	ObjectID string `json:"objectId"`
+	// TranslateX — Optional. Translation X in mm
 	TranslateX *float64 `json:"translateX,omitempty"`
+	// TranslateY — Optional. Translation Y in mm
 	TranslateY *float64 `json:"translateY,omitempty"`
+	// TranslateZ — Optional. Translation Z in mm
 	TranslateZ *float64 `json:"translateZ,omitempty"`
-	RotateX    *float64 `json:"rotateX,omitempty"`
-	RotateY    *float64 `json:"rotateY,omitempty"`
-	RotateZ    *float64 `json:"rotateZ,omitempty"`
-	Scale      *float64 `json:"scale,omitempty"`
-	ID         string   `json:"id,omitempty"`
+	// RotateX — Optional. Rotation around X axis in degrees (pitch)
+	RotateX *float64 `json:"rotateX,omitempty"`
+	// RotateY — Optional. Rotation around Y axis in degrees (yaw)
+	RotateY *float64 `json:"rotateY,omitempty"`
+	// RotateZ — Optional. Rotation around Z axis in degrees (roll)
+	RotateZ *float64 `json:"rotateZ,omitempty"`
+	// Scale — Optional. Uniform scale factor (1.0 = no change). Applied before rotation/translation.
+	Scale *float64 `json:"scale,omitempty"`
+	// ID — Optional. Optional ID for the result
+	ID string `json:"id,omitempty"`
 }
 
 // TransformVoxelsFn calls the transform_voxels MCP tool.
@@ -1390,16 +1623,26 @@ func (c *Client) TransformVoxelsFn(req TransformVoxels) (string, error) {
 // CircularPattern holds parameters for the circular_pattern tool.
 // Create a circular (polar) pattern of a voxel object: rotate copies around an axis through a center point and union them into a single result. Uses SDF re-rasterization (no mesh round-trips) for each copy. Returns a new object ID containing all copies combined. Example: 4 bolt holes around a flange center at 90° intervals.
 type CircularPattern struct {
-	ObjectID   string   `json:"objectId"`
-	Count      int      `json:"count"`
+	// ObjectID — Required. ID of the source voxel object to pattern
+	ObjectID string `json:"objectId"`
+	// Count — Required. Number of copies (including the original at angle 0)
+	Count int `json:"count"`
+	// TotalAngle — Optional. Total angular span in degrees (default 360 = full circle)
 	TotalAngle *float64 `json:"totalAngle,omitempty"`
-	CenterX    *float64 `json:"centerX,omitempty"`
-	CenterY    *float64 `json:"centerY,omitempty"`
-	CenterZ    *float64 `json:"centerZ,omitempty"`
-	AxisX      *float64 `json:"axisX,omitempty"`
-	AxisY      *float64 `json:"axisY,omitempty"`
-	AxisZ      *float64 `json:"axisZ,omitempty"`
-	ID         string   `json:"id,omitempty"`
+	// CenterX — Optional. Center point X of the rotation axis
+	CenterX *float64 `json:"centerX,omitempty"`
+	// CenterY — Optional. Center point Y of the rotation axis
+	CenterY *float64 `json:"centerY,omitempty"`
+	// CenterZ — Optional. Center point Z of the rotation axis
+	CenterZ *float64 `json:"centerZ,omitempty"`
+	// AxisX — Optional. Rotation axis direction X (default 0 = +Z axis)
+	AxisX *float64 `json:"axisX,omitempty"`
+	// AxisY — Optional. Rotation axis direction Y (default 0 = +Z axis)
+	AxisY *float64 `json:"axisY,omitempty"`
+	// AxisZ — Optional. Rotation axis direction Z (default 1 = +Z axis)
+	AxisZ *float64 `json:"axisZ,omitempty"`
+	// ID — Optional. Optional ID for the result
+	ID string `json:"id,omitempty"`
 }
 
 // CircularPatternFn calls the circular_pattern MCP tool.

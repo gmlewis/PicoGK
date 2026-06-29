@@ -56,7 +56,7 @@ func main() {
 
 	// --- Session ---
 	fmt.Println("--- Session ---")
-	do(picogk.Init{VoxelSizeMM: new(0.3)})
+	do(picogk.Init{VoxelSizeMM: picogk.Ptr(0.3)})
 	doPrint(picogk.Info{})
 
 	// --- Build a part ---

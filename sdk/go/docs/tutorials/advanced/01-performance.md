@@ -9,10 +9,10 @@ quadruples the compute time and memory.
 
 ```go
     // Fast (coarse): 0.5mm — good for prototyping
-    client.Must(picogk.Init{VoxelSizeMM: new(0.5)})
+    client.Must(picogk.Init{VoxelSizeMM: picogk.Ptr(0.5)})
 
     // Slow (fine): 0.1mm — use only for final output
-    client.Must(picogk.Init{VoxelSizeMM: new(0.1)})
+    client.Must(picogk.Init{VoxelSizeMM: picogk.Ptr(0.1)})
 ```
 
 | Voxel size | Relative speed | Relative memory | Surface quality |
@@ -90,7 +90,7 @@ objects with `DeleteObject` or `DeleteObjects`:
     do(picogk.DeleteObjects{ObjectIDs: []string{"temp2", "temp3"}})
 
     // Keep only the final result, delete everything else:
-    do(picogk.DeleteObjects{ObjectIDs: []string{"finalPart"}, KeepOnly: new(true)})
+    do(picogk.DeleteObjects{ObjectIDs: []string{"finalPart"}, KeepOnly: picogk.Ptr(true)})
 ```
 
 ## Shutdown

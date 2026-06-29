@@ -158,8 +158,8 @@ func renderScene(client *picogk.Client, do func(any), name string, builder Scene
 	do(picogk.RenderToImage{
 		ObjectID:       sceneID,
 		Path:           path,
-		Width:          new(1280),
-		Height:         new(960),
+		Width:          picogk.Ptr(1280),
+		Height:         picogk.Ptr(960),
 		BackgroundColor: "#292933",
 		ObjectColor:    color,
 	})
@@ -229,7 +229,7 @@ func makeCylinder(do func(any), id string, cx, cy, cz, radius, height float64) s
 func makeTorus(do func(any), id string, cx, cy, cz, majorR, minorR float64) string {
 	do(picogk.CreateTorus{
 		MajorRadius: majorR, MinorRadius: minorR,
-		X: new(cx), Y: new(cy), Z: new(cz), ID: id,
+		X: picogk.Ptr(cx), Y: picogk.Ptr(cy), Z: picogk.Ptr(cz), ID: id,
 	})
 	return id
 }
@@ -237,7 +237,7 @@ func makeTorus(do func(any), id string, cx, cy, cz, majorR, minorR float64) stri
 // translate moves an object by (dx, dy, dz).
 func translate(do func(any), id, newID string, dx, dy, dz float64) string {
 	do(picogk.TransformVoxels{
-		ObjectID: id, TranslateX: new(dx), TranslateY: new(dy), TranslateZ: new(dz), ID: newID,
+		ObjectID: id, TranslateX: picogk.Ptr(dx), TranslateY: picogk.Ptr(dy), TranslateZ: picogk.Ptr(dz), ID: newID,
 	})
 	return newID
 }
@@ -246,8 +246,8 @@ func translate(do func(any), id, newID string, dx, dy, dz float64) string {
 // then translates it to (tx, ty, tz).
 func rotateZAndTranslate(do func(any), id, newID string, angleDeg, tx, ty, tz float64) string {
 	do(picogk.TransformVoxels{
-		ObjectID: id, RotateZ: new(angleDeg),
-		TranslateX: new(tx), TranslateY: new(ty), TranslateZ: new(tz), ID: newID,
+		ObjectID: id, RotateZ: picogk.Ptr(angleDeg),
+		TranslateX: picogk.Ptr(tx), TranslateY: picogk.Ptr(ty), TranslateZ: picogk.Ptr(tz), ID: newID,
 	})
 	return newID
 }
@@ -465,21 +465,21 @@ func buildLatticeManifold(c *picogk.Client, do func(any)) []SceneGroup {
 	// Manifold at (-50, 0, 0) along Y axis.
 	do(picogk.CreateCylinder{
 		X: -50, Y: -25, Z: 0, Radius: 5, Height: 50,
-		DirX: new(0.0), DirY: new(1.0), DirZ: new(0.0),
+		DirX: picogk.Ptr(0.0), DirY: picogk.Ptr(1.0), DirZ: picogk.Ptr(0.0),
 		ID: "gallery_lman_1",
 	})
 
 	// Manifold at (0, 0, 0) along Y axis, radius 10.
 	do(picogk.CreateCylinder{
 		X: 0, Y: -25, Z: 0, Radius: 10, Height: 50,
-		DirX: new(0.0), DirY: new(1.0), DirZ: new(0.0),
+		DirX: picogk.Ptr(0.0), DirY: picogk.Ptr(1.0), DirZ: picogk.Ptr(0.0),
 		ID: "gallery_lman_2",
 	})
 
 	// Manifold at (50, 0, 0) along Y axis, radius 5.
 	do(picogk.CreateCylinder{
 		X: 50, Y: -25, Z: 0, Radius: 5, Height: 50,
-		DirX: new(0.0), DirY: new(1.0), DirZ: new(0.0),
+		DirX: picogk.Ptr(0.0), DirY: picogk.Ptr(1.0), DirZ: picogk.Ptr(0.0),
 		ID: "gallery_lman_3",
 	})
 
@@ -575,8 +575,8 @@ func buildMeshTrafo(c *picogk.Client, do func(any)) []SceneGroup {
 
 	// Rotate 45 degrees around Z.
 	do(picogk.TransformVoxels{
-		ObjectID: boxID, RotateZ: new(45.0),
-		TranslateX: new(60.0), ID: "gallery_trafo_rotated",
+		ObjectID: boxID, RotateZ: picogk.Ptr(45.0),
+		TranslateX: picogk.Ptr(60.0), ID: "gallery_trafo_rotated",
 	})
 
 	return []SceneGroup{

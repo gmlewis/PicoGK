@@ -271,6 +271,28 @@ func (c *Client) Must(cmd any) (label, result string) {
 	return label, result
 }
 
+// --- Pointer helpers for optional parameters ---
+//
+// Use these to set optional pointer fields on command structs:
+//
+//	client.Must(picogk.Init{VoxelSizeMM: picogk.Ptr(0.5)})
+//	client.Must(picogk.CreateCylinder{X: 0, Y: 0, Z: 0, R: 5, H: 40, DirX: picogk.Ptr(1.0)})
+//	client.Must(picogk.DeleteObjects{ObjectIDs: []string{"a"}, KeepOnly: picogk.Ptr(true)})
+
+// Ptr returns a pointer to v. Use it for optional *float64, *int, *bool fields.
+func Ptr[T any](v T) *T { return &v }
+
+// --- Result parsing helpers ---
+//
+// Some MCP tools return human-readable strings that contain boolean values
+// (e.g. "True" / "False") or numeric values. These helpers extract them.
+
+// ResultBool parses a tool result string and returns true if it contains
+// "True" (case-insensitive). Useful for PointInside, VoxelsIsEmpty, VoxelsIsEqual.
+func ResultBool(result string) bool {
+	return strings.Contains(strings.ToLower(result), "true")
+}
+
 // Do executes an MCP tool call, returning a string result and an error.
 func (c *Client) Do(cmd any) (label, result string, err error) {
 	switch req := cmd.(type) {

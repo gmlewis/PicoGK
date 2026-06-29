@@ -55,7 +55,7 @@ func main() {
 		log.Printf("  OK: %s -> %s", label, truncate(result, 80))
 	}
 
-	do(picogk.Init{VoxelSizeMM: new(0.3)})
+	do(picogk.Init{VoxelSizeMM: picogk.Ptr(0.3)})
 
 	// A hollow shelled part with a through-hole.
 	do(picogk.CreateSphere{X: 0, Y: 0, Z: 0, Radius: 12, ID: "body"})
@@ -80,8 +80,8 @@ func main() {
 	do(picogk.RenderToImage{
 		ObjectID:       "shelled",
 		Path:           previewPath,
-		Width:          new(1280),
-		Height:         new(960),
+		Width:          picogk.Ptr(1280),
+		Height:         picogk.Ptr(960),
 		BackgroundColor: "#292933",
 		ObjectColor:    "#5999e6",
 	})

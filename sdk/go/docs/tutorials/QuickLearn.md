@@ -43,7 +43,8 @@ func main() {
     }
 
     // Initialize with a 0.3mm voxel grid. Must be called first.
-    do(picogk.Init{VoxelSizeMM: new(0.3)})
+    // picogk.Ptr creates a pointer for optional fields.
+    do(picogk.Init{VoxelSizeMM: picogk.Ptr(0.3)})
     doPrint(picogk.Info{})          // version, memory, object counts
 
     // ---- VOXELS: the core object (a signed-distance / level-set volume) -----
@@ -53,7 +54,7 @@ func main() {
     do(picogk.CreateCylinder{X: 0, Y: 0, Z: 0, Radius: 5, Height: 30, ID: "cyl"})
     // Cylinder along X axis (DirX=1, DirY=0, DirZ=0):
     do(picogk.CreateCylinder{X: 0, Y: 0, Z: 0, Radius: 3, Height: 30,
-        DirX: new(1.0), DirY: new(0.0), DirZ: new(0.0), ID: "rod"})
+        DirX: picogk.Ptr(1.0), DirY: picogk.Ptr(0.0), DirZ: picogk.Ptr(0.0), ID: "rod"})
     // Capsule (sphere-swept segment):
     do(picogk.CreateCapsule{X1: -15, Y1: 0, Z1: 0, X2: 15, Y2: 0, Z2: 0, Radius: 3, ID: "cap"})
     // Torus:
@@ -75,17 +76,17 @@ func main() {
     // Double offset (morphological open: expand then shrink):
     do(picogk.DoubleOffset{ObjectID: "ball", Offset1: 2.0, Offset2: -2.0, ID: "opened"})
     // Over offset (expand, then settle at a final distance):
-    do(picogk.OverOffset{ObjectID: "ball", FirstOffset: 3.0, FinalSurfaceDist: new(0.5), ID: "over"})
+    do(picogk.OverOffset{ObjectID: "ball", FirstOffset: 3.0, FinalSurfaceDist: picogk.Ptr(0.5), ID: "over"})
 
     // ---- TRANSFORMS --------------------------------------------------------
     do(picogk.Smooth{ObjectID: "box", Distance: 1.5, ID: "smoothed"})
     do(picogk.Trim{ObjectID: "ball", MinX: -20, MinY: -20, MinZ: 0, MaxX: 20, MaxY: 20, MaxZ: 50, ID: "half"})
     do(picogk.Fillet{ObjectID: "box", Radius: 2.0, ID: "filleted"})
-    do(picogk.TransformVoxels{ObjectID: "ball", TranslateX: new(100.0), ID: "moved"})
-    do(picogk.TransformVoxels{ObjectID: "ball", RotateZ: new(45.0), ID: "rotated"})
-    do(picogk.TransformVoxels{ObjectID: "ball", Scale: new(2.0), ID: "scaled"})
+    do(picogk.TransformVoxels{ObjectID: "ball", TranslateX: picogk.Ptr(100.0), ID: "moved"})
+    do(picogk.TransformVoxels{ObjectID: "ball", RotateZ: picogk.Ptr(45.0), ID: "rotated"})
+    do(picogk.TransformVoxels{ObjectID: "ball", Scale: picogk.Ptr(2.0), ID: "scaled"})
     // Circular pattern: 4 copies around Z axis:
-    do(picogk.CircularPattern{ObjectID: "cyl", Count: 4, TotalAngle: new(360.0), ID: "pattern"})
+    do(picogk.CircularPattern{ObjectID: "cyl", Count: 4, TotalAngle: picogk.Ptr(360.0), ID: "pattern"})
     do(picogk.ProjectZSlice{ObjectID: "ball", StartZ: -5, EndZ: 5, ID: "proj"})
 
     // ---- QUERIES -----------------------------------------------------------
@@ -121,7 +122,7 @@ func main() {
     do(picogk.MeshAddQuad{MeshID: "myMesh", X0: 0, Y0: 0, Z0: 20, X1: 10, Y1: 0, Z1: 20, X2: 10, Y2: 10, Z2: 20, X3: 0, Y3: 10, Z3: 20})
 
     // Mesh transform and mirror:
-    do(picogk.MeshTransform{MeshID: "ballMesh", Scale: new(2.0), TranslateX: new(50.0), ID: "ballMesh2x"})
+    do(picogk.MeshTransform{MeshID: "ballMesh", Scale: picogk.Ptr(2.0), TranslateX: picogk.Ptr(50.0), ID: "ballMesh2x"})
     do(picogk.MeshMirror{MeshID: "ballMesh", PtX: 0, PtY: 0, PtZ: 0, NX: 1, NY: 0, NZ: 0, ID: "ballMirrored"})
     do(picogk.MeshAppend{TargetID: "myMesh", SourceID: "ballMesh2x"})
 
@@ -138,13 +139,13 @@ func main() {
     doPrint(picogk.ListVDBFields{Path: filepath.Join(outdir, "ball.vdb")})
     do(picogk.LoadVDB{Path: filepath.Join(outdir, "ball.vdb"), FieldName: "body", ID: "loadedBall"})
     do(picogk.MeshFromSTL{Path: filepath.Join(outdir, "ball.stl"), ID: "importedMesh"})
-    do(picogk.SaveCLI{VoxelsID: "ball", Path: filepath.Join(outdir, "ball.cli"), LayerHeight: new(2.0)})
-    do(picogk.SaveSVG{VoxelsID: "ball", Path: filepath.Join(outdir, "ball.svg"), LayerHeight: new(2.0)})
+    do(picogk.SaveCLI{VoxelsID: "ball", Path: filepath.Join(outdir, "ball.cli"), LayerHeight: picogk.Ptr(2.0)})
+    do(picogk.SaveSVG{VoxelsID: "ball", Path: filepath.Join(outdir, "ball.svg"), LayerHeight: picogk.Ptr(2.0)})
 
     // ---- RENDERING ---------------------------------------------------------
     // Isometric PNG with Lambertian shading:
     do(picogk.RenderToImage{ObjectID: "ball", Path: filepath.Join(outdir, "ball.png"),
-        Width: new(600), Height: new(400)})
+        Width: picogk.Ptr(600), Height: picogk.Ptr(400)})
     // Z-slice cross-section:
     do(picogk.RenderSlice{VoxelsID: "ball", ZPosition: 0, Path: filepath.Join(outdir, "slice_z0.png")})
 
@@ -152,7 +153,7 @@ func main() {
     do(picogk.DeleteObject{ObjectID: "box"})
     do(picogk.DeleteObjects{ObjectIDs: []string{"cyl", "cap", "torus"}})
     // Keep only "ball", delete everything else:
-    do(picogk.DeleteObjects{ObjectIDs: []string{"ball"}, KeepOnly: new(true)})
+    do(picogk.DeleteObjects{ObjectIDs: []string{"ball"}, KeepOnly: picogk.Ptr(true)})
 
     // ---- SHUTDOWN ----------------------------------------------------------
     doPrint(picogk.Shutdown{})
@@ -165,13 +166,13 @@ func main() {
 
 | Python (PicoPie) | Go SDK |
 |---|---|
-| `picogk.init(voxel_size_mm=0.3)` | `picogk.Init{VoxelSizeMM: new(0.3)}` |
+| `picogk.init(voxel_size_mm=0.3)` | `picogk.Init{VoxelSizeMM: picogk.Ptr(0.3)}` |
 | `Voxels.sphere(radius=10)` | `picogk.CreateSphere{Radius: 10, ID: "..."}` |
 | `part = body - hole` (operator) | `picogk.BooleanSubtract{A: "body", B: "hole", ID: "part"}` |
 | `part.shell_(1.5)` (in-place) | `picogk.Shell{ObjectID: "part", InnerOffset: 1.5, ...}` |
 | `part.volume_mm3()` | `picogk.GetVolume{ObjectID: "part"}` |
 | `part.to_mesh().save_stl("p.stl")` | `picogk.VoxelsToMesh{...}` then `picogk.SaveSTL{...}` |
-| Optional args via kwargs | Optional args via `new(value)` pointers |
+| Optional args via kwargs | Optional args via `picogk.Ptr(v)` pointers |
 | `ScalarField`, `Metadata`, `VectorField` | Not available in MCP SDK |
 | `render_implicit_(sdf, bbox)` | Not available in MCP SDK (no per-voxel callback) |
 | `picogk.show(part)` (interactive) | `picogk.RenderToImage{...}` (headless PNG only) |

@@ -23,7 +23,7 @@ func main() {
     defer client.Close()
 
     do := func(cmd any) { client.Must(cmd) }
-    client.Must(picogk.Init{VoxelSizeMM: new(0.5)})
+    client.Must(picogk.Init{VoxelSizeMM: picogk.Ptr(0.5)})
 
     // Build a lattice pipe: a cylinder filled with lattice struts.
     do(picogk.CreateLattice{ID: "lat"})
@@ -178,8 +178,8 @@ and object:
     do(picogk.RenderToImage{
         ObjectID:        "part",
         Path:            "/tmp/part.png",
-        Width:           new(1280),
-        Height:          new(960),
+        Width:           picogk.Ptr(1280),
+        Height:          picogk.Ptr(960),
         BackgroundColor: "#292933",  // dark gray-blue
         ObjectColor:     "#5999e6",  // steel blue
     })

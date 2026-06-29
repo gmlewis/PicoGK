@@ -51,7 +51,7 @@ func main() {
 	do := func(cmd any) { client.Must(cmd) }
 
 	// Coarse voxel size so the demo HTML stays light and fast.
-	do(picogk.Init{VoxelSizeMM: new(0.5)})
+	do(picogk.Init{VoxelSizeMM: picogk.Ptr(0.5)})
 
 	// Build the scene: a box, a sphere, and a gyroid-filled sphere.
 	// Box at (-32, 0, 0), size 22.
@@ -89,8 +89,8 @@ func main() {
 	do(picogk.RenderToImage{
 		ObjectID:       "scene",
 		Path:           filepath.Join(outdir, "web_demo.png"),
-		Width:          new(1280),
-		Height:         new(960),
+		Width:          picogk.Ptr(1280),
+		Height:         picogk.Ptr(960),
 		BackgroundColor: "#292933",
 	})
 

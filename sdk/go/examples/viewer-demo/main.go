@@ -40,7 +40,7 @@ func main() {
 
 	do := func(cmd any) { client.Must(cmd) }
 
-	do(picogk.Init{VoxelSizeMM: new(0.2)})
+	do(picogk.Init{VoxelSizeMM: picogk.Ptr(0.2)})
 
 	// A hollow shell with a bite taken out, so the wall is visible.
 	do(picogk.CreateSphere{X: 0, Y: 0, Z: 0, Radius: 12, ID: "body"})
@@ -52,8 +52,8 @@ func main() {
 	do(picogk.RenderToImage{
 		ObjectID:        "shelled",
 		Path:            out,
-		Width:           new(1280),
-		Height:          new(960),
+		Width:           picogk.Ptr(1280),
+		Height:          picogk.Ptr(960),
 		BackgroundColor:  "#292933",
 		ObjectColor:      "#5999e6",
 	})
