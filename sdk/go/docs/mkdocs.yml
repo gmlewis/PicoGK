@@ -1,0 +1,54 @@
+site_name: PicoGK Go SDK
+site_description: A Go SDK for the PicoGK computational-geometry kernel
+repo_url: https://github.com/gmlewis/PicoGK
+docs_dir: docs
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - content.code.copy
+  palette:
+    - scheme: default
+      primary: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+
+nav:
+  - Home: index.md
+  - Tutorials:
+    - QuickLearn: tutorials/QuickLearn.md
+    - Novice:
+      - 1 · Setup: tutorials/novice/01-setup.md
+      - 2 · First shapes: tutorials/novice/02-first-shapes.md
+      - 3 · Booleans & export: tutorials/novice/03-booleans-and-export.md
+    - Intermediate:
+      - 1 · Implicit modeling: tutorials/intermediate/01-implicit-modeling.md
+      - 2 · Meshes & files: tutorials/intermediate/02-meshes-and-files.md
+      - 3 · Fields & metadata: tutorials/intermediate/03-fields-and-metadata.md
+    - Advanced:
+      - 1 · Performance: tutorials/advanced/01-performance.md
+      - 2 · Reliability: tutorials/advanced/02-reliability.md
+      - 3 · Rendering: tutorials/advanced/03-viewer.md
+      - 4 · Web viewer: tutorials/advanced/04-web-viewer.md
+    - Shapes (ShapeKernel):
+      - 1 · Parametric shapes: tutorials/shapes/01-parametric-shapes.md
+      - 2 · Frames & spines: tutorials/shapes/02-frames-and-spines.md
+      - 3 · Lattices & implicits: tutorials/shapes/03-lattices-and-implicits.md
+  - Gallery: gallery.md
+  - API reference: api.md
