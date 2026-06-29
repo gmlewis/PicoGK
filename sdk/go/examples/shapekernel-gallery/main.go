@@ -165,8 +165,8 @@ func renderScene(client *picogk.Client, do func(any), name string, builder Scene
 	})
 	fmt.Printf("  -> %s\n", path)
 
-	// Clean up the scene union object.
-	do(picogk.DeleteObject{ObjectID: sceneID})
+	// Clean up all objects for the next scene.
+	do(picogk.DeleteObjects{ObjectIDs: []string{}, KeepOnly: picogk.Ptr(true)})
 }
 
 // =========================================================================

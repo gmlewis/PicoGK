@@ -32,6 +32,8 @@ async fn main {
   check_tool("render_to_image", client.render_to_image("scene_box", outdir + "/box.png", Some(1280), Some(960), Some("#292933"), Some("#5999e6")))
   check_tool("delete_object", client.delete_object("scene_box"))
   println("  -> " + outdir + "/box.png")
+  // Clean up all objects for the next scene.
+  let _ = client.delete_objects([], Some(true))
 
   // --- sphere ---
   println("--- sphere ---")
@@ -42,6 +44,8 @@ async fn main {
   check_tool("render_to_image", client.render_to_image("scene_sphere", outdir + "/sphere.png", Some(1280), Some(960), Some("#292933"), Some("#7ec8e3")))
   check_tool("delete_object", client.delete_object("scene_sphere"))
   println("  -> " + outdir + "/sphere.png")
+  // Clean up all objects for the next scene.
+  let _ = client.delete_objects([], Some(true))
 
   // --- cylinder ---
   println("--- cylinder ---")
@@ -52,6 +56,8 @@ async fn main {
   check_tool("render_to_image", client.render_to_image("scene_cylinder", outdir + "/cylinder.png", Some(1280), Some(960), Some("#292933"), Some("#5999e6")))
   check_tool("delete_object", client.delete_object("scene_cylinder"))
   println("  -> " + outdir + "/cylinder.png")
+  // Clean up all objects for the next scene.
+  let _ = client.delete_objects([], Some(true))
 
   // --- ring ---
   println("--- ring ---")
@@ -63,6 +69,8 @@ async fn main {
   check_tool("render_to_image", client.render_to_image("scene_ring", outdir + "/ring.png", Some(1280), Some(960), Some("#292933"), Some("#7ec8e3")))
   check_tool("delete_object", client.delete_object("scene_ring"))
   println("  -> " + outdir + "/ring.png")
+  // Clean up all objects for the next scene.
+  let _ = client.delete_objects([], Some(true))
 
   // --- lens ---
   println("--- lens ---")
@@ -73,6 +81,8 @@ async fn main {
   check_tool("render_to_image", client.render_to_image("scene_lens", outdir + "/lens.png", Some(1280), Some(960), Some("#292933"), Some("#7ec8e3")))
   check_tool("delete_object", client.delete_object("scene_lens"))
   println("  -> " + outdir + "/lens.png")
+  // Clean up all objects for the next scene.
+  let _ = client.delete_objects([], Some(true))
 
   // --- pipe ---
   println("--- pipe ---")
@@ -96,6 +106,8 @@ async fn main {
   check_tool("render_to_image", client.render_to_image("scene_pipe", outdir + "/pipe.png", Some(1280), Some(960), Some("#292933"), Some("#5999e6")))
   check_tool("delete_object", client.delete_object("scene_pipe"))
   println("  -> " + outdir + "/pipe.png")
+  // Clean up all objects for the next scene.
+  let _ = client.delete_objects([], Some(true))
 
   // --- pipe_segment ---
   println("--- pipe_segment ---")
@@ -112,6 +124,8 @@ async fn main {
   check_tool("render_to_image", client.render_to_image("scene_pipe_segment", outdir + "/pipe_segment.png", Some(1280), Some(960), Some("#292933"), Some("#5999e6")))
   check_tool("delete_object", client.delete_object("scene_pipe_segment"))
   println("  -> " + outdir + "/pipe_segment.png")
+  // Clean up all objects for the next scene.
+  let _ = client.delete_objects([], Some(true))
 
   // --- basic_lattices ---
   println("--- basic_lattices ---")
@@ -121,6 +135,8 @@ async fn main {
   check_tool("lattice_to_voxels", client.lattice_to_voxels("gallery_blat", Some("gallery_blat_vox")))
   check_tool("render_to_image", client.render_to_image("gallery_blat_vox", outdir + "/basic_lattices.png", Some(1280), Some(960), Some("#292933"), Some("#4f6be6")))
   println("  -> " + outdir + "/basic_lattices.png")
+  // Clean up all objects for the next scene.
+  let _ = client.delete_objects([], Some(true))
 
   // --- lattice_pipe ---
   println("--- lattice_pipe ---")
@@ -131,6 +147,8 @@ async fn main {
   check_tool("render_to_image", client.render_to_image("scene_lattice_pipe", outdir + "/lattice_pipe.png", Some(1280), Some(960), Some("#292933"), Some("#e6dc4f")))
   check_tool("delete_object", client.delete_object("scene_lattice_pipe"))
   println("  -> " + outdir + "/lattice_pipe.png")
+  // Clean up all objects for the next scene.
+  let _ = client.delete_objects([], Some(true))
 
   // --- lattice_manifold ---
   println("--- lattice_manifold ---")
@@ -141,6 +159,8 @@ async fn main {
   check_tool("render_to_image", client.render_to_image("scene_lattice_manifold", outdir + "/lattice_manifold.png", Some(1280), Some(960), Some("#292933"), Some("#e6dc4f")))
   check_tool("delete_object", client.delete_object("scene_lattice_manifold"))
   println("  -> " + outdir + "/lattice_manifold.png")
+  // Clean up all objects for the next scene.
+  let _ = client.delete_objects([], Some(true))
 
   // --- gyroid_sphere ---
   println("--- gyroid_sphere ---")
@@ -158,6 +178,8 @@ async fn main {
   check_tool("boolean_intersect", client.boolean_intersect("gallery_gyroid_sphere", "gallery_gyroid_lat_vox", Some("gallery_gyroid_result")))
   check_tool("render_to_image", client.render_to_image("gallery_gyroid_result", outdir + "/gyroid_sphere.png", Some(1280), Some(960), Some("#292933"), Some("#4fb6e6")))
   println("  -> " + outdir + "/gyroid_sphere.png")
+  // Clean up all objects for the next scene.
+  let _ = client.delete_objects([], Some(true))
 
   // --- gyroid_genus ---
   println("--- gyroid_genus ---")
@@ -165,6 +187,8 @@ async fn main {
   check_tool("create_torus", client.create_torus(24.0, 8.0, Some(0.0), Some(0.0), Some(0.0), Some("gallery_gyroid_genus")))
   check_tool("render_to_image", client.render_to_image("gallery_gyroid_genus", outdir + "/gyroid_genus.png", Some(1280), Some(960), Some("#292933"), Some("#b09be6")))
   println("  -> " + outdir + "/gyroid_genus.png")
+  // Clean up all objects for the next scene.
+  let _ = client.delete_objects([], Some(true))
 
   // --- superellipsoid ---
   println("--- superellipsoid ---")
@@ -179,12 +203,16 @@ async fn main {
   check_tool("render_to_image", client.render_to_image("scene_superellipsoid", outdir + "/superellipsoid.png", Some(1280), Some(960), Some("#292933"), Some("#e64f6b")))
   check_tool("delete_object", client.delete_object("scene_superellipsoid"))
   println("  -> " + outdir + "/superellipsoid.png")
+  // Clean up all objects for the next scene.
+  let _ = client.delete_objects([], Some(true))
 
   // --- mesh_painter ---
   println("--- mesh_painter ---")
   check_tool("create_sphere", client.create_sphere(0.0, 0.0, 0.0, 40.0, Some("gallery_painter_sphere")))
   check_tool("render_to_image", client.render_to_image("gallery_painter_sphere", outdir + "/mesh_painter.png", Some(1280), Some(960), Some("#292933"), Some("#4fb6e6")))
   println("  -> " + outdir + "/mesh_painter.png")
+  // Clean up all objects for the next scene.
+  let _ = client.delete_objects([], Some(true))
 
   // --- mesh_trafo ---
   println("--- mesh_trafo ---")
@@ -195,6 +223,8 @@ async fn main {
   check_tool("render_to_image", client.render_to_image("scene_mesh_trafo", outdir + "/mesh_trafo.png", Some(1280), Some(960), Some("#292933"), Some("#888888")))
   check_tool("delete_object", client.delete_object("scene_mesh_trafo"))
   println("  -> " + outdir + "/mesh_trafo.png")
+  // Clean up all objects for the next scene.
+  let _ = client.delete_objects([], Some(true))
 
   // --- over_offset ---
   println("--- over_offset ---")
@@ -205,6 +235,8 @@ async fn main {
   check_tool("double_offset", client.double_offset("gallery_oo_union", 4.0, -4.0, Some("gallery_oo_result")))
   check_tool("render_to_image", client.render_to_image("gallery_oo_result", outdir + "/over_offset.png", Some(1280), Some(960), Some("#292933"), Some("#e67bb0")))
   println("  -> " + outdir + "/over_offset.png")
+  // Clean up all objects for the next scene.
+  let _ = client.delete_objects([], Some(true))
 
   println("")
   println("done.")
