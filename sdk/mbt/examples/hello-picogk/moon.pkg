@@ -1,0 +1,10 @@
+// hello-picogk example package
+
+import {
+  "gmlewis/picogk" @picogk,
+  "moonbitlang/async",
+}
+
+options(
+  "is-main": true,
+)

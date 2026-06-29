@@ -1,0 +1,10 @@
+// fields-and-io example package
+
+import {
+  "gmlewis/picogk" @picogk,
+  "moonbitlang/async",
+}
+
+options(
+  "is-main": true,
+)
