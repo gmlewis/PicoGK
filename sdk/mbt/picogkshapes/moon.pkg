@@ -1,0 +1,6 @@
+// picogkshapes package configuration
+
+import {
+  "gmlewis/picogkffi",
+  "moonbitlang/core/math",
+}

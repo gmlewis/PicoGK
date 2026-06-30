@@ -26,8 +26,7 @@ async fn main {
   // --- Execute: Set up a demonstration scene ---
   println("")
   println("--- Execute: Create Scene ---")
-  let setup_code =
-    "import bpy\n" +
+  let setup_code = "import bpy\n" +
     "import math\n" +
     "\n" +
     "# Clear default scene\n" +
@@ -93,7 +92,10 @@ async fn main {
     "    \"camera\": bpy.context.scene.camera.name if bpy.context.scene.camera else None,\n" +
     "    \"world_nodes\": len(world.node_tree.nodes) if world and world.use_nodes else 0,\n" +
     "}\n"
-  check_tool("execute_blender_code(setup)", client.execute_blender_code(setup_code))
+  check_tool(
+    "execute_blender_code(setup)",
+    client.execute_blender_code(setup_code),
+  )
 
   // --- Query: Get scene objects ---
   println("")
@@ -103,46 +105,92 @@ async fn main {
   // --- Query: Detail of specific objects ---
   println("")
   println("--- Query: Object Details ---")
-  check_tool("get_object_detail(Sphere)", client.get_object_detail_summary("Sphere"))
-  check_tool("get_object_detail(Cube)", client.get_object_detail_summary("Cube"))
-  check_tool("get_object_detail(Cylinder)", client.get_object_detail_summary("Cylinder"))
+  check_tool(
+    "get_object_detail(Sphere)",
+    client.get_object_detail_summary("Sphere"),
+  )
+  check_tool(
+    "get_object_detail(Cube)",
+    client.get_object_detail_summary("Cube"),
+  )
+  check_tool(
+    "get_object_detail(Cylinder)",
+    client.get_object_detail_summary("Cylinder"),
+  )
 
   // --- UI Navigation ---
   println("")
   println("--- UI Navigation ---")
   check_tool("jump_to_tab_by_name", client.jump_to_tab_by_name("Layout"))
-  check_tool("jump_to_tab_by_space_type", client.jump_to_tab_by_space_type("VIEW_3D", None))
-  check_tool("jump_to_view3d_object_by_name", client.jump_to_view3d_object_by_name("Cube", None))
-  check_tool("jump_to_view3d_object_data_by_name", client.jump_to_view3d_object_data_by_name("Torus", None))
+  check_tool(
+    "jump_to_tab_by_space_type",
+    client.jump_to_tab_by_space_type("VIEW_3D", None),
+  )
+  check_tool(
+    "jump_to_view3d_object_by_name",
+    client.jump_to_view3d_object_by_name("Cube", None),
+  )
+  check_tool(
+    "jump_to_view3d_object_data_by_name",
+    client.jump_to_view3d_object_data_by_name("Torus", None),
+  )
 
   // --- Screenshots ---
   println("")
   println("--- Screenshots ---")
-  check_tool("get_screenshot_of_window_as_json", client.get_screenshot_of_window_as_json())
+  check_tool(
+    "get_screenshot_of_window_as_json",
+    client.get_screenshot_of_window_as_json(),
+  )
   // Note: Image-returning tools may fail due to MCP binary transport limits.
-  println("  (skipping image screenshot tools — known MCP binary transport limitation)")
+  println(
+    "  (skipping image screenshot tools — known MCP binary transport limitation)",
+  )
 
   // --- Blend File Info ---
   println("")
   println("--- Blend File Info ---")
-  check_tool("get_blendfile_summary_datablocks", client.get_blendfile_summary_datablocks())
-  check_tool("get_blendfile_summary_path_info", client.get_blendfile_summary_path_info())
-  check_tool("get_blendfile_summary_usage_guess", client.get_blendfile_summary_usage_guess())
-  check_tool("get_blendfile_summary_missing_files", client.get_blendfile_summary_missing_files())
-  check_tool("get_blendfile_summary_of_linked_libraries", client.get_blendfile_summary_of_linked_libraries())
+  check_tool(
+    "get_blendfile_summary_datablocks",
+    client.get_blendfile_summary_datablocks(),
+  )
+  check_tool(
+    "get_blendfile_summary_path_info",
+    client.get_blendfile_summary_path_info(),
+  )
+  check_tool(
+    "get_blendfile_summary_usage_guess",
+    client.get_blendfile_summary_usage_guess(),
+  )
+  check_tool(
+    "get_blendfile_summary_missing_files",
+    client.get_blendfile_summary_missing_files(),
+  )
+  check_tool(
+    "get_blendfile_summary_of_linked_libraries",
+    client.get_blendfile_summary_of_linked_libraries(),
+  )
 
   // --- API Documentation ---
   println("")
   println("--- API Docs ---")
-  check_tool("get_python_api_docs", client.get_python_api_docs("bpy.ops.object"))
-  check_tool("search_api_docs", client.search_api_docs("how to add light", None, None, None))
-  check_tool("search_manual_docs", client.search_manual_docs("rendering engine", None, None, None))
+  check_tool(
+    "get_python_api_docs",
+    client.get_python_api_docs("bpy.ops.object"),
+  )
+  check_tool(
+    "search_api_docs",
+    client.search_api_docs("how to add light", None, None, None),
+  )
+  check_tool(
+    "search_manual_docs",
+    client.search_manual_docs("rendering engine", None, None, None),
+  )
 
   // --- Execute: Modify the scene ---
   println("")
   println("--- Execute: Modify Scene ---")
-  let modify_code =
-    "import bpy\n" +
+  let modify_code = "import bpy\n" +
     "\n" +
     "# Duplicate the sphere and move it\n" +
     "bpy.ops.object.select_all(action='DESELECT')\n" +
@@ -169,13 +217,15 @@ async fn main {
     "        torus.name: torus.parent.name if torus.parent else None,\n" +
     "    } if torus else {},\n" +
     "}\n"
-  check_tool("execute_blender_code(modify)", client.execute_blender_code(modify_code))
+  check_tool(
+    "execute_blender_code(modify)",
+    client.execute_blender_code(modify_code),
+  )
 
   // --- Execute: Final summary ---
   println("")
   println("--- Execute: Final Summary ---")
-  let summary_code =
-    "import bpy\n" +
+  let summary_code = "import bpy\n" +
     "result = {\n" +
     "    \"total_objects\": len(bpy.data.objects),\n" +
     "    \"object_names\": sorted([o.name for o in bpy.data.objects]),\n" +
@@ -185,7 +235,10 @@ async fn main {
     "    \"render_engine\": bpy.context.scene.render.engine,\n" +
     "    \"frame_current\": bpy.context.scene.frame_current,\n" +
     "}\n"
-  check_tool("execute_blender_code(summary)", client.execute_blender_code(summary_code))
+  check_tool(
+    "execute_blender_code(summary)",
+    client.execute_blender_code(summary_code),
+  )
 
   // --- Cleanup ---
   println("")
@@ -196,6 +249,7 @@ async fn main {
   println("=== Blender scene inspection complete! ===")
 }
 
+///|
 /// check_tool calls a tool, checks for errors, and prints a truncated result.
 fn check_tool(label : String, result : String) -> Unit {
   let truncated = if result.length() > 120 {

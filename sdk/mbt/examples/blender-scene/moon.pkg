@@ -2,7 +2,7 @@
 // DO NOT EDIT — auto-generated
 
 import {
-  "gmlewis/blender" @blender,
+  "gmlewis/blender",
   "moonbitlang/async",
 }
 

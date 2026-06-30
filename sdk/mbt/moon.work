@@ -1,10 +1,8 @@
-// MoonBit workspace for PicoGK SDK development
-// Contains the picogk library and example programs
-// DO NOT EDIT — auto-generated
-
 members = [
   "blender",
   "picogk",
+  "picogkffi",
+  "picogkshapes",
   "examples/blender-scene",
   "examples/full-api",
   "examples/hello-picogk",

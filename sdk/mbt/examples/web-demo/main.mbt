@@ -26,41 +26,84 @@ async fn main {
 
   // Build the scene: a box, a sphere, and a gyroid-filled sphere.
   // Box at (-32, 0, 0), size 22.
-  check_tool("create_box", client.create_box(-43.0, -11.0, -11.0, -21.0, 11.0, 11.0, Some("box")))
+  check_tool(
+    "create_box",
+    client.create_box(-43.0, -11.0, -11.0, -21.0, 11.0, 11.0, Some("box")),
+  )
 
   // Sphere at origin, radius 13.
-  check_tool("create_sphere", client.create_sphere(0.0, 0.0, 0.0, 13.0, Some("sphere")))
+  check_tool(
+    "create_sphere",
+    client.create_sphere(0.0, 0.0, 0.0, 13.0, Some("sphere")),
+  )
 
   // Gyroid-filled sphere at (32, 0, 0), radius 13.
   // The MCP SDK does not have ImplicitGyroid or intersect_implicit tools,
   // so we approximate the gyroid sphere with a plain sphere.
-  check_tool("create_sphere(gyroid)", client.create_sphere(32.0, 0.0, 0.0, 13.0, Some("gyroid")))
+  check_tool(
+    "create_sphere(gyroid)",
+    client.create_sphere(32.0, 0.0, 0.0, 13.0, Some("gyroid")),
+  )
 
   // Mesh all objects.
-  check_tool("voxels_to_mesh(box)", client.voxels_to_mesh("box", Some("boxMesh")))
-  check_tool("voxels_to_mesh(sphere)", client.voxels_to_mesh("sphere", Some("sphereMesh")))
-  check_tool("voxels_to_mesh(gyroid)", client.voxels_to_mesh("gyroid", Some("gyroidMesh")))
+  check_tool(
+    "voxels_to_mesh(box)",
+    client.voxels_to_mesh("box", Some("boxMesh")),
+  )
+  check_tool(
+    "voxels_to_mesh(sphere)",
+    client.voxels_to_mesh("sphere", Some("sphereMesh")),
+  )
+  check_tool(
+    "voxels_to_mesh(gyroid)",
+    client.voxels_to_mesh("gyroid", Some("gyroidMesh")),
+  )
 
   // Export STLs.
-  check_tool("save_stl(box)", client.save_stl("boxMesh", outdir + "/box.stl", None))
-  check_tool("save_stl(sphere)", client.save_stl("sphereMesh", outdir + "/sphere.stl", None))
-  check_tool("save_stl(gyroid)", client.save_stl("gyroidMesh", outdir + "/gyroid.stl", None))
+  check_tool(
+    "save_stl(box)",
+    client.save_stl("boxMesh", outdir + "/box.stl", None),
+  )
+  check_tool(
+    "save_stl(sphere)",
+    client.save_stl("sphereMesh", outdir + "/sphere.stl", None),
+  )
+  check_tool(
+    "save_stl(gyroid)",
+    client.save_stl("gyroidMesh", outdir + "/gyroid.stl", None),
+  )
 
   // Render the full scene to a PNG preview.
-  check_tool("boolean_add_all", client.boolean_add_all(["box", "sphere", "gyroid"], Some("scene")))
-  check_tool("render_to_image", client.render_to_image("scene", outdir + "/web_demo.png", Some(1280), Some(960), Some("#292933"), None))
+  check_tool(
+    "boolean_add_all",
+    client.boolean_add_all(["box", "sphere", "gyroid"], Some("scene")),
+  )
+  check_tool(
+    "render_to_image",
+    client.render_to_image(
+      "scene",
+      outdir + "/web_demo.png",
+      Some(1280),
+      Some(960),
+      Some("#292933"),
+      None,
+    ),
+  )
 
   println("wrote " + outdir + "/web_demo.png")
   println("wrote " + outdir + "/box.stl")
   println("wrote " + outdir + "/sphere.stl")
   println("wrote " + outdir + "/gyroid.stl")
   println("")
-  println("(Use the STLs with a three.js HTML viewer — see the Go web-demo example.)")
+  println(
+    "(Use the STLs with a three.js HTML viewer — see the Go web-demo example.)",
+  )
 
   let _ = client.picogk_shutdown()
   client.close()
 }
 
+///|
 /// check_tool calls a tool, checks for errors, and prints a truncated result.
 fn check_tool(label : String, result : String) -> Unit {
   let truncated = if result.length() > 80 {

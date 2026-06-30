@@ -15,5 +15,5 @@ supported_targets = "+native"
 
 import {
   "gmlewis/blender@0.1.0",
-  "moonbitlang/async@0.19.2"
+  "moonbitlang/async@0.19.2",
 }

@@ -12,7 +12,7 @@ repository = "https://github.com/gmlewis/PicoGK"
 
 license = "Apache-2.0"
 
-keywords = []
+keywords = [ ]
 
 description = "MoonBit SDK for the PicoGK MCP geometry kernel server"
 
@@ -21,5 +21,5 @@ preferred_target = "native"
 supported_targets = "+native"
 
 import {
-  "moonbitlang/async@0.19.2"
+  "moonbitlang/async@0.19.2",
 }

@@ -1,7 +1,7 @@
 // web-demo example package
 
 import {
-  "gmlewis/picogk" @picogk,
+  "gmlewis/picogk",
   "moonbitlang/async",
 }
 
