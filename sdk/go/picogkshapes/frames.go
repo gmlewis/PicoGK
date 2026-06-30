@@ -4,7 +4,7 @@ import "math"
 
 // LocalFrame is a position + right-handed orthonormal basis.
 type LocalFrame struct {
-	Pos   Vec3
+	Pos    Vec3
 	LocalX Vec3
 	LocalY Vec3
 	LocalZ Vec3

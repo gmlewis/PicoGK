@@ -95,7 +95,7 @@ func RotateAroundAxis(pt, axis Vec3, angle float64, origin ...Vec3) Vec3 {
 	}
 	half := angle / 2
 	s := math.Sin(half)
- qx, qy, qz, qw := axis.X*s, axis.Y*s, axis.Z*s, math.Cos(half)
+	qx, qy, qz, qw := axis.X*s, axis.Y*s, axis.Z*s, math.Cos(half)
 	// Quaternion rotation: v' = q * v * q^-1
 	// Using the formula: v' = v + 2*cross(q.xyz, cross(q.xyz, v) + qw*v)
 	qv := Vec3{qx, qy, qz}

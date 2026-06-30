@@ -98,7 +98,7 @@ func main() {
 			if diff == 1 {
 				do(picogk.LatticeAddBeam{
 					LatticeID: "lat",
-					X1: a[0], Y1: a[1], Z1: a[2], Radius1: 1.0,
+					X1:        a[0], Y1: a[1], Z1: a[2], Radius1: 1.0,
 					X2: b[0], Y2: b[1], Z2: b[2], Radius2: 1.0,
 				})
 			}

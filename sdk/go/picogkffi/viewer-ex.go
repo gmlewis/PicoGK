@@ -45,7 +45,7 @@ type CameraState struct {
 	Autofit   bool
 
 	// Mouse state
-	DragButton int  // -1 = no drag
+	DragButton int // -1 = no drag
 	MouseX     float32
 	MouseY     float32
 
@@ -59,14 +59,14 @@ type CameraState struct {
 // DefaultCameraState returns the default camera state matching PicoPie.
 func DefaultCameraState() CameraState {
 	return CameraState{
-		Target:    [3]float32{0, 0, 0},
-		Radius:    10.0,
-		Azimuth:   float32(45.0 * math.Pi / 180.0),
-		Elevation: float32(25.0 * math.Pi / 180.0),
-		Zoom:      1.0,
-		Autofit:   true,
+		Target:     [3]float32{0, 0, 0},
+		Radius:     10.0,
+		Azimuth:    float32(45.0 * math.Pi / 180.0),
+		Elevation:  float32(25.0 * math.Pi / 180.0),
+		Zoom:       1.0,
+		Autofit:    true,
 		DragButton: -1,
-		BgR:       0.16, BgG: 0.16, BgB: 0.20, BgA: 1.0,
+		BgR:        0.16, BgG: 0.16, BgB: 0.20, BgA: 1.0,
 	}
 }
 

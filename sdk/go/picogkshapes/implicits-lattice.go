@@ -17,7 +17,7 @@ type ImplicitGyroid struct {
 func NewImplicitGyroid(unitSize, thicknessRatio float64) *ImplicitGyroid {
 	return &ImplicitGyroid{
 		UnitSize:       unitSize,
-		ThicknessRatio:  thicknessRatio,
+		ThicknessRatio: thicknessRatio,
 		frequency:      2 * math.Pi / unitSize,
 	}
 }
@@ -114,7 +114,7 @@ func (g *ImplicitGenus) Render(bbox picogkffi.BBox3, scale float64) *picogkffi.V
 
 // ImplicitSuperEllipsoid is a super-ellipsoid SDF.
 type ImplicitSuperEllipsoid struct {
-	Center  Vec3
+	Center             Vec3
 	Ax, Ay, Az, E1, E2 float64
 }
 
@@ -145,11 +145,11 @@ func (s *ImplicitSuperEllipsoid) Render(bbox picogkffi.BBox3) *picogkffi.Voxels 
 // LatticePipe is a round pipe built from lattice beams along a length-spine.
 type LatticePipe struct {
 	BaseShape
-	frame   *LocalFrame
-	length   float64
-	radius  *LineModulation
-	frames  *Frames
-	lSteps  int
+	frame  *LocalFrame
+	length float64
+	radius *LineModulation
+	frames *Frames
+	lSteps int
 }
 
 // NewLatticePipe creates a lattice pipe.
@@ -172,8 +172,10 @@ func NewLatticePipe(frame *LocalFrame, length, radius any, opts ...LatticePipeOp
 // LatticePipeOpt configures a LatticePipe.
 type LatticePipeOpt func(*LatticePipe)
 
-func LatticePipeFrames(fs *Frames) LatticePipeOpt { return func(lp *LatticePipe) { lp.frames = fs; lp.lSteps = 500 } }
-func LatticePipeLengthSteps(n int) LatticePipeOpt  { return func(lp *LatticePipe) { lp.lSteps = n } }
+func LatticePipeFrames(fs *Frames) LatticePipeOpt {
+	return func(lp *LatticePipe) { lp.frames = fs; lp.lSteps = 500 }
+}
+func LatticePipeLengthSteps(n int) LatticePipeOpt { return func(lp *LatticePipe) { lp.lSteps = n } }
 
 func (lp *LatticePipe) spinePoint(lr float64) Vec3 {
 	if lp.frames != nil {
@@ -188,7 +190,7 @@ func (lp *LatticePipe) ToLattice() *picogkffi.Lattice {
 	lat := picogkffi.NewLattice()
 	n := lp.lSteps
 	for i := 1; i <= n; i++ {
-		lr0 := float64(i - 1) / float64(n)
+		lr0 := float64(i-1) / float64(n)
 		lr1 := float64(i) / float64(n)
 		p0 := lp.spinePoint(lr0)
 		p1 := lp.spinePoint(lr1)
@@ -212,9 +214,9 @@ func (lp *LatticePipe) ToMesh() *picogkffi.Mesh {
 // LatticeManifold is a lattice pipe with tear-drop tips for printability.
 type LatticeManifold struct {
 	LatticePipe
-	maxOverhangAngle    float64
-	extendBothSides     bool
-	minPrintableRadius  float64
+	maxOverhangAngle   float64
+	extendBothSides    bool
+	minPrintableRadius float64
 }
 
 // NewLatticeManifold creates a lattice manifold.
@@ -234,9 +236,15 @@ func NewLatticeManifold(frame *LocalFrame, length, radius, maxOverhangAngle floa
 // LatticeManifoldOpt configures a LatticeManifold.
 type LatticeManifoldOpt func(*LatticeManifold)
 
-func LMExtendBothSides(b bool) LatticeManifoldOpt { return func(lm *LatticeManifold) { lm.extendBothSides = b } }
-func LMMinPrintableRadius(r float64) LatticeManifoldOpt { return func(lm *LatticeManifold) { lm.minPrintableRadius = r } }
-func LMFrames(fs *Frames) LatticeManifoldOpt { return func(lm *LatticeManifold) { lm.frames = fs; lm.lSteps = 500 } }
+func LMExtendBothSides(b bool) LatticeManifoldOpt {
+	return func(lm *LatticeManifold) { lm.extendBothSides = b }
+}
+func LMMinPrintableRadius(r float64) LatticeManifoldOpt {
+	return func(lm *LatticeManifold) { lm.minPrintableRadius = r }
+}
+func LMFrames(fs *Frames) LatticeManifoldOpt {
+	return func(lm *LatticeManifold) { lm.frames = fs; lm.lSteps = 500 }
+}
 func LMLengthSteps(n int) LatticeManifoldOpt { return func(lm *LatticeManifold) { lm.lSteps = n } }
 
 func (lm *LatticeManifold) ToLattice() *picogkffi.Lattice {
@@ -250,7 +258,7 @@ func (lm *LatticeManifold) ToLattice() *picogkffi.Lattice {
 	s := 2 * r * math.Sin(halfAlpha)
 	tipLength := math.Tan(halfAlpha) * (0.5*s - lm.minPrintableRadius)
 	for i := 1; i <= n; i++ {
-		lr0 := float64(i - 1) / float64(n)
+		lr0 := float64(i-1) / float64(n)
 		lr1 := float64(i) / float64(n)
 		p0 := lm.spinePoint(lr0)
 		p1 := lm.spinePoint(lr1)

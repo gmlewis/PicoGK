@@ -7,9 +7,9 @@
 //
 // The Python picopie.web.export_html function is not available in the Go SDK.
 // This example replicates the functionality by:
-//   1. Meshing each voxel object
-//   2. Extracting vertices and triangles via the MCP mesh tools
-//   3. Writing an HTML file with three.js (via CDN) that renders the scene
+//  1. Meshing each voxel object
+//  2. Extracting vertices and triangles via the MCP mesh tools
+//  3. Writing an HTML file with three.js (via CDN) that renders the scene
 //
 // Run:  go run main.go [output.html] [--no-open]
 package main
@@ -87,10 +87,10 @@ func main() {
 	// Render the full scene to a PNG preview as well.
 	do(picogk.BooleanAddAll{ObjectIDs: []string{"box", "sphere", "gyroid"}, ID: "scene"})
 	do(picogk.RenderToImage{
-		ObjectID:       "scene",
-		Path:           filepath.Join(outdir, "web_demo.png"),
-		Width:          picogk.Ptr(1280),
-		Height:         picogk.Ptr(960),
+		ObjectID:        "scene",
+		Path:            filepath.Join(outdir, "web_demo.png"),
+		Width:           picogk.Ptr(1280),
+		Height:          picogk.Ptr(960),
 		BackgroundColor: "#292933",
 	})
 

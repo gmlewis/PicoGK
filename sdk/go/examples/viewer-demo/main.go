@@ -54,8 +54,8 @@ func main() {
 		Path:            out,
 		Width:           picogk.Ptr(1280),
 		Height:          picogk.Ptr(960),
-		BackgroundColor:  "#292933",
-		ObjectColor:      "#5999e6",
+		BackgroundColor: "#292933",
+		ObjectColor:     "#5999e6",
 	})
 
 	fmt.Printf("wrote %s\n", out)

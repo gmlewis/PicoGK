@@ -25,9 +25,9 @@ import (
 )
 
 var (
-	outDir     = flag.String("out", "/tmp/go-ffi-gallery", "output directory for PNGs")
-	voxelSize  = flag.Float64("voxel-size", 0.2, "kernel voxel size in mm")
-	noViewer   = flag.Bool("no-viewer", false, "Use render_to_image instead of Viewer (no display needed)")
+	outDir    = flag.String("out", "/tmp/go-ffi-gallery", "output directory for PNGs")
+	voxelSize = flag.Float64("voxel-size", 0.2, "kernel voxel size in mm")
+	noViewer  = flag.Bool("no-viewer", false, "Use render_to_image instead of Viewer (no display needed)")
 )
 
 // SceneGroup is re-exported from picogkshapes.
@@ -127,8 +127,8 @@ func buildScenes() map[string]SceneBuilder {
 
 // --- Shared modulations (matching the Python gallery) ---
 
-func line1(lr float64) float64 { return 10.0 - 3.0*math.Cos(8.0*lr) }
-func line2(lr float64) float64 { return 8.0 - math.Cos(40.0*lr) }
+func line1(lr float64) float64      { return 10.0 - 3.0*math.Cos(8.0*lr) }
+func line2(lr float64) float64      { return 8.0 - math.Cos(40.0*lr) }
 func surf1(phi, lr float64) float64 { return 12.0 + 3.0*math.Cos(5.0*phi) }
 func surf3(phi, lr float64) float64 { return 8.0 + 5.0*math.Cos(5.0*phi) }
 
@@ -145,16 +145,18 @@ func splinePoints() []picogkshapes.Vec3 {
 	pts := make([]picogkshapes.Vec3, n)
 	// Simple Catmull-Rom-like interpolation (linear for now; port ControlPointSpline later)
 	for i := 0; i < n; i++ {
-		t := float64(i) / float64(n - 1)
+		t := float64(i) / float64(n-1)
 		// Find segment
-		seg := t * float64(len(ctrl) - 1)
+		seg := t * float64(len(ctrl)-1)
 		idx := int(seg)
-		if idx >= len(ctrl) - 1 { idx = len(ctrl) - 2 }
+		if idx >= len(ctrl)-1 {
+			idx = len(ctrl) - 2
+		}
 		frac := seg - float64(idx)
 		// Quadratic interpolation between 3 points
 		if idx == 0 {
 			pts[i] = picogkshapes.Lerp(ctrl[0], ctrl[1], frac)
-		} else if idx >= len(ctrl) - 2 {
+		} else if idx >= len(ctrl)-2 {
 			pts[i] = picogkshapes.Lerp(ctrl[len(ctrl)-2], ctrl[len(ctrl)-1], frac)
 		} else {
 			// Smooth interpolation

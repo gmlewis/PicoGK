@@ -78,12 +78,12 @@ func main() {
 	do(picogk.VoxelsToMesh{VoxelsID: "shelled", ID: "mesh"})
 	previewPath := filepath.Join(outdir, "mesh_preview.png")
 	do(picogk.RenderToImage{
-		ObjectID:       "shelled",
-		Path:           previewPath,
-		Width:          picogk.Ptr(1280),
-		Height:         picogk.Ptr(960),
+		ObjectID:        "shelled",
+		Path:            previewPath,
+		Width:           picogk.Ptr(1280),
+		Height:          picogk.Ptr(960),
 		BackgroundColor: "#292933",
-		ObjectColor:    "#5999e6",
+		ObjectColor:     "#5999e6",
 	})
 	fmt.Printf("  -> %s  (3D isometric render)\n", previewPath)
 

@@ -21,3 +21,41 @@ func goSdfTrampoline(coord *C.PKVector3) C.float {
 	}
 	return C.float(r)
 }
+
+// ScalarField traverse callback support.
+var currentScalarFieldTraverse func(pt Vec3, val float32)
+
+func setScalarFieldTraverseCallback(fn func(pt Vec3, val float32)) {
+	currentScalarFieldTraverse = fn
+}
+
+func clearScalarFieldTraverseCallback() {
+	currentScalarFieldTraverse = nil
+}
+
+//export goScalarFieldTraverseTrampoline
+func goScalarFieldTraverseTrampoline(coord *C.PKVector3, val C.float) {
+	if currentScalarFieldTraverse == nil {
+		return
+	}
+	currentScalarFieldTraverse(vec3FromC(*coord), float32(val))
+}
+
+// VectorField traverse callback support.
+var currentVectorFieldTraverse func(pt, val Vec3)
+
+func setVectorFieldTraverseCallback(fn func(pt, val Vec3)) {
+	currentVectorFieldTraverse = fn
+}
+
+func clearVectorFieldTraverseCallback() {
+	currentVectorFieldTraverse = nil
+}
+
+//export goVectorFieldTraverseTrampoline
+func goVectorFieldTraverseTrampoline(coord *C.PKVector3, val *C.PKVector3) {
+	if currentVectorFieldTraverse == nil {
+		return
+	}
+	currentVectorFieldTraverse(vec3FromC(*coord), vec3FromC(*val))
+}

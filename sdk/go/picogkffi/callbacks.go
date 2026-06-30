@@ -7,8 +7,10 @@ package picogkffi
 */
 import "C"
 
-import "math"
-import "unsafe"
+import (
+	"math"
+	"unsafe"
+)
 
 //export goInfoCb
 func goInfoCb(msg *C.char, fatal C.bool) {

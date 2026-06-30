@@ -76,7 +76,7 @@ func main() {
 			math.Sin(float64(k*y))*math.Cos(float64(k*z)) +
 			math.Sin(float64(k*z))*math.Cos(float64(k*x)))
 		sphere := float32(math.Sqrt(float64(x*x+y*y+z*z))) - r
-		return float32(math.Max(float64(math.Abs(float64(g)) - float64(wall)), float64(sphere)))
+		return float32(math.Max(float64(math.Abs(float64(g))-float64(wall)), float64(sphere)))
 	})
 	tpms := picogkffi.NewVoxels()
 	defer tpms.Destroy()

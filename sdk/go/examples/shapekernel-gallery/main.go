@@ -13,10 +13,11 @@
 // plus transforms and booleans.
 //
 // Usage:
-//   go run main.go                    # render every scene to /tmp/go-picogk-gallery
-//   go run main.go -o /path/to/dir    # render into a custom directory
-//   go run main.go -voxel-size 0.1    # finer grid (slower)
-//   go run main.go -scene box         # render only one scene
+//
+//	go run main.go                    # render every scene to /tmp/go-picogk-gallery
+//	go run main.go -o /path/to/dir    # render into a custom directory
+//	go run main.go -voxel-size 0.1    # finer grid (slower)
+//	go run main.go -scene box         # render only one scene
 package main
 
 import (
@@ -156,12 +157,12 @@ func renderScene(client *picogk.Client, do func(any), name string, builder Scene
 	color := groups[0].Color.Hex
 	path := filepath.Join(outDir, name+".png")
 	do(picogk.RenderToImage{
-		ObjectID:       sceneID,
-		Path:           path,
-		Width:          picogk.Ptr(1280),
-		Height:         picogk.Ptr(960),
+		ObjectID:        sceneID,
+		Path:            path,
+		Width:           picogk.Ptr(1280),
+		Height:          picogk.Ptr(960),
 		BackgroundColor: "#292933",
-		ObjectColor:    color,
+		ObjectColor:     color,
 	})
 	fmt.Printf("  -> %s\n", path)
 
@@ -298,7 +299,7 @@ func buildBox(c *picogk.Client, do func(any)) []SceneGroup {
 // spheres with representative radii.
 func buildSphere(c *picogk.Client, do func(any)) []SceneGroup {
 	id1 := makeSphere(do, "gallery_sphere_1", -100, 0, 0, 40)
-	id2 := makeSphere(do, "gallery_sphere_2", 0, 0, 0, 37) // approximate modulated
+	id2 := makeSphere(do, "gallery_sphere_2", 0, 0, 0, 37)   // approximate modulated
 	id3 := makeSphere(do, "gallery_sphere_3", 150, 0, 0, 42) // approximate modulated
 
 	return []SceneGroup{
@@ -428,7 +429,7 @@ func buildBasicLattices(c *picogk.Client, do func(any)) []SceneGroup {
 	// Add a beam from (5, 3, 0) to (-3, 0, 7) with tapered radii.
 	do(picogk.LatticeAddBeam{
 		LatticeID: "gallery_blat",
-		X1: 5, Y1: 3, Z1: 0, Radius1: 1,
+		X1:        5, Y1: 3, Z1: 0, Radius1: 1,
 		X2: -3, Y2: 0, Z2: 7, Radius2: 3,
 	})
 	do(picogk.LatticeToVoxels{LatticeID: "gallery_blat", ID: "gallery_blat_vox"})
@@ -508,7 +509,7 @@ func buildGyroidSphere(c *picogk.Client, do func(any)) []SceneGroup {
 		y := 6 * math.Sin(angle)
 		do(picogk.LatticeAddBeam{
 			LatticeID: "gallery_gyroid_lat",
-			X1: 0, Y1: 0, Z1: 0, Radius1: 1,
+			X1:        0, Y1: 0, Z1: 0, Radius1: 1,
 			X2: x, Y2: y, Z2: 0, Radius2: 1,
 		})
 	}

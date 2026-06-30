@@ -9,9 +9,9 @@ import (
 // Sphere is a parametric sphere with optional radius modulation.
 type Sphere struct {
 	BaseShape
-	frame     *LocalFrame
-	radius    *SurfaceModulation
-	azimSteps int
+	frame      *LocalFrame
+	radius     *SurfaceModulation
+	azimSteps  int
 	polarSteps int
 }
 
@@ -71,14 +71,14 @@ func (s *Sphere) ToVoxels() *picogkffi.Voxels {
 // Box is a parametric box with optional width/depth modulations.
 type Box struct {
 	BaseShape
-	frame   *LocalFrame
-	length  float64
-	width   *LineModulation
-	depth   *LineModulation
-	frames  *Frames
-	wSteps  int
-	dSteps  int
-	lSteps  int
+	frame  *LocalFrame
+	length float64
+	width  *LineModulation
+	depth  *LineModulation
+	frames *Frames
+	wSteps int
+	dSteps int
+	lSteps int
 }
 
 // NewBox creates a box. width and depth can be float64, func(lr float64) float64,
@@ -134,7 +134,7 @@ func (b *Box) ToMesh() *picogkffi.Mesh {
 	}
 	lr := make([]float64, nl)
 	for i := 0; i < nl; i++ {
-		lr[i] = float64(i) / float64(nl - 1)
+		lr[i] = float64(i) / float64(nl-1)
 	}
 
 	smb := NewSurfaceMeshBuilder()
@@ -281,11 +281,11 @@ func (b *Box) ToVoxels() *picogkffi.Voxels {
 // Cylinder is a parametric cylinder with optional radius modulation.
 type Cylinder struct {
 	BaseShape
-	frame      *LocalFrame
+	frame       *LocalFrame
 	length      float64
-	radius     *SurfaceModulation
-	frames     *Frames
-	polarSteps int
+	radius      *SurfaceModulation
+	frames      *Frames
+	polarSteps  int
 	radialSteps int
 	lengthSteps int
 }
@@ -313,10 +313,12 @@ func NewCylinder(frame *LocalFrame, length, radius any, opts ...CylinderOpt) *Cy
 // CylinderOpt configures a Cylinder.
 type CylinderOpt func(*Cylinder)
 
-func CylinderFrames(fs *Frames) CylinderOpt      { return func(c *Cylinder) { c.frames = fs; c.lengthSteps = 500 } }
-func CylinderPolarSteps(n int) CylinderOpt        { return func(c *Cylinder) { c.polarSteps = n } }
-func CylinderRadialSteps(n int) CylinderOpt       { return func(c *Cylinder) { c.radialSteps = n } }
-func CylinderLengthSteps(n int) CylinderOpt       { return func(c *Cylinder) { c.lengthSteps = n } }
+func CylinderFrames(fs *Frames) CylinderOpt {
+	return func(c *Cylinder) { c.frames = fs; c.lengthSteps = 500 }
+}
+func CylinderPolarSteps(n int) CylinderOpt  { return func(c *Cylinder) { c.polarSteps = n } }
+func CylinderRadialSteps(n int) CylinderOpt { return func(c *Cylinder) { c.radialSteps = n } }
+func CylinderLengthSteps(n int) CylinderOpt { return func(c *Cylinder) { c.lengthSteps = n } }
 
 func (c *Cylinder) ToMesh() *picogkffi.Mesh {
 	smb := NewSurfaceMeshBuilder()
@@ -384,7 +386,7 @@ type Cone struct {
 // NewCone creates a cone from start_radius to end_radius.
 func NewCone(frame *LocalFrame, length, startRadius, endRadius float64, opts ...CylinderOpt) *Cone {
 	linear := func(_, lr float64) float64 {
-		return startRadius + clamp(lr, 0, 1) * (endRadius - startRadius)
+		return startRadius + clamp(lr, 0, 1)*(endRadius-startRadius)
 	}
 	c := &Cone{
 		Cylinder: *NewCylinder(frame, length, linear, opts...),
@@ -396,7 +398,7 @@ func NewCone(frame *LocalFrame, length, startRadius, endRadius float64, opts ...
 type Ring struct {
 	BaseShape
 	frame       *LocalFrame
-	ringRadius   float64
+	ringRadius  float64
 	radius      *SurfaceModulation
 	radialSteps int
 	polarSteps  int
@@ -519,11 +521,15 @@ func NewLens(frame *LocalFrame, height, innerRadius, outerRadius float64, opts .
 // LensOpt configures a Lens.
 type LensOpt func(*Lens)
 
-func LensLower(m *SurfaceModulation) LensOpt  { return func(l *Lens) { l.lower = m; l.radialSteps = 500 } }
-func LensUpper(m *SurfaceModulation) LensOpt  { return func(l *Lens) { l.upper = m; l.radialSteps = 500 } }
-func LensRadialSteps(n int) LensOpt           { return func(l *Lens) { l.radialSteps = n } }
-func LensPolarSteps(n int) LensOpt            { return func(l *Lens) { l.polarSteps = n } }
-func LensHeightSteps(n int) LensOpt           { return func(l *Lens) { l.heightSteps = n } }
+func LensLower(m *SurfaceModulation) LensOpt {
+	return func(l *Lens) { l.lower = m; l.radialSteps = 500 }
+}
+func LensUpper(m *SurfaceModulation) LensOpt {
+	return func(l *Lens) { l.upper = m; l.radialSteps = 500 }
+}
+func LensRadialSteps(n int) LensOpt { return func(l *Lens) { l.radialSteps = n } }
+func LensPolarSteps(n int) LensOpt  { return func(l *Lens) { l.polarSteps = n } }
+func LensHeightSteps(n int) LensOpt { return func(l *Lens) { l.heightSteps = n } }
 
 func (l *Lens) lensSurface(h float64, phiR, radR []float64) [][]Vec3 {
 	nphi := len(phiR)
@@ -591,7 +597,7 @@ func (l *Lens) ToVoxels() *picogkffi.Voxels {
 type Pipe struct {
 	BaseShape
 	frame       *LocalFrame
-	length       float64
+	length      float64
 	inner       *SurfaceModulation
 	outer       *SurfaceModulation
 	frames      *Frames
@@ -604,7 +610,7 @@ type Pipe struct {
 func NewPipe(frame *LocalFrame, length, innerRadius, outerRadius any, opts ...PipeOpt) *Pipe {
 	p := &Pipe{
 		frame:       frame,
-		length:       toFloat(length),
+		length:      toFloat(length),
 		inner:       NewSurfaceModulation(innerRadius),
 		outer:       NewSurfaceModulation(outerRadius),
 		polarSteps:  360,
@@ -623,10 +629,10 @@ func NewPipe(frame *LocalFrame, length, innerRadius, outerRadius any, opts ...Pi
 // PipeOpt configures a Pipe.
 type PipeOpt func(*Pipe)
 
-func PipeFrames(fs *Frames) PipeOpt       { return func(p *Pipe) { p.frames = fs; p.lengthSteps = 500 } }
-func PipePolarSteps(n int) PipeOpt        { return func(p *Pipe) { p.polarSteps = n } }
-func PipeRadialSteps(n int) PipeOpt       { return func(p *Pipe) { p.radialSteps = n } }
-func PipeLengthSteps(n int) PipeOpt       { return func(p *Pipe) { p.lengthSteps = n } }
+func PipeFrames(fs *Frames) PipeOpt           { return func(p *Pipe) { p.frames = fs; p.lengthSteps = 500 } }
+func PipePolarSteps(n int) PipeOpt            { return func(p *Pipe) { p.polarSteps = n } }
+func PipeRadialSteps(n int) PipeOpt           { return func(p *Pipe) { p.radialSteps = n } }
+func PipeLengthSteps(n int) PipeOpt           { return func(p *Pipe) { p.lengthSteps = n } }
 func PipeTransform(t VertexTransform) PipeOpt { return func(p *Pipe) { p.transform = t } }
 
 func (p *Pipe) pipeSpine(lr float64) (Vec3, Vec3, Vec3) {
@@ -651,12 +657,24 @@ func (p *Pipe) pipeSurface(lrs, phiRs, radRs []float64) [][]Vec3 {
 	nr := len(radRs)
 	// Determine grid shape
 	r0, r1 := 1, 1
-	if nl > 1 { r0 = nl }
-	if np > 1 && nl > 1 { r1 = np }
-	if np > 1 && nl == 1 { r0 = np }
-	if nr > 1 && nl == 1 && np > 1 { r1 = nr }
-	if nr > 1 && nl > 1 { r1 = nr } // radial on axis1 when lr varies on axis0
-	if nr > 1 && np > 1 && nl == 1 { r0 = nr } // radial on axis0 when phi varies on axis1
+	if nl > 1 {
+		r0 = nl
+	}
+	if np > 1 && nl > 1 {
+		r1 = np
+	}
+	if np > 1 && nl == 1 {
+		r0 = np
+	}
+	if nr > 1 && nl == 1 && np > 1 {
+		r1 = nr
+	}
+	if nr > 1 && nl > 1 {
+		r1 = nr
+	} // radial on axis1 when lr varies on axis0
+	if nr > 1 && np > 1 && nl == 1 {
+		r0 = nr
+	} // radial on axis0 when phi varies on axis1
 	// Actually follow Python broadcasting more carefully:
 	// For top/bottom cap: lr is scalar, p[:,None] is (np,1), rr[None,:] is (1,nr) → grid (np, nr)
 	// For inner/outer mantle: lr[None,:] is (1,nl), p[:,None] is (np,1), radR scalar → grid (np, nl)
@@ -667,11 +685,25 @@ func (p *Pipe) pipeSurface(lrs, phiRs, radRs []float64) [][]Vec3 {
 	for i := 0; i < r0; i++ {
 		for j := 0; j < r1; j++ {
 			var lr, phiR, radR float64
-			if nl == 1 { lr = lrs[0] } else if nl > 1 { lr = lrs[min(i, nl-1)] }
-			if np == 1 { phiR = phiRs[0] } else if np > 1 {
-				if nl > 1 { phiR = phiRs[min(j, np-1)] } else { phiR = phiRs[min(i, np-1)] }
+			if nl == 1 {
+				lr = lrs[0]
+			} else if nl > 1 {
+				lr = lrs[min(i, nl-1)]
 			}
-			if nr == 1 { radR = radRs[0] } else if nr > 1 { radR = radRs[min(j, nr-1)] }
+			if np == 1 {
+				phiR = phiRs[0]
+			} else if np > 1 {
+				if nl > 1 {
+					phiR = phiRs[min(j, np-1)]
+				} else {
+					phiR = phiRs[min(i, np-1)]
+				}
+			}
+			if nr == 1 {
+				radR = radRs[0]
+			} else if nr > 1 {
+				radR = radRs[min(j, nr-1)]
+			}
 
 			sp, lx, ly := p.pipeSpine(lr)
 			phi := p.phiAngle(phiR, lr)
@@ -728,8 +760,8 @@ func (p *Pipe) ToVoxels() *picogkffi.Voxels {
 // PipeSegment is an angular slice of a pipe.
 type PipeSegment struct {
 	Pipe
-	mid   *LineModulation
-	rng   *LineModulation
+	mid *LineModulation
+	rng *LineModulation
 }
 
 // NewPipeSegment creates a pipe segment. start/end are angles or LineModulation.
@@ -750,7 +782,7 @@ func NewPipeSegment(frame *LocalFrame, length, innerRadius, outerRadius any,
 }
 
 func (ps *PipeSegment) phiAngle(phiRatio, lr float64) float64 {
-	return ps.mid.Call(lr) + (phiRatio - 0.5) * ps.rng.Call(lr)
+	return ps.mid.Call(lr) + (phiRatio-0.5)*ps.rng.Call(lr)
 }
 
 func (ps *PipeSegment) ToMesh() *picogkffi.Mesh {
