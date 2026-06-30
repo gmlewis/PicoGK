@@ -70,10 +70,7 @@ func main() {
 		}
 
 		if *noViewer {
-			// Use render_to_image (MCP-style) — but we're FFI, so we
-			// need to union all groups and call... hmm, the FFI doesn't
-			// have a render_to_image. We need the Viewer for rendering.
-			// For now, skip rendering in no-viewer mode and just save STLs.
+			// Save STLs only
 			for i, g := range groups {
 				mesh := g.Voxels.ToMesh()
 				stlPath := filepath.Join(*outDir, fmt.Sprintf("%s_%d.stl", name, i))
@@ -82,8 +79,13 @@ func main() {
 			}
 			fmt.Printf("  -> %s/*.stl (no viewer mode)\n", *outDir)
 		} else {
-			// Use the native Viewer to render the scene.
-			v := picogkffi.NewViewer("PicoGK Gallery — "+name, 1280, 960)
+			// Use the native ViewerEx with full callbacks to render the scene.
+			cam := picogkffi.DefaultCameraState()
+			cam.BgR = 0.16
+			cam.BgG = 0.16
+			cam.BgB = 0.20
+			cam.BgA = 1.0
+			v := picogkffi.NewViewerEx("PicoGK Gallery — "+name, 1280, 960, cam)
 			for i, g := range groups {
 				v.AddVoxels(i, g.Voxels)
 				v.SetGroupMaterial(i, g.Color.ToFFI(), 0.1, 0.5)

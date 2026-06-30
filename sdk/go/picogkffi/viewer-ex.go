@@ -1,0 +1,350 @@
+package picogkffi
+
+/*
+#include <stdlib.h>
+#include <string.h>
+#include "picogk_ffi.h"
+
+// Forward declarations of the exported Go callbacks.
+extern void goInfoCb(const char* msg, bool fatal);
+extern void goUpdateCb(void* viewer, const PKVector2* vp, PKColorFloat* bg, PKMatrix4x4* mvp, PKVector3* eye);
+extern void goKeyCb(void* viewer, int32_t key, int32_t scancode, int32_t action, int32_t mods);
+extern void goMouseMoveCb(void* viewer, const PKVector2* pos, bool shift, bool ctrl, bool alt, bool sup);
+extern void goMouseButtonCb(void* viewer, int32_t button, int32_t action, int32_t mods, const PKVector2* pos);
+extern void goScrollCb(void* viewer, const PKVector2* offset, const PKVector2* pos, bool shift, bool ctrl, bool alt, bool sup);
+extern void goWindowSizeCb(void* viewer, const PKVector2* size);
+
+// Helper to create a viewer with all callbacks wired.
+static PKVIEWER createViewer(const char* title, const PKVector2* size) {
+    return Viewer_hCreate(title, size,
+        goInfoCb, goUpdateCb, goKeyCb,
+        goMouseMoveCb, goMouseButtonCb, goScrollCb, goWindowSizeCb);
+}
+*/
+import "C"
+
+import (
+	"math"
+	"unsafe"
+)
+
+// CameraState holds the orbit camera state.
+type CameraState struct {
+	Target    [3]float32
+	Radius    float32
+	Azimuth   float32 // radians
+	Elevation float32 // radians
+	Zoom      float32
+	Autofit   bool
+
+	// Mouse state
+	DragButton int  // -1 = no drag
+	MouseX     float32
+	MouseY     float32
+
+	// Background
+	BgR, BgG, BgB, BgA float32
+
+	// Screenshot
+	PendingScreenshot string
+}
+
+// DefaultCameraState returns the default camera state matching PicoPie.
+func DefaultCameraState() CameraState {
+	return CameraState{
+		Target:    [3]float32{0, 0, 0},
+		Radius:    10.0,
+		Azimuth:   float32(45.0 * math.Pi / 180.0),
+		Elevation: float32(25.0 * math.Pi / 180.0),
+		Zoom:      1.0,
+		Autofit:   true,
+		DragButton: -1,
+		BgR:       0.16, BgG: 0.16, BgB: 0.20, BgA: 1.0,
+	}
+}
+
+// ViewerEx is the interactive OpenGL viewer with full callback support.
+type ViewerEx struct {
+	h      C.PKVIEWER
+	cam    CameraState
+	active bool // tracks if this viewer is the current callback target
+}
+
+// activeViewer is the viewer that receives callbacks (single active viewer).
+var activeViewer *ViewerEx
+
+// NewViewerEx creates a viewer with full callback support.
+// Must be called on the main OS thread (use runtime.LockOSThread).
+func NewViewerEx(title string, width, height int, cam CameraState) *ViewerEx {
+	mustInit()
+	cTitle := C.CString(title)
+	defer C.free(unsafe.Pointer(cTitle))
+	cSize := C.PKVector2{X: C.float(float32(width)), Y: C.float(float32(height))}
+
+	v := &ViewerEx{cam: cam, active: true}
+	activeViewer = v
+
+	h := C.createViewer(cTitle, &cSize)
+	if h == nil {
+		panic("picogkffi: Viewer_hCreate returned null (no display?)")
+	}
+	v.h = h
+
+	// Load IBL lighting if available
+	loadLightSetup(v.h)
+
+	return v
+}
+
+// Destroy closes the viewer.
+func (v *ViewerEx) Destroy() {
+	if v.h != nil {
+		C.Viewer_Destroy(v.h)
+		v.h = nil
+	}
+	if activeViewer == v {
+		activeViewer = nil
+	}
+}
+
+// IsValid returns true if the viewer is still open.
+func (v *ViewerEx) IsValid() bool {
+	return v.h != nil && bool(C.Viewer_bIsValid(v.h))
+}
+
+// Poll processes events and renders one frame.
+func (v *ViewerEx) Poll() bool {
+	activeViewer = v
+	return bool(C.Viewer_bPoll(v.h))
+}
+
+// RequestClose asks the viewer to close.
+func (v *ViewerEx) RequestClose() {
+	C.Viewer_RequestClose(v.h)
+}
+
+// RequestUpdate asks for a redraw.
+func (v *ViewerEx) RequestUpdate() {
+	C.Viewer_RequestUpdate(v.h)
+}
+
+// RequestScreenShot asks the viewer to save a screenshot.
+func (v *ViewerEx) RequestScreenShot(path string) {
+	cPath := C.CString(path)
+	defer C.free(unsafe.Pointer(cPath))
+	C.Viewer_RequestScreenShot(v.h, cPath)
+}
+
+// AddVoxels adds a voxel object to the viewer at the given group.
+func (v *ViewerEx) AddVoxels(group int, vox *Voxels) {
+	C.Viewer_AddVoxels(instance, v.h, C.int32_t(group), vox.h)
+}
+
+// AddMesh adds a mesh object to the viewer at the given group.
+func (v *ViewerEx) AddMesh(group int, mesh *Mesh) {
+	C.Viewer_AddMesh(instance, v.h, C.int32_t(group), mesh.h)
+}
+
+// RemoveAllObjects removes all objects from the viewer.
+func (v *ViewerEx) RemoveAllObjects() {
+	C.Viewer_RemoveAllObjects(v.h)
+}
+
+// SetGroupMaterial sets the PBR material for a group.
+func (v *ViewerEx) SetGroupMaterial(group int, color ColorFloat, metallic, roughness float32) {
+	c := C.PKColorFloat{R: C.float(color.R), G: C.float(color.G), B: C.float(color.B), A: C.float(color.A)}
+	C.Viewer_SetGroupMaterial(v.h, C.int32_t(group), &c, C.float(metallic), C.float(roughness))
+}
+
+// SetBackground sets the background color.
+func (v *ViewerEx) SetBackground(r, g, b, a float32) {
+	v.cam.BgR = r
+	v.cam.BgG = g
+	v.cam.BgB = b
+	v.cam.BgA = a
+}
+
+// Screenshot takes a screenshot by polling frames.
+func (v *ViewerEx) Screenshot(path string, frames int) {
+	activeViewer = v
+	// Pump frames to ensure scene is rendered
+	for i := 0; i < frames; i++ {
+		v.RequestUpdate()
+		if !v.Poll() {
+			break
+		}
+	}
+	// Request screenshot
+	v.RequestScreenShot(path)
+	// Pump frames to flush the screenshot
+	for i := 0; i < frames; i++ {
+		v.RequestUpdate()
+		if !v.Poll() {
+			break
+		}
+	}
+}
+
+// Run blocks and runs the viewer event loop until closed.
+func (v *ViewerEx) Run() {
+	for v.Poll() {
+	}
+	v.Destroy()
+}
+
+// loadLightSetup attempts to load IBL lighting from the assets directory.
+// If the DDS files are not found, the scene will be dark.
+func loadLightSetup(viewer C.PKVIEWER) {
+	// Try to load from PicoPie's bundled assets
+	paths := []string{
+		"/Users/glenn/src/github.com/Borderliner/PicoPie/src/picogk/_assets/viewer_environment.zip",
+	}
+	for _, p := range paths {
+		data, err := loadDDSFromZip(p)
+		if err != nil || len(data) == 0 {
+			continue
+		}
+		_ = data // TODO: implement DDS loading
+	}
+}
+
+func loadDDSFromZip(zipPath string) ([][]byte, error) {
+	// TODO: implement zip loading
+	return nil, nil
+}
+
+// --- Camera math (ported from PicoPie viewer.py) ---
+
+const (
+	fovY       = 35.0 * math.Pi / 180.0
+	orbitSpeed = 0.008
+	panScale   = 0.0015
+	zoomMin    = 0.05
+	zoomMax    = 20.0
+	elevClamp  = math.Pi/2 - 1e-3
+)
+
+var up = [3]float32{0, 0, 1}
+
+func cameraBasis(cam *CameraState) (d, right, upCam [3]float32) {
+	ce := float32(math.Cos(float64(cam.Elevation)))
+	se := float32(math.Sin(float64(cam.Elevation)))
+	ca := float32(math.Cos(float64(cam.Azimuth)))
+	sa := float32(math.Sin(float64(cam.Azimuth)))
+	d = [3]float32{ce * ca, ce * sa, se}
+	right = cross3(up, d)
+	rl := norm3(right)
+	if rl > 0 {
+		right[0] /= rl
+		right[1] /= rl
+		right[2] /= rl
+	}
+	upCam = cross3(d, right)
+	return
+}
+
+func cameraDistance(cam *CameraState) float32 {
+	return cam.Radius / float32(math.Sin(fovY/2)) * 1.1 * cam.Zoom
+}
+
+func viewProjection(cam *CameraState, aspect float32) (mvp [16]float32, eye [3]float32) {
+	dist := cameraDistance(cam)
+	d, _, _ := cameraBasis(cam)
+	eye = [3]float32{
+		cam.Target[0] + d[0]*dist,
+		cam.Target[1] + d[1]*dist,
+		cam.Target[2] + d[2]*dist,
+	}
+	near := dist * 0.01
+	if near < 0.01 {
+		near = 0.01
+	}
+	far := dist*10.0 + 1000.0
+	if far < near+1e-3 {
+		far = near + 1e-3
+	}
+	v := lookAt(eye[:], cam.Target[:], up[:])
+	p := perspective(float32(fovY), aspect, near, far)
+	mvp = mat4Mul(v, p)
+	return
+}
+
+func lookAt(eye, target, upV []float32) [16]float32 {
+	z := sub3(eye, target)
+	z = norm3v(z)
+	up3 := [3]float32{upV[0], upV[1], upV[2]}
+	x := cross3(up3, z)
+	x = norm3v(x)
+	y := cross3(z, x)
+	// Row-major, System.Numerics convention (point transforms as p·M)
+	return [16]float32{
+		x[0], y[0], z[0], 0,
+		x[1], y[1], z[1], 0,
+		x[2], y[2], z[2], 0,
+		-dot3(x, eye), -dot3(y, eye), -dot3(z, eye), 1,
+	}
+}
+
+func perspective(fovy, aspect, near, far float32) [16]float32 {
+	ys := 1.0 / float32(math.Tan(float64(fovy)*0.5))
+	xs := ys / aspect
+	if aspect < 1e-6 {
+		xs = ys / 1e-6
+	}
+	return [16]float32{
+		xs, 0, 0, 0,
+		0, ys, 0, 0,
+		0, 0, far / (near - far), -1,
+		0, 0, near * far / (near - far), 1,
+	}
+}
+
+func mat4Mul(a, b [16]float32) [16]float32 {
+	var r [16]float32
+	for i := 0; i < 4; i++ {
+		for j := 0; j < 4; j++ {
+			s := float32(0)
+			for k := 0; k < 4; k++ {
+				s += a[i*4+k] * b[k*4+j]
+			}
+			r[i*4+j] = s
+		}
+	}
+	return r
+}
+
+func cross3(a, b [3]float32) [3]float32 {
+	return [3]float32{
+		a[1]*b[2] - a[2]*b[1],
+		a[2]*b[0] - a[0]*b[2],
+		a[0]*b[1] - a[1]*b[0],
+	}
+}
+
+func cross3s(a, b []float32) [3]float32 {
+	return [3]float32{
+		a[1]*b[2] - a[2]*b[1],
+		a[2]*b[0] - a[0]*b[2],
+		a[0]*b[1] - a[1]*b[0],
+	}
+}
+
+func norm3(v [3]float32) float32 {
+	return float32(math.Sqrt(float64(v[0]*v[0] + v[1]*v[1] + v[2]*v[2])))
+}
+
+func norm3v(v [3]float32) [3]float32 {
+	l := norm3(v)
+	if l < 1e-12 {
+		return [3]float32{0, 0, 0}
+	}
+	return [3]float32{v[0] / l, v[1] / l, v[2] / l}
+}
+
+func sub3(a, b []float32) [3]float32 {
+	return [3]float32{a[0] - b[0], a[1] - b[1], a[2] - b[2]}
+}
+
+func dot3(a [3]float32, b []float32) float32 {
+	return a[0]*b[0] + a[1]*b[1] + a[2]*b[2]
+}
