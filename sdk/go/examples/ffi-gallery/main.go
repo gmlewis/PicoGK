@@ -30,11 +30,8 @@ var (
 	noViewer   = flag.Bool("no-viewer", false, "Use render_to_image instead of Viewer (no display needed)")
 )
 
-// SceneGroup is one (object, color) pair in a scene.
-type SceneGroup struct {
-	Voxels *picogkffi.Voxels
-	Color  picogkshapes.RGB
-}
+// SceneGroup is re-exported from picogkshapes.
+type SceneGroup = picogkshapes.SceneGroup
 
 // SceneBuilder builds a scene.
 type SceneBuilder func() []SceneGroup
@@ -135,6 +132,39 @@ func line2(lr float64) float64 { return 8.0 - math.Cos(40.0*lr) }
 func surf1(phi, lr float64) float64 { return 12.0 + 3.0*math.Cos(5.0*phi) }
 func surf3(phi, lr float64) float64 { return 8.0 + 5.0*math.Cos(5.0*phi) }
 
+// splinePoints returns 500 sampled points along the gallery's spine curve.
+// Matches Python: ControlPointSpline([[0,0,0],[0,40,0],[0,50,20],[0,60,60]]).points(500)
+func splinePoints() []picogkshapes.Vec3 {
+	ctrl := []picogkshapes.Vec3{
+		picogkshapes.V(0, 0, 0),
+		picogkshapes.V(0, 40, 0),
+		picogkshapes.V(0, 50, 20),
+		picogkshapes.V(0, 60, 60),
+	}
+	n := 500
+	pts := make([]picogkshapes.Vec3, n)
+	// Simple Catmull-Rom-like interpolation (linear for now; port ControlPointSpline later)
+	for i := 0; i < n; i++ {
+		t := float64(i) / float64(n - 1)
+		// Find segment
+		seg := t * float64(len(ctrl) - 1)
+		idx := int(seg)
+		if idx >= len(ctrl) - 1 { idx = len(ctrl) - 2 }
+		frac := seg - float64(idx)
+		// Quadratic interpolation between 3 points
+		if idx == 0 {
+			pts[i] = picogkshapes.Lerp(ctrl[0], ctrl[1], frac)
+		} else if idx >= len(ctrl) - 2 {
+			pts[i] = picogkshapes.Lerp(ctrl[len(ctrl)-2], ctrl[len(ctrl)-1], frac)
+		} else {
+			// Smooth interpolation
+			p0, p1 := ctrl[idx], ctrl[idx+1]
+			pts[i] = picogkshapes.Lerp(p0, p1, frac)
+		}
+	}
+	return pts
+}
+
 // --- Scenes ---
 
 func buildBox() []SceneGroup {
@@ -193,10 +223,16 @@ func buildRing() []SceneGroup {
 }
 
 func buildLens() []SceneGroup {
-	// Approximate lens with spheres (the shapes.Lens is complex)
-	l1 := picogkshapes.NewSphere(picogkshapes.NewLocalFrame(picogkshapes.V(-50, -50, 0)), 20).ToVoxels()
-	l2 := picogkshapes.NewSphere(picogkshapes.NewLocalFrame(picogkshapes.V(50, 50, 0)), 18).ToVoxels()
-	l3 := picogkshapes.NewSphere(picogkshapes.NewLocalFrame(picogkshapes.V(-50, 50, 0)), 22).ToVoxels()
+	surf := func(phi, rr float64) float64 { return 12.0 + 3.0*math.Cos(5.0*phi) }
+	l1 := picogkshapes.NewLens(picogkshapes.NewLocalFrame(picogkshapes.V(-50, -50, 0)), 10, 10, 40).ToVoxels()
+	l2 := picogkshapes.NewLens(picogkshapes.NewLocalFrame(picogkshapes.V(50, 50, 0)), 10, 10, 40,
+		picogkshapes.LensLower(picogkshapes.NewSurfaceModulation(func(phi, rr float64) float64 { return 5 - surf(phi, rr) })),
+		picogkshapes.LensUpper(picogkshapes.NewSurfaceModulation(func(phi, rr float64) float64 { return 5 + surf(phi, rr) })),
+	).ToVoxels()
+	l3 := picogkshapes.NewLens(picogkshapes.NewLocalFrame(picogkshapes.V(-50, 50, 0)), 10, 10, 40,
+		picogkshapes.LensLower(picogkshapes.NewSurfaceModulation(func(phi, rr float64) float64 { return 5 - surf(phi, rr) })),
+		picogkshapes.LensUpper(picogkshapes.NewSurfaceModulation(func(phi, rr float64) float64 { return 5 + math.Cos(6*(phi+0.3*math.Pi*rr)) + 3*math.Cos(20*rr) })),
+	).ToVoxels()
 	return []SceneGroup{
 		{l1, picogkshapes.Palette.Frozen},
 		{l2, picogkshapes.Palette.Pitaya},
@@ -205,11 +241,17 @@ func buildLens() []SceneGroup {
 }
 
 func buildPipe() []SceneGroup {
-	// Pipe as a boolean: outer cylinder minus inner cylinder
-	p1 := makePipe(picogkshapes.NewLocalFrame(picogkshapes.V(-50, 0, 0)), 60, 10, 20)
-	p2 := makePipe(picogkshapes.NewLocalFrame(picogkshapes.V(0, 0, 0)), 60, 10, 20)
-	p3 := makePipe(picogkshapes.NewLocalFrame(picogkshapes.V(50, -50, 0)), 60, 6, 10)
-	p4 := makePipe(picogkshapes.NewLocalFrame(picogkshapes.V(0, 0, 30)), 60, 8, 12)
+	p1 := picogkshapes.NewPipe(picogkshapes.NewLocalFrame(picogkshapes.V(-50, 0, 0)), 60, 10, 20).ToVoxels()
+	p2 := picogkshapes.NewPipe(picogkshapes.NewLocalFrame(picogkshapes.V(0, 0, 0)), 60, 10, 20).ToVoxels()
+	p3 := picogkshapes.NewPipe(picogkshapes.NewLocalFrame(picogkshapes.V(50, -50, 0)), 60, 6,
+		func(phi, lr float64) float64 { return line1(lr) }).ToVoxels()
+	p4 := picogkshapes.NewPipe(picogkshapes.NewLocalFrame(picogkshapes.V(0, 0, 0)), 60,
+		surf3, surf1, picogkshapes.PipeFrames(nil)).ToVoxels()
+	// p4 uses a spine — build it properly below
+	p4.Destroy()
+	// Build p4 with the spine
+	spine := picogkshapes.FramesAlignedToX(splinePoints(), picogkshapes.V(0, 1, 0))
+	p4 = picogkshapes.NewPipe(nil, 60, surf3, surf1, picogkshapes.PipeFrames(spine)).ToVoxels()
 	return []SceneGroup{
 		{p1, picogkshapes.Palette.Blue},
 		{p2, picogkshapes.Palette.Green},
@@ -218,18 +260,23 @@ func buildPipe() []SceneGroup {
 	}
 }
 
-func makePipe(frame *picogkshapes.LocalFrame, length, innerR, outerR float64) *picogkffi.Voxels {
-	outer := picogkshapes.NewCylinder(frame, length, outerR).ToVoxels()
-	inner := picogkshapes.NewCylinder(frame, length, innerR).ToVoxels()
-	outer.BoolSubtract(inner)
-	inner.Destroy()
-	return outer
-}
-
 func buildPipeSegment() []SceneGroup {
-	p1 := makePipe(picogkshapes.NewLocalFrame(picogkshapes.V(-50, 0, 0)), 60, 20, 40)
-	p2 := makePipe(picogkshapes.NewLocalFrame(picogkshapes.V(50, 0, 0)), 60, 8, 12)
-	p3 := makePipe(picogkshapes.NewLocalFrame(picogkshapes.V(0, 0, 30)), 60, 8, 12)
+	p1 := picogkshapes.NewPipeSegment(
+		picogkshapes.NewLocalFrame(picogkshapes.V(-50, 0, 0)), 60, 20, 40,
+		math.Pi, 0.5*math.Pi, "start_end",
+		picogkshapes.PipePolarSteps(360),
+	).ToVoxels()
+	p2 := picogkshapes.NewPipeSegment(
+		picogkshapes.NewLocalFrame(picogkshapes.V(50, 0, 0)), 60, surf3, surf1,
+		func(lr float64) float64 { return -math.Pi * lr }, 1.75*math.Pi, "mid_range",
+		picogkshapes.PipePolarSteps(360),
+	).ToVoxels()
+	spine := picogkshapes.FramesAlignedToX(splinePoints(), picogkshapes.V(0, 1, 0))
+	p3 := picogkshapes.NewPipeSegment(
+		nil, 60, surf3, surf1,
+		func(lr float64) float64 { return 4 * math.Pi * lr }, 1.5*math.Pi, "mid_range",
+		picogkshapes.PipeFrames(spine), picogkshapes.PipePolarSteps(360),
+	).ToVoxels()
 	return []SceneGroup{
 		{p1, picogkshapes.Palette.Blue},
 		{p2, picogkshapes.Palette.Ruby},
@@ -258,14 +305,16 @@ func buildLatticePipe() []SceneGroup {
 }
 
 func buildLatticeManifold() []SceneGroup {
+	// local_z=(0,1,0) means the manifold extends along Y axis
+	// The frame's local_z defines the "up" direction for the tear-drop tips
 	lm1 := picogkshapes.NewLatticeManifold(
-		picogkshapes.NewLocalFrameXYZ(picogkshapes.V(-50, 0, 0), picogkshapes.V(0, 1, 0), picogkshapes.V(1, 0, 0)),
+		picogkshapes.NewLocalFrameXYZ(picogkshapes.V(-50, -25, 0), picogkshapes.V(0, 1, 0), picogkshapes.V(1, 0, 0)),
 		50, 5, 45).ToVoxels()
 	lm2 := picogkshapes.NewLatticeManifold(
-		picogkshapes.NewLocalFrameXYZ(picogkshapes.V(0, 0, 0), picogkshapes.V(0, 1, 0), picogkshapes.V(1, 0, 0)),
+		picogkshapes.NewLocalFrameXYZ(picogkshapes.V(0, -25, 0), picogkshapes.V(0, 1, 0), picogkshapes.V(1, 0, 0)),
 		50, 10, 30, picogkshapes.LMExtendBothSides(true)).ToVoxels()
 	lm3 := picogkshapes.NewLatticeManifold(
-		picogkshapes.NewLocalFrameXYZ(picogkshapes.V(50, 0, 0), picogkshapes.V(0, 1, 0), picogkshapes.V(1, 0, 0)),
+		picogkshapes.NewLocalFrameXYZ(picogkshapes.V(50, -25, 0), picogkshapes.V(0, 1, 0), picogkshapes.V(1, 0, 0)),
 		50, 5, 60, picogkshapes.LMExtendBothSides(true)).ToVoxels()
 	return []SceneGroup{
 		{lm1, picogkshapes.Palette.Yellow},
@@ -275,25 +324,41 @@ func buildLatticeManifold() []SceneGroup {
 }
 
 func buildGyroidSphere() []SceneGroup {
-	ball := picogkshapes.NewImplicitSphere(picogkshapes.V(0, 0, 0), 10).Render(picogkffi.BBox3{
-		Min: picogkffi.Vec3{-12, -12, -12},
-		Max: picogkffi.Vec3{12, 12, 12},
+	// Compose gyroid + sphere clip inside a single SDF (the robust approach,
+	// matching PicoPie's hello_picogk.py pattern).
+	// This avoids IntersectImplicit which requires grid outside value > 0.
+	gyroid := picogkshapes.NewImplicitGyroid(3, 1)
+	r := 10.0
+	sdf := picogkffi.NewSDF(func(x, y, z float32) float32 {
+		g := gyroid.Eval(float64(x), float64(y), float64(z))
+		sphere := float32(math.Sqrt(float64(x*x+y*y+z*z))) - float32(r)
+		return float32(math.Max(g, float64(sphere)))
 	})
-	gyroid := picogkshapes.NewImplicitGyroid(3, 1).Intersect(ball)
-	ball.Destroy()
-	return []SceneGroup{{gyroid, picogkshapes.Palette.Billie}}
+	v := picogkffi.NewVoxels()
+	pad := float32(2.0)
+	v.RenderImplicitWith(picogkffi.BBox3{
+		Min: picogkffi.Vec3{-float32(r) - pad, -float32(r) - pad, -float32(r) - pad},
+		Max: picogkffi.Vec3{float32(r) + pad, float32(r) + pad, float32(r) + pad},
+	}, sdf)
+	return []SceneGroup{{v, picogkshapes.Palette.Billie}}
 }
 
 func buildGyroidGenus() []SceneGroup {
 	s := 8.0
 	genus := picogkshapes.NewImplicitGenus(0.0)
-	v := genus.Render(picogkffi.BBox3{
+	gyroid := picogkshapes.NewImplicitGyroid(6, 0.6)
+	// Compose genus + gyroid clip in a single SDF
+	sdf := picogkffi.NewSDF(func(x, y, z float32) float32 {
+		g := genus.Eval(float64(x)/s, float64(y)/s, float64(z)/s)
+		gy := gyroid.Eval(float64(x), float64(y), float64(z))
+		return float32(math.Max(g, gy))
+	})
+	v := picogkffi.NewVoxels()
+	v.RenderImplicitWith(picogkffi.BBox3{
 		Min: picogkffi.Vec3{float32(-3 * s), float32(-3 * s), float32(-1.6 * s)},
 		Max: picogkffi.Vec3{float32(3 * s), float32(3 * s), float32(1.6 * s)},
-	}, s)
-	gyroid := picogkshapes.NewImplicitGyroid(6, 0.6).Intersect(v)
-	v.Destroy()
-	return []SceneGroup{{gyroid, picogkshapes.Palette.Lavender}}
+	}, sdf)
+	return []SceneGroup{{v, picogkshapes.Palette.Lavender}}
 }
 
 func buildSuperellipsoid() []SceneGroup {
@@ -314,16 +379,33 @@ func buildSuperellipsoid() []SceneGroup {
 			Min: picogkffi.Vec3{float32(-a), float32(-a), float32(-a)},
 			Max: picogkffi.Vec3{float32(a), float32(a), float32(a)},
 		})
-		// Translate to the spec centre
-		v.Offset(0) // no-op but ensures it's valid
-		groups = append(groups, SceneGroup{v, spec.color})
+		// Translate to the spec centre via mesh round-trip (like PicoPie's vox_apply_transformation)
+		mesh := v.ToMesh()
+		v.Destroy()
+		verts := mesh.Vertices()
+		tris := mesh.Triangles()
+		for i := 0; i+2 < len(verts); i += 3 {
+			verts[i] += float32(spec.centre.X)
+			verts[i+1] += float32(spec.centre.Y)
+			verts[i+2] += float32(spec.centre.Z)
+		}
+		translatedMesh := picogkffi.MeshFromArrays(verts, tris)
+		mesh.Destroy()
+		translatedVox := picogkffi.FromMesh(translatedMesh)
+		translatedMesh.Destroy()
+		groups = append(groups, SceneGroup{translatedVox, spec.color})
 	}
 	return groups
 }
 
 func buildMeshPainter() []SceneGroup {
-	ball := picogkshapes.NewSphere(nil, 40.0).ToVoxels()
-	return []SceneGroup{{ball, picogkshapes.Palette.Billie}}
+	// Build a sphere mesh and split it by overhang angle into colored groups
+	ball := picogkshapes.NewSphere(nil, 40.0)
+	mesh := ball.ToMesh()
+	scale := picogkshapes.NewColorScale3D(picogkshapes.RainbowSpectrum(), 0.0, 90.0)
+	groups := picogkshapes.SplitByOverhangAngle(mesh, scale, 50)
+	mesh.Destroy()
+	return groups
 }
 
 func buildMeshTrafo() []SceneGroup {

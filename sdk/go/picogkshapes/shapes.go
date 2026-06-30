@@ -119,90 +119,120 @@ func BoxDepthSteps(n int) BoxOpt { return func(b *Box) { b.dSteps = n } }
 func BoxLengthSteps(n int) BoxOpt { return func(b *Box) { b.lSteps = n } }
 
 // ToMesh builds the box mesh.
+// Matches the Python picogk.shapes.box.Box.to_mesh exactly:
+// 6 faces, each a 2D grid via NumPy-style broadcasting of (wr, dr, lr).
 func (b *Box) ToMesh() *picogkffi.Mesh {
-	smb := NewSurfaceMeshBuilder()
 	nw, nd, nl := b.wSteps, b.dSteps, b.lSteps
-	wRatios := arange(nw + 1) // -1 to 1
-	dRatios := arange(nd + 1)
-	lRatios := arange(nl + 1)
-	for i := range wRatios {
-		wRatios[i] = wRatios[i]*2 - 1 // [-1, 1]
+	// w: -1..1, d: -1..1, lr: 0..1
+	w := make([]float64, nw)
+	for i := 0; i < nw; i++ {
+		w[i] = 2.0*float64(i)/float64(nw-1) - 1.0
 	}
-	for i := range dRatios {
-		dRatios[i] = dRatios[i]*2 - 1
+	d := make([]float64, nd)
+	for i := 0; i < nd; i++ {
+		d[i] = 2.0*float64(i)/float64(nd-1) - 1.0
 	}
-	f := b.frame
-	spine := func(lr float64) Vec3 {
-		if b.frames != nil {
-			return b.frames.FrameAt(lr).Pos
-		}
-		return f.Pos.Add(f.LocalZ.Mul(b.length * lr))
+	lr := make([]float64, nl)
+	for i := 0; i < nl; i++ {
+		lr[i] = float64(i) / float64(nl - 1)
 	}
-	lx, ly := f.LocalX, f.LocalY
-	if b.frames != nil {
-		fr := b.frames.FrameAt(0)
-		lx, ly = fr.LocalX, fr.LocalY
-	}
-	// Top face (lr=1, flip)
-	smb.Add(b.boxSurface(wRatios, dRatios, []float64{1.0}, spine, lx, ly, b.width, b.depth, f), true)
-	// Bottom face (lr=0, no flip)
-	smb.Add(b.boxSurface(wRatios, dRatios, []float64{0.0}, spine, lx, ly, b.width, b.depth, f), false)
-	// Front face (w=-1, flip)
-	smb.Add(b.boxSurface([]float64{-1.0}, dRatios, lRatios, spine, lx, ly, b.width, b.depth, f), true)
-	// Back face (w=1, no flip)
-	smb.Add(b.boxSurface([]float64{1.0}, dRatios, lRatios, spine, lx, ly, b.width, b.depth, f), false)
-	// Right face (d=1, flip)
-	smb.Add(b.boxSurface(wRatios, []float64{1.0}, lRatios, spine, lx, ly, b.width, b.depth, f), true)
-	// Left face (d=-1, no flip)
-	smb.Add(b.boxSurface(wRatios, []float64{-1.0}, lRatios, spine, lx, ly, b.width, b.depth, f), false)
+
+	smb := NewSurfaceMeshBuilder()
+	// Top face: grid (nw, nd), w varies on axis0, d on axis1, lr=last
+	smb.Add(b.boxSurfaceGrid(w, d, []float64{lr[nl-1]}), true)
+	// Bottom face: grid (nw, nd)
+	smb.Add(b.boxSurfaceGrid(w, d, []float64{lr[0]}), false)
+	// Front face (w=-1): grid (nl, nd), lr varies on axis0, d on axis1, w=first
+	smb.Add(b.boxSurfaceGrid([]float64{w[0]}, d, lr), true)
+	// Back face (w=+1): grid (nl, nd)
+	smb.Add(b.boxSurfaceGrid([]float64{w[nw-1]}, d, lr), false)
+	// Right face (d=+1): grid (nl, nw), lr varies on axis0, w on axis1, d=last
+	smb.Add(b.boxSurfaceGrid(w, []float64{d[nd-1]}, lr), true)
+	// Left face (d=-1): grid (nl, nw)
+	smb.Add(b.boxSurfaceGrid(w, []float64{d[0]}, lr), false)
 	return smb.Build()
 }
 
-func (b *Box) boxSurface(wR, dR, lR []float64, spine func(float64) Vec3, lx, ly Vec3, width, depth *LineModulation, f *LocalFrame) [][]Vec3 {
-	nw, nd, nl := len(wR), len(dR), len(lR)
-	grid := makeGrid(nw*nl, nd*nl)
-	for i := 0; i < nw*nl; i++ {
-		for j := 0; j < nd*nl; j++ {
-			wi := i % nw
-			li := i / nw
-			di := j % nd
-			// Actually we need the full grid — let me fix the indexing
-			_ = wi; _ = li; _ = di
-		}
+// boxSurfaceGrid builds a 2D grid by broadcasting (wr, dr, lr) arrays.
+// The grid dimensions are (max(len(wr),len(lr)), max(len(dr),len(lr)))
+// following NumPy broadcasting rules: scalars (len==1) are broadcast,
+// arrays with len>1 define that axis.
+// If lr has len>1, it varies on axis0. If wr has len>1 and lr has len==1,
+// wr varies on axis0. dr with len>1 varies on axis1.
+func (b *Box) boxSurfaceGrid(wR, dR, lR []float64) [][]Vec3 {
+	// Determine grid shape via broadcasting
+	r0 := 1
+	r1 := 1
+	if len(lR) > 1 {
+		r0 = len(lR)
+	} else if len(wR) > 1 {
+		r0 = len(wR)
 	}
-	// Simpler approach: build grid as (max(nw,nl), max(nd,nl))
-	// Actually the Python code builds each face separately with different dimensions.
-	// Let me match the Python approach more closely.
-	// For a face with (wR, dR, lR), the grid is (len(wR)*len(lR), len(dR)*len(lR))
-	// but actually it's more nuanced. Let me just build the surface grid directly.
-	grid = makeGrid(max(len(wR), len(lR)), max(len(dR), len(lR)))
-	for i := 0; i < len(grid); i++ {
-		for j := 0; j < len(grid[0]); j++ {
-			// Determine which ratio to use for each axis
-			var wr, dr, lr float64
-			if len(wR) > 1 {
-				wr = wR[min(i, len(wR)-1)]
-			} else if len(wR) == 1 {
+	if len(dR) > 1 {
+		r1 = len(dR)
+	} else if len(wR) > 1 && len(lR) > 1 {
+		// w varies on axis1
+		r1 = len(wR)
+	}
+	// Fix: when both lr>1 and wr>1, lr is axis0 and wr is axis1
+	if len(lR) > 1 && len(wR) > 1 {
+		r0 = len(lR)
+		r1 = len(wR)
+	}
+	if len(lR) > 1 && len(dR) > 1 {
+		r0 = len(lR)
+		r1 = len(dR)
+	}
+	if len(wR) > 1 && len(dR) > 1 {
+		// top/bottom: w is axis0, d is axis1
+		r0 = len(wR)
+		r1 = len(dR)
+	}
+
+	grid := makeGrid(r0, r1)
+	for i := 0; i < r0; i++ {
+		for j := 0; j < r1; j++ {
+			// Pick the right ratio for each axis
+			var wr, dr, lrVal float64
+			if len(wR) == 1 {
 				wr = wR[0]
-			}
-			if len(dR) > 1 {
-				dr = dR[min(j, len(dR)-1)]
-			} else if len(dR) == 1 {
-				dr = dR[0]
-			}
-			if len(lR) > 1 {
-				lr = lR[min(i, len(lR)-1)]
 			} else if len(lR) == 1 {
-				lr = lR[0]
+				// w varies on axis0
+				wr = wR[min(i, len(wR)-1)]
+			} else {
+				// w varies on axis1
+				wr = wR[min(j, len(wR)-1)]
 			}
-			sp := spine(lr)
-			w := width.Call(lr) * 0.5 * wr
-			d := depth.Call(lr) * 0.5 * dr
-			grid[i][j] = sp.Add(lx.Mul(w)).Add(ly.Mul(d))
+			if len(dR) == 1 {
+				dr = dR[0]
+			} else {
+				dr = dR[min(j, len(dR)-1)]
+			}
+			if len(lR) == 1 {
+				lrVal = lR[0]
+			} else {
+				lrVal = lR[min(i, len(lR)-1)]
+			}
+
+			// Get spine position and local axes at lr
+			sp, lx, ly := b.boxSpine(lrVal)
+			wm := b.width.Call(lrVal) * 0.5 * wr
+			dm := b.depth.Call(lrVal) * 0.5 * dr
+			grid[i][j] = sp.Add(lx.Mul(wm)).Add(ly.Mul(dm))
 		}
 	}
 	grid = b.applyGridTransform(grid)
 	return grid
+}
+
+// boxSpine returns the spine position and local axes at the given length ratio.
+func (b *Box) boxSpine(lr float64) (Vec3, Vec3, Vec3) {
+	if b.frames != nil {
+		fr := b.frames.FrameAt(lr)
+		return fr.Pos, fr.LocalX, fr.LocalY
+	}
+	pos := b.frame.Pos.Add(b.frame.LocalZ.Mul(b.length * lr))
+	return pos, b.frame.LocalX, b.frame.LocalY
 }
 
 func (b *Box) applyGridTransform(grid [][]Vec3) [][]Vec3 {
@@ -427,6 +457,10 @@ func (r *Ring) ToMesh() *picogkffi.Mesh {
 	return smb.Build()
 }
 
+func (r *Ring) ToVoxels() *picogkffi.Voxels {
+	return ToVoxels(r.ToMesh())
+}
+
 func (r *Ring) applyGridTransform(grid [][]Vec3) [][]Vec3 {
 	if r.transform == nil {
 		return grid
@@ -446,11 +480,295 @@ func (r *Ring) applyGridTransform(grid [][]Vec3) [][]Vec3 {
 	return grid
 }
 
-func (r *Ring) ToVoxels() *picogkffi.Voxels {
-	return ToVoxels(r.ToMesh())
+// Lens is a disc/annulus between inner and outer radius with modulated height.
+type Lens struct {
+	BaseShape
+	frame       *LocalFrame
+	height      float64
+	innerRadius float64
+	outerRadius float64
+	lower       *SurfaceModulation
+	upper       *SurfaceModulation
+	radialSteps int
+	polarSteps  int
+	heightSteps int
 }
 
-// Helper functions
+// NewLens creates a lens. lower and upper are SurfaceModulation(phi, radius_ratio).
+func NewLens(frame *LocalFrame, height, innerRadius, outerRadius float64, opts ...LensOpt) *Lens {
+	l := &Lens{
+		frame:       frame,
+		height:      height,
+		innerRadius: innerRadius,
+		outerRadius: outerRadius,
+		lower:       NewSurfaceModulation(0.0),
+		upper:       NewSurfaceModulation(height),
+		radialSteps: 5,
+		polarSteps:  360,
+		heightSteps: 5,
+	}
+	if frame == nil {
+		l.frame = NewLocalFrame(V(0, 0, 0))
+	}
+	for _, opt := range opts {
+		opt(l)
+	}
+	return l
+}
+
+// LensOpt configures a Lens.
+type LensOpt func(*Lens)
+
+func LensLower(m *SurfaceModulation) LensOpt  { return func(l *Lens) { l.lower = m; l.radialSteps = 500 } }
+func LensUpper(m *SurfaceModulation) LensOpt  { return func(l *Lens) { l.upper = m; l.radialSteps = 500 } }
+func LensRadialSteps(n int) LensOpt           { return func(l *Lens) { l.radialSteps = n } }
+func LensPolarSteps(n int) LensOpt            { return func(l *Lens) { l.polarSteps = n } }
+func LensHeightSteps(n int) LensOpt           { return func(l *Lens) { l.heightSteps = n } }
+
+func (l *Lens) lensSurface(h float64, phiR, radR []float64) [][]Vec3 {
+	nphi := len(phiR)
+	nrad := len(radR)
+	grid := makeGrid(nphi, nrad)
+	f := l.frame
+	for i := 0; i < nphi; i++ {
+		phi := 2 * math.Pi * phiR[i]
+		for j := 0; j < nrad; j++ {
+			radius := (l.outerRadius-l.innerRadius)*radR[j] + l.innerRadius
+			lower := l.lower.Call(phi, radR[j])
+			upper := l.upper.Call(phi, radR[j])
+			z := lower + h*(upper-lower)
+			grid[i][j] = f.Pos.
+				Add(f.LocalX.Mul(radius * math.Cos(phi))).
+				Add(f.LocalY.Mul(radius * math.Sin(phi))).
+				Add(f.LocalZ.Mul(z))
+		}
+	}
+	return grid
+}
+
+func (l *Lens) ToMesh() *picogkffi.Mesh {
+	smb := NewSurfaceMeshBuilder()
+	p := arange(l.polarSteps)
+	rr := arange(l.radialSteps)
+	hr := arange(l.heightSteps)
+	// top (h=1, no flip)
+	smb.Add(l.lensSurface(1.0, p, rr), false)
+	// bottom (h=0, flip)
+	smb.Add(l.lensSurface(0.0, p, rr), true)
+	// inner mantle (radR=0, no flip)
+	smb.Add(l.lensMantleSurface(hr, p, 0.0), false)
+	// outer mantle (radR=1, flip)
+	smb.Add(l.lensMantleSurface(hr, p, 1.0), true)
+	return smb.Build()
+}
+
+func (l *Lens) lensMantleSurface(hr, p []float64, radR float64) [][]Vec3 {
+	nh := len(hr)
+	np := len(p)
+	grid := makeGrid(nh, np)
+	f := l.frame
+	for i := 0; i < nh; i++ {
+		for j := 0; j < np; j++ {
+			phi := 2 * math.Pi * p[j]
+			radius := (l.outerRadius-l.innerRadius)*radR + l.innerRadius
+			lower := l.lower.Call(phi, radR)
+			upper := l.upper.Call(phi, radR)
+			z := lower + hr[i]*(upper-lower)
+			grid[i][j] = f.Pos.
+				Add(f.LocalX.Mul(radius * math.Cos(phi))).
+				Add(f.LocalY.Mul(radius * math.Sin(phi))).
+				Add(f.LocalZ.Mul(z))
+		}
+	}
+	return grid
+}
+
+func (l *Lens) ToVoxels() *picogkffi.Voxels {
+	return ToVoxels(l.ToMesh())
+}
+
+// Pipe is a hollow tube with inner/outer radius over a length-spine.
+type Pipe struct {
+	BaseShape
+	frame       *LocalFrame
+	length       float64
+	inner       *SurfaceModulation
+	outer       *SurfaceModulation
+	frames      *Frames
+	polarSteps  int
+	radialSteps int
+	lengthSteps int
+}
+
+// NewPipe creates a pipe. innerRadius/outerRadius can be float64 or func(phi,lr float64) float64.
+func NewPipe(frame *LocalFrame, length, innerRadius, outerRadius any, opts ...PipeOpt) *Pipe {
+	p := &Pipe{
+		frame:       frame,
+		length:       toFloat(length),
+		inner:       NewSurfaceModulation(innerRadius),
+		outer:       NewSurfaceModulation(outerRadius),
+		polarSteps:  360,
+		radialSteps: 5,
+		lengthSteps: 5,
+	}
+	if frame == nil {
+		p.frame = NewLocalFrame(V(0, 0, 0))
+	}
+	for _, opt := range opts {
+		opt(p)
+	}
+	return p
+}
+
+// PipeOpt configures a Pipe.
+type PipeOpt func(*Pipe)
+
+func PipeFrames(fs *Frames) PipeOpt       { return func(p *Pipe) { p.frames = fs; p.lengthSteps = 500 } }
+func PipePolarSteps(n int) PipeOpt        { return func(p *Pipe) { p.polarSteps = n } }
+func PipeRadialSteps(n int) PipeOpt       { return func(p *Pipe) { p.radialSteps = n } }
+func PipeLengthSteps(n int) PipeOpt       { return func(p *Pipe) { p.lengthSteps = n } }
+func PipeTransform(t VertexTransform) PipeOpt { return func(p *Pipe) { p.transform = t } }
+
+func (p *Pipe) pipeSpine(lr float64) (Vec3, Vec3, Vec3) {
+	if p.frames != nil {
+		fr := p.frames.FrameAt(lr)
+		return fr.Pos, fr.LocalX, fr.LocalY
+	}
+	pos := p.frame.Pos.Add(p.frame.LocalZ.Mul(p.length * lr))
+	return pos, p.frame.LocalX, p.frame.LocalY
+}
+
+func (p *Pipe) phiAngle(phiRatio, lr float64) float64 {
+	return 2 * math.Pi * phiRatio
+}
+
+func (p *Pipe) pipeSurface(lrs, phiRs, radRs []float64) [][]Vec3 {
+	// Broadcast: grid is (len(lrs) or len(phiRs), max of the other two)
+	// Following the Python pattern: lrs varies on axis0 if len>1,
+	// phiRs varies on axis1 if len>1.
+	nl := len(lrs)
+	np := len(phiRs)
+	nr := len(radRs)
+	// Determine grid shape
+	r0, r1 := 1, 1
+	if nl > 1 { r0 = nl }
+	if np > 1 && nl > 1 { r1 = np }
+	if np > 1 && nl == 1 { r0 = np }
+	if nr > 1 && nl == 1 && np > 1 { r1 = nr }
+	if nr > 1 && nl > 1 { r1 = nr } // radial on axis1 when lr varies on axis0
+	if nr > 1 && np > 1 && nl == 1 { r0 = nr } // radial on axis0 when phi varies on axis1
+	// Actually follow Python broadcasting more carefully:
+	// For top/bottom cap: lr is scalar, p[:,None] is (np,1), rr[None,:] is (1,nr) → grid (np, nr)
+	// For inner/outer mantle: lr[None,:] is (1,nl), p[:,None] is (np,1), radR scalar → grid (np, nl)
+	// For segment start/end cap: lr[:,None] is (nl,1), phiR scalar, rr[None,:] is (1,nr) → grid (nl, nr)
+	r0, r1 = pipeGridShape(lrs, phiRs, radRs)
+
+	grid := makeGrid(r0, r1)
+	for i := 0; i < r0; i++ {
+		for j := 0; j < r1; j++ {
+			var lr, phiR, radR float64
+			if nl == 1 { lr = lrs[0] } else if nl > 1 { lr = lrs[min(i, nl-1)] }
+			if np == 1 { phiR = phiRs[0] } else if np > 1 {
+				if nl > 1 { phiR = phiRs[min(j, np-1)] } else { phiR = phiRs[min(i, np-1)] }
+			}
+			if nr == 1 { radR = radRs[0] } else if nr > 1 { radR = radRs[min(j, nr-1)] }
+
+			sp, lx, ly := p.pipeSpine(lr)
+			phi := p.phiAngle(phiR, lr)
+			outer := p.outer.Call(phi, lr)
+			inner := p.inner.Call(phi, lr)
+			radius := radR*(outer-inner) + inner
+			grid[i][j] = sp.Add(lx.Mul(radius * math.Cos(phi))).Add(ly.Mul(radius * math.Sin(phi)))
+		}
+	}
+	return grid
+}
+
+func pipeGridShape(lrs, phiRs, radRs []float64) (int, int) {
+	nl, np, nr := len(lrs), len(phiRs), len(radRs)
+	// Default: each array with len>1 gets its own axis
+	// axis0 = first array with len>1 (priority: lr, then phi, then rad)
+	// axis1 = second array with len>1
+	var axis0, axis1 int = 1, 1
+	assigned := 0
+	for _, n := range []int{nl, np, nr} {
+		if n > 1 {
+			if assigned == 0 {
+				axis0 = n
+				assigned++
+			} else if assigned == 1 {
+				axis1 = n
+				assigned++
+			}
+		}
+	}
+	return axis0, axis1
+}
+
+func (p *Pipe) ToMesh() *picogkffi.Mesh {
+	smb := NewSurfaceMeshBuilder()
+	pr := arange(p.polarSteps)
+	rr := arange(p.radialSteps)
+	lr := arange(p.lengthSteps)
+	// top cap (lr=last, no flip)
+	smb.Add(p.pipeSurface([]float64{lr[len(lr)-1]}, pr, rr), false)
+	// bottom cap (lr=first, flip)
+	smb.Add(p.pipeSurface([]float64{lr[0]}, pr, rr), true)
+	// inner mantle (radR=0, no flip)
+	smb.Add(p.pipeSurface(lr, pr, []float64{0.0}), false)
+	// outer mantle (radR=1, flip)
+	smb.Add(p.pipeSurface(lr, pr, []float64{1.0}), true)
+	return smb.Build()
+}
+
+func (p *Pipe) ToVoxels() *picogkffi.Voxels {
+	return ToVoxels(p.ToMesh())
+}
+
+// PipeSegment is an angular slice of a pipe.
+type PipeSegment struct {
+	Pipe
+	mid   *LineModulation
+	rng   *LineModulation
+}
+
+// NewPipeSegment creates a pipe segment. start/end are angles or LineModulation.
+func NewPipeSegment(frame *LocalFrame, length, innerRadius, outerRadius any,
+	start, end any, method string, opts ...PipeOpt) *PipeSegment {
+	pipe := *NewPipe(frame, length, innerRadius, outerRadius, opts...)
+	a := NewLineModulation(start)
+	b := NewLineModulation(end)
+	ps := &PipeSegment{Pipe: pipe}
+	if method == "start_end" {
+		ps.mid = a.Add(b).Mul(0.5)
+		ps.rng = b.Sub(a)
+	} else { // mid_range
+		ps.mid = a
+		ps.rng = b
+	}
+	return ps
+}
+
+func (ps *PipeSegment) phiAngle(phiRatio, lr float64) float64 {
+	return ps.mid.Call(lr) + (phiRatio - 0.5) * ps.rng.Call(lr)
+}
+
+func (ps *PipeSegment) ToMesh() *picogkffi.Mesh {
+	smb := NewSurfaceMeshBuilder()
+	pr := arange(ps.polarSteps)
+	rr := arange(ps.radialSteps)
+	lr := arange(ps.lengthSteps)
+	// Standard pipe surfaces
+	smb.Add(ps.pipeSurface([]float64{lr[len(lr)-1]}, pr, rr), false) // top cap
+	smb.Add(ps.pipeSurface([]float64{lr[0]}, pr, rr), true)          // bottom cap
+	smb.Add(ps.pipeSurface(lr, pr, []float64{0.0}), false)           // inner mantle
+	smb.Add(ps.pipeSurface(lr, pr, []float64{1.0}), true)            // outer mantle
+	// Segment start cap (phiR=0, no flip)
+	smb.Add(ps.pipeSurface(lr, []float64{0.0}, rr), false)
+	// Segment end cap (phiR=1, flip)
+	smb.Add(ps.pipeSurface(lr, []float64{1.0}, rr), true)
+	return smb.Build()
+}
 
 func toFloat(v any) float64 {
 	switch x := v.(type) {

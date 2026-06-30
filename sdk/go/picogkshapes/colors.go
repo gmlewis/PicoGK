@@ -2,7 +2,7 @@ package picogkshapes
 
 import "github.com/gmlewis/PicoGK/sdk/go/picogkffi"
 
-// Palette of named RGB colors (0..1) matching PicoPie's picogk.shapes.colors.Palette.
+// Palette of named RGB colors (0..1) — exact values from PicoPie's picogk.shapes.colors.Palette.
 type RGB struct {
 	R, G, B float64
 }
@@ -25,22 +25,22 @@ var Palette = struct {
 	Bubblegum   RGB
 	Gray        RGB
 }{
-	Blue:        RGB{0.346, 0.6, 0.902},
-	Frozen:      RGB{0.494, 0.784, 0.89},
-	Pitaya:      RGB{0.902, 0.439, 0.357},
-	Warning:     RGB{0.902, 0.722, 0.31},
-	Green:       RGB{0.42, 0.84, 0.42},
-	Yellow:      RGB{0.902, 0.863, 0.31},
-	Blueberry:   RGB{0.31, 0.42, 0.902},
-	Lemongrass:  RGB{0.769, 0.839, 0.42},
-	Orchid:      RGB{0.608, 0.353, 0.714},
-	Ruby:        RGB{0.902, 0.31, 0.42},
-	RacingGreen: RGB{0.043, 0.478, 0.294},
-	Crystal:     RGB{0.69, 0.878, 0.902},
-	Billie:      RGB{0.31, 0.714, 0.902},
-	Lavender:    RGB{0.69, 0.608, 0.902},
-	Bubblegum:   RGB{0.902, 0.482, 0.69},
-	Gray:        RGB{0.533, 0.533, 0.533},
+	Blue:        RGB{0.258824, 0.529412, 0.960784},
+	Frozen:      RGB{0.427451, 0.886275, 0.988235},
+	Pitaya:      RGB{0.980392, 0.164706, 0.533333},
+	Warning:     RGB{0.988235, 0.400000, 0.031373},
+	Green:       RGB{0.000000, 0.721569, 0.000000},
+	Yellow:      RGB{0.988235, 0.847059, 0.031373},
+	Blueberry:   RGB{0.309804, 0.050980, 0.749020},
+	Lemongrass:  RGB{0.721569, 0.878431, 0.192157},
+	Orchid:      RGB{0.780392, 0.141176, 0.513725},
+	Ruby:        RGB{0.690196, 0.000000, 0.172549},
+	RacingGreen: RGB{0.023529, 0.360784, 0.207843},
+	Crystal:     RGB{0.047059, 0.756863, 0.968627},
+	Billie:      RGB{0.007843, 0.968627, 0.043137},
+	Lavender:    RGB{0.788235, 0.400000, 1.000000},
+	Bubblegum:   RGB{1.000000, 0.400000, 0.807843},
+	Gray:        RGB{0.741176, 0.741176, 0.741176},
 }
 
 // ToFFI converts an RGB to a picogkffi.ColorFloat.

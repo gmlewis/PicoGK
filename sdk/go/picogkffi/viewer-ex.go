@@ -24,7 +24,14 @@ static PKVIEWER createViewer(const char* title, const PKVector2* size) {
 import "C"
 
 import (
+	"archive/zip"
+	"fmt"
+	"image"
+	"image/color"
+	"image/png"
+	"io"
 	"math"
+	"os"
 	"unsafe"
 )
 
@@ -165,6 +172,7 @@ func (v *ViewerEx) SetBackground(r, g, b, a float32) {
 }
 
 // Screenshot takes a screenshot by polling frames.
+// The native viewer writes TGA; we convert to PNG if needed.
 func (v *ViewerEx) Screenshot(path string, frames int) {
 	activeViewer = v
 	// Pump frames to ensure scene is rendered
@@ -174,15 +182,119 @@ func (v *ViewerEx) Screenshot(path string, frames int) {
 			break
 		}
 	}
-	// Request screenshot
-	v.RequestScreenShot(path)
-	// Pump frames to flush the screenshot
-	for i := 0; i < frames; i++ {
-		v.RequestUpdate()
-		if !v.Poll() {
+
+	// Determine if we need TGA→PNG conversion
+	ext := ""
+	for i := len(path) - 1; i >= 0; i-- {
+		if path[i] == '.' {
+			ext = path[i+1:]
 			break
 		}
 	}
+
+	if ext == "tga" {
+		// Native TGA output
+		v.RequestScreenShot(path)
+		for i := 0; i < frames; i++ {
+			v.RequestUpdate()
+			if !v.Poll() {
+				break
+			}
+		}
+	} else {
+		// Write TGA to temp, then convert to PNG
+		tgaPath := path + ".tga"
+		v.RequestScreenShot(tgaPath)
+		for i := 0; i < frames; i++ {
+			v.RequestUpdate()
+			if !v.Poll() {
+				break
+			}
+		}
+		// Convert TGA to target format using Go's image package
+		convertTGA(tgaPath, path)
+		os.Remove(tgaPath)
+	}
+}
+
+// convertTGA converts a TGA file to PNG format.
+func convertTGA(tgaPath, pngPath string) {
+	// Read TGA file
+	data, err := os.ReadFile(tgaPath)
+	if err != nil {
+		return
+	}
+
+	// Parse TGA header (18 bytes)
+	if len(data) < 18 {
+		return
+	}
+	idLen := int(data[0])
+	colorMapType := data[1]
+	imageType := data[2]
+	width := int(data[12]) | int(data[13])<<8
+	height := int(data[14]) | int(data[15])<<8
+	bpp := int(data[16])
+	descriptor := data[17]
+
+	// Skip image ID
+	offset := 18 + idLen
+	// Skip color map if present
+	if colorMapType == 1 {
+		mapLen := int(data[5]) | int(data[6])<<8
+		mapEntrySize := int(data[7])
+		offset += mapLen * (mapEntrySize / 8)
+	}
+
+	// Only handle uncompressed true-color (type 2)
+	if imageType != 2 {
+		return
+	}
+
+	pixelData := data[offset:]
+	stride := width * (bpp / 8)
+
+	// Create RGBA image
+	img := image.NewRGBA(image.Rect(0, 0, width, height))
+	topOrigin := (descriptor & 0x20) != 0
+
+	for y := 0; y < height; y++ {
+		rowOffset := y * stride
+		if rowOffset+stride > len(pixelData) {
+			break
+		}
+		dstY := y
+		if !topOrigin {
+			dstY = height - 1 - y
+		}
+		for x := 0; x < width; x++ {
+			srcIdx := rowOffset + x*(bpp/8)
+			if bpp == 32 {
+				img.SetRGBA(x, dstY, color.RGBA{
+					R: pixelData[srcIdx+2],
+					G: pixelData[srcIdx+1],
+					B: pixelData[srcIdx+0],
+					A: pixelData[srcIdx+3],
+				})
+			} else if bpp == 24 {
+				img.SetRGBA(x, dstY, color.RGBA{
+					R: pixelData[srcIdx+2],
+					G: pixelData[srcIdx+1],
+					B: pixelData[srcIdx+0],
+					A: 255,
+				})
+			}
+		}
+	}
+
+	// Write PNG with best compression
+	f, err := os.Create(pngPath)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+	enc := png.Encoder{CompressionLevel: png.BestCompression}
+	enc.Encode(f, img)
 }
 
 // Run blocks and runs the viewer event loop until closed.
@@ -192,25 +304,59 @@ func (v *ViewerEx) Run() {
 	v.Destroy()
 }
 
-// loadLightSetup attempts to load IBL lighting from the assets directory.
-// If the DDS files are not found, the scene will be dark.
+// loadLightSetup loads the IBL lighting from PicoPie's bundled assets.
 func loadLightSetup(viewer C.PKVIEWER) {
-	// Try to load from PicoPie's bundled assets
-	paths := []string{
-		"/Users/glenn/src/github.com/Borderliner/PicoPie/src/picogk/_assets/viewer_environment.zip",
+	assetPath := "/Users/glenn/src/github.com/Borderliner/PicoPie/src/picogk/_assets/viewer_environment.zip"
+	if _, err := os.Stat(assetPath); err != nil {
+		return
 	}
-	for _, p := range paths {
-		data, err := loadDDSFromZip(p)
-		if err != nil || len(data) == 0 {
-			continue
-		}
-		_ = data // TODO: implement DDS loading
+
+	diffuse, specular, err := loadDDSFromZip(assetPath)
+	if err != nil {
+		return
 	}
+
+	C.Viewer_bLoadLightSetup(viewer,
+		(*C.char)(unsafe.Pointer(&diffuse[0])), C.int32_t(len(diffuse)),
+		(*C.char)(unsafe.Pointer(&specular[0])), C.int32_t(len(specular)))
 }
 
-func loadDDSFromZip(zipPath string) ([][]byte, error) {
-	// TODO: implement zip loading
-	return nil, nil
+func loadDDSFromZip(zipPath string) (diffuse, specular []byte, err error) {
+	r, err := zip.OpenReader(zipPath)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer r.Close()
+
+	for _, f := range r.File {
+		if f.Name == "Diffuse.dds" {
+			rc, err := f.Open()
+			if err != nil {
+				return nil, nil, err
+			}
+			defer rc.Close()
+			diffuse, err = io.ReadAll(rc)
+			if err != nil {
+				return nil, nil, err
+			}
+		}
+		if f.Name == "Specular.dds" {
+			rc, err := f.Open()
+			if err != nil {
+				return nil, nil, err
+			}
+			defer rc.Close()
+			specular, err = io.ReadAll(rc)
+			if err != nil {
+				return nil, nil, err
+			}
+		}
+	}
+
+	if len(diffuse) == 0 || len(specular) == 0 {
+		return nil, nil, fmt.Errorf("DDS files not found in zip")
+	}
+	return diffuse, specular, nil
 }
 
 // --- Camera math (ported from PicoPie viewer.py) ---
