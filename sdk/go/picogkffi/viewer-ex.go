@@ -163,6 +163,97 @@ func (v *ViewerEx) SetGroupMaterial(group int, color ColorFloat, metallic, rough
 	C.Viewer_SetGroupMaterial(v.h, C.int32_t(group), &c, C.float(metallic), C.float(roughness))
 }
 
+// SetGroupVisible sets the visibility of a group.
+func (v *ViewerEx) SetGroupVisible(group int, visible bool) {
+	C.Viewer_SetGroupVisible(v.h, C.int32_t(group), C.bool(visible))
+}
+
+// RemoveMesh removes a mesh from the viewer.
+func (v *ViewerEx) RemoveMesh(mesh *Mesh) {
+	C.Viewer_RemoveMesh(instance, v.h, mesh.h)
+}
+
+// SetMeshMatrix sets the transform matrix for a mesh in the viewer.
+func (v *ViewerEx) SetMeshMatrix(mesh *Mesh, matrix [16]float32) {
+	m := C.PKMatrix4x4{
+		vec1: C.PKVector4{X: C.float(matrix[0]), Y: C.float(matrix[1]), Z: C.float(matrix[2]), W: C.float(matrix[3])},
+		vec2: C.PKVector4{X: C.float(matrix[4]), Y: C.float(matrix[5]), Z: C.float(matrix[6]), W: C.float(matrix[7])},
+		vec3: C.PKVector4{X: C.float(matrix[8]), Y: C.float(matrix[9]), Z: C.float(matrix[10]), W: C.float(matrix[11])},
+		vec4: C.PKVector4{X: C.float(matrix[12]), Y: C.float(matrix[13]), Z: C.float(matrix[14]), W: C.float(matrix[15])},
+	}
+	C.Viewer_SetMeshMatrix(instance, v.h, mesh.h, &m)
+}
+
+// RemoveVoxels removes a voxel object from the viewer.
+func (v *ViewerEx) RemoveVoxels(vox *Voxels) {
+	C.Viewer_RemoveVoxels(instance, v.h, vox.h)
+}
+
+// SetVoxelsMatrix sets the transform matrix for a voxel object in the viewer.
+func (v *ViewerEx) SetVoxelsMatrix(vox *Voxels, matrix [16]float32) {
+	m := C.PKMatrix4x4{
+		vec1: C.PKVector4{X: C.float(matrix[0]), Y: C.float(matrix[1]), Z: C.float(matrix[2]), W: C.float(matrix[3])},
+		vec2: C.PKVector4{X: C.float(matrix[4]), Y: C.float(matrix[5]), Z: C.float(matrix[6]), W: C.float(matrix[7])},
+		vec3: C.PKVector4{X: C.float(matrix[8]), Y: C.float(matrix[9]), Z: C.float(matrix[10]), W: C.float(matrix[11])},
+		vec4: C.PKVector4{X: C.float(matrix[12]), Y: C.float(matrix[13]), Z: C.float(matrix[14]), W: C.float(matrix[15])},
+	}
+	C.Viewer_SetVoxelsMatrix(instance, v.h, vox.h, &m)
+}
+
+// AddPolyLine adds a polyline to the viewer at the given group.
+func (v *ViewerEx) AddPolyLine(group int, pl *PolyLine) {
+	C.Viewer_AddPolyLine(instance, v.h, C.int32_t(group), pl.h)
+}
+
+// RemovePolyLine removes a polyline from the viewer.
+func (v *ViewerEx) RemovePolyLine(pl *PolyLine) {
+	C.Viewer_RemovePolyLine(instance, v.h, pl.h)
+}
+
+// SetPolyLineMatrix sets the transform matrix for a polyline in the viewer.
+func (v *ViewerEx) SetPolyLineMatrix(pl *PolyLine, matrix [16]float32) {
+	m := C.PKMatrix4x4{
+		vec1: C.PKVector4{X: C.float(matrix[0]), Y: C.float(matrix[1]), Z: C.float(matrix[2]), W: C.float(matrix[3])},
+		vec2: C.PKVector4{X: C.float(matrix[4]), Y: C.float(matrix[5]), Z: C.float(matrix[6]), W: C.float(matrix[7])},
+		vec3: C.PKVector4{X: C.float(matrix[8]), Y: C.float(matrix[9]), Z: C.float(matrix[10]), W: C.float(matrix[11])},
+		vec4: C.PKVector4{X: C.float(matrix[12]), Y: C.float(matrix[13]), Z: C.float(matrix[14]), W: C.float(matrix[15])},
+	}
+	C.Viewer_SetPolyLineMatrix(instance, v.h, pl.h, &m)
+}
+
+// SetGroupMatrix sets the transform matrix for a group.
+func (v *ViewerEx) SetGroupMatrix(group int, matrix [16]float32) {
+	m := C.PKMatrix4x4{
+		vec1: C.PKVector4{X: C.float(matrix[0]), Y: C.float(matrix[1]), Z: C.float(matrix[2]), W: C.float(matrix[3])},
+		vec2: C.PKVector4{X: C.float(matrix[4]), Y: C.float(matrix[5]), Z: C.float(matrix[6]), W: C.float(matrix[7])},
+		vec3: C.PKVector4{X: C.float(matrix[8]), Y: C.float(matrix[9]), Z: C.float(matrix[10]), W: C.float(matrix[11])},
+		vec4: C.PKVector4{X: C.float(matrix[12]), Y: C.float(matrix[13]), Z: C.float(matrix[14]), W: C.float(matrix[15])},
+	}
+	C.Viewer_SetGroupMatrix(v.h, C.int32_t(group), &m)
+}
+
+// EnableGroupWarnOverhang enables overhang warnings for a group.
+func (v *ViewerEx) EnableGroupWarnOverhang(group int, maxAngle, minLength float32) {
+	C.Viewer_EnableGroupWarnOverhang(v.h, C.int32_t(group), C.float(maxAngle), C.float(minLength))
+}
+
+// DisableGroupWarnOverhang disables overhang warnings for a group.
+func (v *ViewerEx) DisableGroupWarnOverhang(group int) {
+	C.Viewer_DisableGroupWarnOverhang(v.h, C.int32_t(group))
+}
+
+// BoundingBox returns the viewer scene bounding box.
+func (v *ViewerEx) BoundingBox() BBox3 {
+	var out C.PKBBox3
+	C.Viewer_GetBoundingBox(v.h, &out)
+	return bboxFromC(out)
+}
+
+// EnableExperimental enables experimental viewer features.
+func (v *ViewerEx) EnableExperimental(enable bool) {
+	C.Viewer_EnableExperimental(v.h, C.bool(enable))
+}
+
 // SetBackground sets the background color.
 func (v *ViewerEx) SetBackground(r, g, b, a float32) {
 	v.cam.BgR = r

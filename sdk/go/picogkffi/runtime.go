@@ -131,3 +131,46 @@ func freeCstr(s *C.char) {
 func errf(format string, args ...any) error {
 	return fmt.Errorf(format, args...)
 }
+
+// --- Per-type memory usage ---
+
+func MeshesMemUsage() int64    { mustInit(); return int64(C.Library_nMeshesMemUsage(instance)) }
+func LatticesMemUsage() int64  { mustInit(); return int64(C.Library_nLatticesMemUsage(instance)) }
+func PolyLinesMemUsage() int64 { mustInit(); return int64(C.Library_nPolyLinesMemUsage(instance)) }
+func VoxelsMemUsage() int64    { mustInit(); return int64(C.Library_nVoxelsMemUsage(instance)) }
+func VdbFilesMemUsage() int64  { mustInit(); return int64(C.Library_nVdbFilesMemUsage(instance)) }
+func ScalarFieldsMemUsage() int64 {
+	mustInit()
+	return int64(C.Library_nScalarFieldsMemUsage(instance))
+}
+func VectorFieldsMemUsage() int64 {
+	mustInit()
+	return int64(C.Library_nVectorFieldsMemUsage(instance))
+}
+func VdbMetasMemUsage() int64 { mustInit(); return int64(C.Library_nVdbMetasMemUsage(instance)) }
+
+// --- Per-type allocation counts ---
+
+func MeshesAllocated() int64    { mustInit(); return int64(C.Library_nMeshesAllocated(instance)) }
+func LatticesAllocated() int64  { mustInit(); return int64(C.Library_nLatticesAllocated(instance)) }
+func PolyLinesAllocated() int64 { mustInit(); return int64(C.Library_nPolyLinesAllocated(instance)) }
+func VoxelsAllocated() int64    { mustInit(); return int64(C.Library_nVoxelsAllocated(instance)) }
+func VdbFilesAllocated() int64  { mustInit(); return int64(C.Library_nVdbFilesAllocated(instance)) }
+func ScalarFieldsAllocated() int64 {
+	mustInit()
+	return int64(C.Library_nScalarFieldsAllocated(instance))
+}
+func VectorFieldsAllocated() int64 {
+	mustInit()
+	return int64(C.Library_nVectorFieldsAllocated(instance))
+}
+func VdbMetasAllocated() int64 { mustInit(); return int64(C.Library_nVdbMetasAllocated(instance)) }
+
+// MmToVoxels converts a point from mm coordinates to voxel coordinates.
+func MmToVoxels(pt Vec3) Vec3 {
+	mustInit()
+	c := pt.toC()
+	var out C.PKVector3
+	C.Library_MmToVoxels(instance, &c, &out)
+	return vec3FromC(out)
+}

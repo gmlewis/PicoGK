@@ -228,3 +228,58 @@ func (v *Voxels) ToMesh() *Mesh {
 	mustInit()
 	return &Mesh{h: C.Mesh_hCreateFromVoxels(instance, v.h)}
 }
+
+// Diagnose returns diagnostic information about the voxel field.
+func (v *Voxels) Diagnose() string {
+	buf := make([]C.char, C.PKINFOSTRINGLEN)
+	C.Voxels_bDiagnose(instance, v.h, &buf[0])
+	return goStringFromC(buf)
+}
+
+// GetXSlice returns the SDF values for the given X slice as a flat float32 array.
+// The array has sizeY * sizeZ elements, indexed as [y*sizeZ + z].
+func (v *Voxels) GetXSlice(x int32) []float32 {
+	_, _, _, _, sy, sz := v.VoxelDimensions()
+	n := int(sy * sz)
+	result := make([]float32, n)
+	if n > 0 {
+		C.Voxels_GetXSlice(instance, v.h, C.int32_t(x), (*C.float)(&result[0]), nil)
+	}
+	return result
+}
+
+// GetYSlice returns the SDF values for the given Y slice as a flat float32 array.
+// The array has sizeX * sizeZ elements, indexed as [x*sizeZ + z].
+func (v *Voxels) GetYSlice(y int32) []float32 {
+	_, _, _, sx, _, sz := v.VoxelDimensions()
+	n := int(sx * sz)
+	result := make([]float32, n)
+	if n > 0 {
+		C.Voxels_GetYSlice(instance, v.h, C.int32_t(y), (*C.float)(&result[0]), nil)
+	}
+	return result
+}
+
+// GetZSlice returns the SDF values for the given Z slice as a flat float32 array.
+// The array has sizeX * sizeY elements, indexed as [x*sizeY + y].
+func (v *Voxels) GetZSlice(z int32) []float32 {
+	_, _, _, sx, sy, _ := v.VoxelDimensions()
+	n := int(sx * sy)
+	result := make([]float32, n)
+	if n > 0 {
+		C.Voxels_GetZSlice(instance, v.h, C.int32_t(z), (*C.float)(&result[0]), nil)
+	}
+	return result
+}
+
+// GetInterpolatedZSlice returns the SDF values at the given floating-point Z position
+// by trilinear interpolation. The array has sizeX * sizeY elements.
+func (v *Voxels) GetInterpolatedZSlice(z float32) []float32 {
+	_, _, _, sx, sy, _ := v.VoxelDimensions()
+	n := int(sx * sy)
+	result := make([]float32, n)
+	if n > 0 {
+		C.Voxels_GetInterpolatedZSlice(instance, v.h, C.float(z), (*C.float)(&result[0]), nil)
+	}
+	return result
+}

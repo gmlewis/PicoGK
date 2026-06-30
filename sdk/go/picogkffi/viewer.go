@@ -109,3 +109,89 @@ func (v *Viewer) Screenshot(path string, frames int) {
 		v.Poll()
 	}
 }
+
+// EnableExperimental enables experimental viewer features.
+func (v *Viewer) EnableExperimental(enable bool) {
+	C.Viewer_EnableExperimental(v.h, C.bool(enable))
+}
+
+// RemoveMesh removes a mesh from the viewer.
+func (v *Viewer) RemoveMesh(mesh *Mesh) {
+	C.Viewer_RemoveMesh(instance, v.h, mesh.h)
+}
+
+// SetMeshMatrix sets the transform matrix for a mesh in the viewer.
+func (v *Viewer) SetMeshMatrix(mesh *Mesh, matrix [16]float32) {
+	m := C.PKMatrix4x4{
+		vec1: C.PKVector4{X: C.float(matrix[0]), Y: C.float(matrix[1]), Z: C.float(matrix[2]), W: C.float(matrix[3])},
+		vec2: C.PKVector4{X: C.float(matrix[4]), Y: C.float(matrix[5]), Z: C.float(matrix[6]), W: C.float(matrix[7])},
+		vec3: C.PKVector4{X: C.float(matrix[8]), Y: C.float(matrix[9]), Z: C.float(matrix[10]), W: C.float(matrix[11])},
+		vec4: C.PKVector4{X: C.float(matrix[12]), Y: C.float(matrix[13]), Z: C.float(matrix[14]), W: C.float(matrix[15])},
+	}
+	C.Viewer_SetMeshMatrix(instance, v.h, mesh.h, &m)
+}
+
+// RemoveVoxels removes a voxel object from the viewer.
+func (v *Viewer) RemoveVoxels(vox *Voxels) {
+	C.Viewer_RemoveVoxels(instance, v.h, vox.h)
+}
+
+// SetVoxelsMatrix sets the transform matrix for a voxel object in the viewer.
+func (v *Viewer) SetVoxelsMatrix(vox *Voxels, matrix [16]float32) {
+	m := C.PKMatrix4x4{
+		vec1: C.PKVector4{X: C.float(matrix[0]), Y: C.float(matrix[1]), Z: C.float(matrix[2]), W: C.float(matrix[3])},
+		vec2: C.PKVector4{X: C.float(matrix[4]), Y: C.float(matrix[5]), Z: C.float(matrix[6]), W: C.float(matrix[7])},
+		vec3: C.PKVector4{X: C.float(matrix[8]), Y: C.float(matrix[9]), Z: C.float(matrix[10]), W: C.float(matrix[11])},
+		vec4: C.PKVector4{X: C.float(matrix[12]), Y: C.float(matrix[13]), Z: C.float(matrix[14]), W: C.float(matrix[15])},
+	}
+	C.Viewer_SetVoxelsMatrix(instance, v.h, vox.h, &m)
+}
+
+// AddPolyLine adds a polyline to the viewer at the given group.
+func (v *Viewer) AddPolyLine(group int, pl *PolyLine) {
+	C.Viewer_AddPolyLine(instance, v.h, C.int32_t(group), pl.h)
+}
+
+// RemovePolyLine removes a polyline from the viewer.
+func (v *Viewer) RemovePolyLine(pl *PolyLine) {
+	C.Viewer_RemovePolyLine(instance, v.h, pl.h)
+}
+
+// SetPolyLineMatrix sets the transform matrix for a polyline in the viewer.
+func (v *Viewer) SetPolyLineMatrix(pl *PolyLine, matrix [16]float32) {
+	m := C.PKMatrix4x4{
+		vec1: C.PKVector4{X: C.float(matrix[0]), Y: C.float(matrix[1]), Z: C.float(matrix[2]), W: C.float(matrix[3])},
+		vec2: C.PKVector4{X: C.float(matrix[4]), Y: C.float(matrix[5]), Z: C.float(matrix[6]), W: C.float(matrix[7])},
+		vec3: C.PKVector4{X: C.float(matrix[8]), Y: C.float(matrix[9]), Z: C.float(matrix[10]), W: C.float(matrix[11])},
+		vec4: C.PKVector4{X: C.float(matrix[12]), Y: C.float(matrix[13]), Z: C.float(matrix[14]), W: C.float(matrix[15])},
+	}
+	C.Viewer_SetPolyLineMatrix(instance, v.h, pl.h, &m)
+}
+
+// SetGroupMatrix sets the transform matrix for a group.
+func (v *Viewer) SetGroupMatrix(group int, matrix [16]float32) {
+	m := C.PKMatrix4x4{
+		vec1: C.PKVector4{X: C.float(matrix[0]), Y: C.float(matrix[1]), Z: C.float(matrix[2]), W: C.float(matrix[3])},
+		vec2: C.PKVector4{X: C.float(matrix[4]), Y: C.float(matrix[5]), Z: C.float(matrix[6]), W: C.float(matrix[7])},
+		vec3: C.PKVector4{X: C.float(matrix[8]), Y: C.float(matrix[9]), Z: C.float(matrix[10]), W: C.float(matrix[11])},
+		vec4: C.PKVector4{X: C.float(matrix[12]), Y: C.float(matrix[13]), Z: C.float(matrix[14]), W: C.float(matrix[15])},
+	}
+	C.Viewer_SetGroupMatrix(v.h, C.int32_t(group), &m)
+}
+
+// EnableGroupWarnOverhang enables overhang warnings for a group.
+func (v *Viewer) EnableGroupWarnOverhang(group int, maxAngle, minLength float32) {
+	C.Viewer_EnableGroupWarnOverhang(v.h, C.int32_t(group), C.float(maxAngle), C.float(minLength))
+}
+
+// DisableGroupWarnOverhang disables overhang warnings for a group.
+func (v *Viewer) DisableGroupWarnOverhang(group int) {
+	C.Viewer_DisableGroupWarnOverhang(v.h, C.int32_t(group))
+}
+
+// BoundingBox returns the viewer scene bounding box.
+func (v *Viewer) BoundingBox() BBox3 {
+	var out C.PKBBox3
+	C.Viewer_GetBoundingBox(v.h, &out)
+	return bboxFromC(out)
+}

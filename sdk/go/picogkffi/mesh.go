@@ -92,6 +92,13 @@ func (m *Mesh) GetTriangle(index int32) Triangle {
 	return Triangle{A: int32(out.A), B: int32(out.B), C: int32(out.C)}
 }
 
+// GetTriangleVertices returns the three vertex positions of the triangle at the given index.
+func (m *Mesh) GetTriangleVertices(index int32) (v0, v1, v2 Vec3) {
+	var a, b, c C.PKVector3
+	C.Mesh_GetTriangleV(instance, m.h, C.int32_t(index), &a, &b, &c)
+	return vec3FromC(a), vec3FromC(b), vec3FromC(c)
+}
+
 // BoundingBox returns the mesh bounding box.
 func (m *Mesh) BoundingBox() BBox3 {
 	var out C.PKBBox3
