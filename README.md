@@ -265,3 +265,31 @@ Both scripts parse `PicoGK.Mcp/Tools/*.cs` to extract tool names, parameter type
 and descriptions, then emit idiomatic code. The generated files include a
 `DO NOT EDIT` header — always edit the C# source and regenerate.
 
+---
+
+# Go FFI Binding (picogkffi)
+
+In addition to the MCP-based SDKs above, PicoGK provides a direct C FFI binding
+for Go via the `picogkffi` package. This gives Go programs in-process access to
+the geometry kernel without going through a subprocess.
+
+## macOS: Fixing the native library for `go run .`
+
+The `picogkffi` cgo package links directly against the native `picogk.*.dylib`.
+On macOS, the dylib is built with `install_name` set to
+`@loader_path/picogk.XX.X.dylib`. This works when the compiled binary lives in
+the same directory as the dylib, but `go run .` places the binary in a Go
+build-cache temp directory, causing dyld to fail with a "Library not loaded"
+error (SIGKILL).
+
+**After cloning this repo on macOS, or after updating the native libraries, run:**
+
+```bash
+./scripts/fix-dylib-install-name.sh
+```
+
+This rewrites the dylib's `install_name` to an absolute path and re-signs it
+with an ad-hoc code signature (required because `install_name_tool` invalidates
+the existing signature, and macOS AMFI kills binaries that load tampered-with
+signed libraries).
+
