@@ -267,7 +267,7 @@ func (v *ViewerEx) SetBackground(r, g, b, a float32) {
 func (v *ViewerEx) Screenshot(path string, frames int) {
 	activeViewer = v
 	// Pump frames to ensure scene is rendered
-	for i := 0; i < frames; i++ {
+	for range frames {
 		v.RequestUpdate()
 		if !v.Poll() {
 			break
@@ -286,7 +286,7 @@ func (v *ViewerEx) Screenshot(path string, frames int) {
 	if ext == "tga" {
 		// Native TGA output
 		v.RequestScreenShot(path)
-		for i := 0; i < frames; i++ {
+		for range frames {
 			v.RequestUpdate()
 			if !v.Poll() {
 				break
@@ -296,7 +296,7 @@ func (v *ViewerEx) Screenshot(path string, frames int) {
 		// Write TGA to temp, then convert to PNG
 		tgaPath := path + ".tga"
 		v.RequestScreenShot(tgaPath)
-		for i := 0; i < frames; i++ {
+		for range frames {
 			v.RequestUpdate()
 			if !v.Poll() {
 				break
@@ -349,7 +349,7 @@ func convertTGA(tgaPath, pngPath string) {
 	img := image.NewRGBA(image.Rect(0, 0, width, height))
 	topOrigin := (descriptor & 0x20) != 0
 
-	for y := 0; y < height; y++ {
+	for y := range height {
 		rowOffset := y * stride
 		if rowOffset+stride > len(pixelData) {
 			break
@@ -358,7 +358,7 @@ func convertTGA(tgaPath, pngPath string) {
 		if !topOrigin {
 			dstY = height - 1 - y
 		}
-		for x := 0; x < width; x++ {
+		for x := range width {
 			srcIdx := rowOffset + x*(bpp/8)
 			if bpp == 32 {
 				img.SetRGBA(x, dstY, color.RGBA{
@@ -538,10 +538,10 @@ func perspective(fovy, aspect, near, far float32) [16]float32 {
 
 func mat4Mul(a, b [16]float32) [16]float32 {
 	var r [16]float32
-	for i := 0; i < 4; i++ {
-		for j := 0; j < 4; j++ {
+	for i := range 4 {
+		for j := range 4 {
 			s := float32(0)
-			for k := 0; k < 4; k++ {
+			for k := range 4 {
 				s += a[i*4+k] * b[k*4+j]
 			}
 			r[i*4+j] = s

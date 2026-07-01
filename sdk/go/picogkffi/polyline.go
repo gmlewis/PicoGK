@@ -75,7 +75,7 @@ func (pl *PolyLine) BoundingBox() BBox3 {
 func (pl *PolyLine) Vertices() []float32 {
 	n := int(pl.VertexCount())
 	result := make([]float32, n*3)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		v := pl.GetVertex(int32(i))
 		result[i*3] = v.X
 		result[i*3+1] = v.Y

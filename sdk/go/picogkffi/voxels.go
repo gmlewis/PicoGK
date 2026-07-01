@@ -213,10 +213,10 @@ func (v *Voxels) VoxelDimensions() (originX, originY, originZ, sizeX, sizeY, siz
 
 // BoundingBox returns the bounding box in mm.
 func (v *Voxels) BoundingBox() BBox3 {
-	_, _, _, sx, sy, sz := v.VoxelDimensions()
-	// Convert voxel dimensions to mm using the library's VoxelsToMm
-	voxMin := C.PKVector3{X: 0, Y: 0, Z: 0}
-	voxMax := C.PKVector3{X: C.float(float32(sx)), Y: C.float(float32(sy)), Z: C.float(float32(sz))}
+	ox, oy, oz, sx, sy, sz := v.VoxelDimensions()
+	// Convert voxel origin and origin+size to mm
+	voxMin := C.PKVector3{X: C.float(float32(ox)), Y: C.float(float32(oy)), Z: C.float(float32(oz))}
+	voxMax := C.PKVector3{X: C.float(float32(ox + sx)), Y: C.float(float32(oy + sy)), Z: C.float(float32(oz + sz))}
 	var mmMin, mmMax C.PKVector3
 	C.Library_VoxelsToMm(instance, &voxMin, &mmMin)
 	C.Library_VoxelsToMm(instance, &voxMax, &mmMax)

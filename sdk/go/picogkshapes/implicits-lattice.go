@@ -252,27 +252,28 @@ func (lm *LatticeManifold) ToLattice() *picogkffi.Lattice {
 	n := lm.lSteps
 	limitAngle := lm.maxOverhangAngle * math.Pi / 180.0
 	halfAlpha := math.Pi/2 - limitAngle
-	maxR := lm.radius.Call(0) // assume radius is constant or use lr=0
+	maxR := lm.radius.Call(0)
 	r := maxR
 	h := r * (1 - math.Cos(halfAlpha))
 	s := 2 * r * math.Sin(halfAlpha)
 	tipLength := math.Tan(halfAlpha) * (0.5*s - lm.minPrintableRadius)
-	for i := 1; i <= n; i++ {
-		lr0 := float64(i-1) / float64(n)
-		lr1 := float64(i) / float64(n)
-		p0 := lm.spinePoint(lr0)
-		p1 := lm.spinePoint(lr1)
-		r0 := lm.radius.Call(lr0)
-		r1 := lm.radius.Call(lr1)
-		// Round beam
-		lat.AddBeam(ToFFI(p0), ToFFI(p1), float32(r0), float32(r1), true)
-		// Tear-drop tip at p1 (+Z)
-		mid := p1.Add(lm.frame.LocalZ.Mul(r - h))
-		tip := mid.Add(lm.frame.LocalZ.Mul(tipLength))
+	// The tear-drop tips point along world Z (up/down), NOT along the frame's local_z.
+	// This matches PicoPie: z = np.array([0.0, 0.0, 1.0])
+	worldZ := Vec3{0, 0, 1}
+	for i := range n {
+		lr := float64(i) / float64(n)
+		pt := lm.spinePoint(lr)
+		beam := lm.radius.Call(lr)
+		// Round pipe station (sphere-like)
+		lat.AddBeam(ToFFI(pt), ToFFI(pt), float32(beam), float32(beam), true)
+		// Tear-drop tip (+Z direction)
+		mid := pt.Add(worldZ.Mul(r - h))
+		tip := mid.Add(worldZ.Mul(tipLength))
 		lat.AddBeam(ToFFI(mid), ToFFI(tip), float32(0.5*s), float32(lm.minPrintableRadius), false)
 		if lm.extendBothSides {
-			midN := p1.Sub(lm.frame.LocalZ.Mul(r - h))
-			tipN := midN.Sub(lm.frame.LocalZ.Mul(tipLength))
+			// Tear-drop tip (-Z direction)
+			midN := pt.Sub(worldZ.Mul(r - h))
+			tipN := midN.Sub(worldZ.Mul(tipLength))
 			lat.AddBeam(ToFFI(midN), ToFFI(tipN), float32(0.5*s), float32(lm.minPrintableRadius), false)
 		}
 	}

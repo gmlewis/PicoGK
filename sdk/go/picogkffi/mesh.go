@@ -110,7 +110,7 @@ func (m *Mesh) BoundingBox() BBox3 {
 func (m *Mesh) Vertices() []float32 {
 	n := int(m.VertexCount())
 	result := make([]float32, n*3)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		v := m.GetVertex(int32(i))
 		result[i*3] = v.X
 		result[i*3+1] = v.Y
@@ -123,7 +123,7 @@ func (m *Mesh) Vertices() []float32 {
 func (m *Mesh) Triangles() []int32 {
 	n := int(m.TriangleCount())
 	result := make([]int32, n*3)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		t := m.GetTriangle(int32(i))
 		result[i*3] = t.A
 		result[i*3+1] = t.B

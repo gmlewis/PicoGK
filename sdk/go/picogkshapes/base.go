@@ -44,8 +44,8 @@ func QuadGridToMesh(grid [][]Vec3) *picogkffi.Mesh {
 	if b < 2 {
 		return picogkffi.NewMesh()
 	}
-	for i := 0; i < a-1; i++ {
-		for j := 0; j < b-1; j++ {
+	for i := range a - 1 {
+		for j := range b - 1 {
 			p0 := grid[i][j]
 			p1 := grid[i+1][j]
 			p2 := grid[i+1][j+1]
@@ -90,12 +90,12 @@ func (smb *SurfaceMeshBuilder) Add(grid [][]Vec3, flip bool) *SurfaceMeshBuilder
 	if b < 2 {
 		return smb
 	}
-	for i := 0; i < a-1; i++ {
-		for j := 0; j < b-1; j++ {
+	for i := range a - 1 {
+		for j := range b - 1 {
 			p0 := grid[i][j]
 			p1 := grid[i][j+1]
 			p2 := grid[i+1][j+1]
-			p3 := grid[i][j+1]
+			p3 := grid[i+1][j]
 			if flip {
 				// Reversed winding
 				idx := int32(len(smb.verts) / 3)
@@ -152,7 +152,7 @@ func makeGrid(a, b int) [][]Vec3 {
 // arange returns n equally-spaced values from 0 to 1 (inclusive).
 func arange(n int) []float64 {
 	result := make([]float64, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		result[i] = float64(i) / float64(n-1)
 	}
 	return result

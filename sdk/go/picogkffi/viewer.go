@@ -105,7 +105,7 @@ func (v *Viewer) Run() {
 // for the screenshot to complete.
 func (v *Viewer) Screenshot(path string, frames int) {
 	v.RequestScreenShot(path)
-	for i := 0; i < frames; i++ {
+	for range frames {
 		v.Poll()
 	}
 }

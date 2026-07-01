@@ -48,9 +48,9 @@ func (s *Sphere) ToMesh() *picogkffi.Mesh {
 	p := s.polarSteps + 1
 	grid := makeGrid(a, p)
 	f := s.frame
-	for i := 0; i < a; i++ {
+	for i := range a {
 		theta := math.Pi * float64(i) / float64(a-1)
-		for j := 0; j < p; j++ {
+		for j := range p {
 			phi := 2 * math.Pi * (float64(j) - 1) / float64(s.polarSteps-1)
 			r := s.radius.Call(phi, theta)
 			x := r * math.Cos(phi) * math.Sin(theta)
@@ -125,15 +125,15 @@ func (b *Box) ToMesh() *picogkffi.Mesh {
 	nw, nd, nl := b.wSteps, b.dSteps, b.lSteps
 	// w: -1..1, d: -1..1, lr: 0..1
 	w := make([]float64, nw)
-	for i := 0; i < nw; i++ {
+	for i := range nw {
 		w[i] = 2.0*float64(i)/float64(nw-1) - 1.0
 	}
 	d := make([]float64, nd)
-	for i := 0; i < nd; i++ {
+	for i := range nd {
 		d[i] = 2.0*float64(i)/float64(nd-1) - 1.0
 	}
 	lr := make([]float64, nl)
-	for i := 0; i < nl; i++ {
+	for i := range nl {
 		lr[i] = float64(i) / float64(nl-1)
 	}
 
@@ -190,8 +190,8 @@ func (b *Box) boxSurfaceGrid(wR, dR, lR []float64) [][]Vec3 {
 	}
 
 	grid := makeGrid(r0, r1)
-	for i := 0; i < r0; i++ {
-		for j := 0; j < r1; j++ {
+	for i := range r0 {
+		for j := range r1 {
 			// Pick the right ratio for each axis
 			var wr, dr, lrVal float64
 			if len(wR) == 1 {
@@ -340,9 +340,9 @@ func (c *Cylinder) ToMesh() *picogkffi.Mesh {
 	}
 	// Top cap (lr=1, no flip)
 	grid := makeGrid(c.polarSteps, c.radialSteps+1)
-	for i := 0; i < c.polarSteps; i++ {
+	for i := range c.polarSteps {
 		phi := 2 * math.Pi * float64(i) / float64(c.polarSteps-1)
-		for j := 0; j <= c.radialSteps; j++ {
+		for j := range c.radialSteps + 1 {
 			rr := float64(j) / float64(c.radialSteps)
 			r := rr * c.radius.Call(phi, 1.0)
 			grid[i][j] = spine(1.0).Add(lx.Mul(r * math.Cos(phi))).Add(ly.Mul(r * math.Sin(phi)))
@@ -351,9 +351,9 @@ func (c *Cylinder) ToMesh() *picogkffi.Mesh {
 	smb.Add(grid, false)
 	// Bottom cap (lr=0, flip)
 	grid = makeGrid(c.polarSteps, c.radialSteps+1)
-	for i := 0; i < c.polarSteps; i++ {
+	for i := range c.polarSteps {
 		phi := 2 * math.Pi * float64(i) / float64(c.polarSteps-1)
-		for j := 0; j <= c.radialSteps; j++ {
+		for j := range c.radialSteps + 1 {
 			rr := float64(j) / float64(c.radialSteps)
 			r := rr * c.radius.Call(phi, 0.0)
 			grid[i][j] = spine(0.0).Add(lx.Mul(r * math.Cos(phi))).Add(ly.Mul(r * math.Sin(phi)))
@@ -362,9 +362,9 @@ func (c *Cylinder) ToMesh() *picogkffi.Mesh {
 	smb.Add(grid, true)
 	// Outer mantle (no flip)
 	grid = makeGrid(c.polarSteps, nl+1)
-	for i := 0; i < c.polarSteps; i++ {
+	for i := range c.polarSteps {
 		phi := 2 * math.Pi * float64(i) / float64(c.polarSteps-1)
-		for j := 0; j <= nl; j++ {
+		for j := range nl + 1 {
 			lr := lRatios[j]
 			r := c.radius.Call(phi, lr)
 			grid[i][j] = spine(lr).Add(lx.Mul(r * math.Cos(phi))).Add(ly.Mul(r * math.Sin(phi)))
@@ -434,7 +434,7 @@ func (r *Ring) ToMesh() *picogkffi.Mesh {
 	nP := r.polarSteps
 	grid := makeGrid(nA, nP)
 	f := r.frame
-	for i := 0; i < nA; i++ {
+	for i := range nA {
 		var a float64
 		if i == 0 {
 			a = 1.0
@@ -447,7 +447,7 @@ func (r *Ring) ToMesh() *picogkffi.Mesh {
 		// Local X at each station is the radial direction
 		localX := SafeNormalized(spine.Sub(f.Pos))
 		localY := f.LocalZ
-		for j := 0; j < nP; j++ {
+		for j := range nP {
 			phi := 2 * math.Pi * float64(j) / float64(nP-1)
 			mod := r.radius.Call(phi, alpha)
 			grid[i][j] = spine.Add(localX.Mul(mod * math.Cos(phi))).Add(localY.Mul(mod * math.Sin(phi)))
@@ -536,9 +536,9 @@ func (l *Lens) lensSurface(h float64, phiR, radR []float64) [][]Vec3 {
 	nrad := len(radR)
 	grid := makeGrid(nphi, nrad)
 	f := l.frame
-	for i := 0; i < nphi; i++ {
+	for i := range nphi {
 		phi := 2 * math.Pi * phiR[i]
-		for j := 0; j < nrad; j++ {
+		for j := range nrad {
 			radius := (l.outerRadius-l.innerRadius)*radR[j] + l.innerRadius
 			lower := l.lower.Call(phi, radR[j])
 			upper := l.upper.Call(phi, radR[j])
@@ -573,8 +573,8 @@ func (l *Lens) lensMantleSurface(hr, p []float64, radR float64) [][]Vec3 {
 	np := len(p)
 	grid := makeGrid(nh, np)
 	f := l.frame
-	for i := 0; i < nh; i++ {
-		for j := 0; j < np; j++ {
+	for i := range nh {
+		for j := range np {
 			phi := 2 * math.Pi * p[j]
 			radius := (l.outerRadius-l.innerRadius)*radR + l.innerRadius
 			lower := l.lower.Call(phi, radR)
@@ -620,8 +620,19 @@ func NewPipe(frame *LocalFrame, length, innerRadius, outerRadius any, opts ...Pi
 	if frame == nil {
 		p.frame = NewLocalFrame(V(0, 0, 0))
 	}
+	// Check if radii are constant — if not, or if there's a spine/transform,
+	// bump lengthSteps to 500 (matching Python's C# ShapeKernel behavior).
+	innerConst := isConstant(innerRadius)
+	outerConst := isConstant(outerRadius)
+	if !innerConst || !outerConst {
+		p.lengthSteps = 500
+	}
 	for _, opt := range opts {
 		opt(p)
+	}
+	// If a spine or transform was set via opts, also bump lengthSteps
+	if (p.frames != nil || p.transform != nil) && p.lengthSteps < 500 {
+		p.lengthSteps = 500
 	}
 	return p
 }
@@ -682,8 +693,8 @@ func (p *Pipe) pipeSurface(lrs, phiRs, radRs []float64) [][]Vec3 {
 	r0, r1 = pipeGridShape(lrs, phiRs, radRs)
 
 	grid := makeGrid(r0, r1)
-	for i := 0; i < r0; i++ {
-		for j := 0; j < r1; j++ {
+	for i := range r0 {
+		for j := range r1 {
 			var lr, phiR, radR float64
 			if nl == 1 {
 				lr = lrs[0]
@@ -711,6 +722,21 @@ func (p *Pipe) pipeSurface(lrs, phiRs, radRs []float64) [][]Vec3 {
 			inner := p.inner.Call(phi, lr)
 			radius := radR*(outer-inner) + inner
 			grid[i][j] = sp.Add(lx.Mul(radius * math.Cos(phi))).Add(ly.Mul(radius * math.Sin(phi)))
+		}
+	}
+	// Apply vertex transform if set
+	if p.transform != nil {
+		var pts []Vec3
+		for _, row := range grid {
+			pts = append(pts, row...)
+		}
+		pts = p.transform(pts)
+		idx := 0
+		for i := range grid {
+			for j := range grid[i] {
+				grid[i][j] = pts[idx]
+				idx++
+			}
 		}
 	}
 	return grid
@@ -800,6 +826,15 @@ func (ps *PipeSegment) ToMesh() *picogkffi.Mesh {
 	// Segment end cap (phiR=1, flip)
 	smb.Add(ps.pipeSurface(lr, []float64{1.0}, rr), true)
 	return smb.Build()
+}
+
+func isConstant(v any) bool {
+	switch v.(type) {
+	case float64, int, int32, int64, float32:
+		return true
+	default:
+		return false
+	}
 }
 
 func toFloat(v any) float64 {

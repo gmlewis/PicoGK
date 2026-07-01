@@ -28,6 +28,7 @@ var (
 	outDir    = flag.String("out", "/tmp/go-ffi-gallery", "output directory for PNGs")
 	voxelSize = flag.Float64("voxel-size", 0.2, "kernel voxel size in mm")
 	noViewer  = flag.Bool("no-viewer", false, "Use render_to_image instead of Viewer (no display needed)")
+	sceneOnly = flag.String("scene", "", "render only this scene (empty = all)")
 )
 
 // SceneGroup is re-exported from picogkshapes.
@@ -59,6 +60,9 @@ func main() {
 	scenes := buildScenes()
 
 	for name, builder := range scenes {
+		if *sceneOnly != "" && name != *sceneOnly {
+			continue
+		}
 		fmt.Printf("--- %s ---\n", name)
 		groups := builder()
 		if len(groups) == 0 {
@@ -69,10 +73,15 @@ func main() {
 		if *noViewer {
 			// Save STLs only
 			for i, g := range groups {
-				mesh := g.Voxels.ToMesh()
-				stlPath := filepath.Join(*outDir, fmt.Sprintf("%s_%d.stl", name, i))
-				saveSTL(stlPath, mesh.Vertices(), mesh.Triangles())
-				mesh.Destroy()
+				if g.Voxels != nil {
+					mesh := g.Voxels.ToMesh()
+					stlPath := filepath.Join(*outDir, fmt.Sprintf("%s_%d.stl", name, i))
+					saveSTL(stlPath, mesh.Vertices(), mesh.Triangles())
+					mesh.Destroy()
+				} else if g.Mesh != nil {
+					stlPath := filepath.Join(*outDir, fmt.Sprintf("%s_%d.stl", name, i))
+					saveSTL(stlPath, g.Mesh.Vertices(), g.Mesh.Triangles())
+				}
 			}
 			fmt.Printf("  -> %s/*.stl (no viewer mode)\n", *outDir)
 		} else {
@@ -84,7 +93,11 @@ func main() {
 			cam.BgA = 1.0
 			v := picogkffi.NewViewerEx("PicoGK Gallery — "+name, 1280, 960, cam)
 			for i, g := range groups {
-				v.AddVoxels(i, g.Voxels)
+				if g.Voxels != nil {
+					v.AddVoxels(i, g.Voxels)
+				} else if g.Mesh != nil {
+					v.AddMesh(i, g.Mesh)
+				}
 				v.SetGroupMaterial(i, g.Color.ToFFI(), 0.1, 0.5)
 			}
 			pngPath := filepath.Join(*outDir, name+".png")
@@ -94,9 +107,14 @@ func main() {
 			fmt.Printf("  -> %s\n", pngPath)
 		}
 
-		// Cleanup voxels
+		// Cleanup
 		for _, g := range groups {
-			g.Voxels.Destroy()
+			if g.Voxels != nil {
+				g.Voxels.Destroy()
+			}
+			if g.Mesh != nil {
+				g.Mesh.Destroy()
+			}
 		}
 	}
 
@@ -141,30 +159,8 @@ func splinePoints() []picogkshapes.Vec3 {
 		picogkshapes.V(0, 50, 20),
 		picogkshapes.V(0, 60, 60),
 	}
-	n := 500
-	pts := make([]picogkshapes.Vec3, n)
-	// Simple Catmull-Rom-like interpolation (linear for now; port ControlPointSpline later)
-	for i := 0; i < n; i++ {
-		t := float64(i) / float64(n-1)
-		// Find segment
-		seg := t * float64(len(ctrl)-1)
-		idx := int(seg)
-		if idx >= len(ctrl)-1 {
-			idx = len(ctrl) - 2
-		}
-		frac := seg - float64(idx)
-		// Quadratic interpolation between 3 points
-		if idx == 0 {
-			pts[i] = picogkshapes.Lerp(ctrl[0], ctrl[1], frac)
-		} else if idx >= len(ctrl)-2 {
-			pts[i] = picogkshapes.Lerp(ctrl[len(ctrl)-2], ctrl[len(ctrl)-1], frac)
-		} else {
-			// Smooth interpolation
-			p0, p1 := ctrl[idx], ctrl[idx+1]
-			pts[i] = picogkshapes.Lerp(p0, p1, frac)
-		}
-	}
-	return pts
+	spline := picogkshapes.NewControlPointSpline(ctrl, 2, false)
+	return spline.Points(500)
 }
 
 // --- Scenes ---
@@ -177,9 +173,9 @@ func buildBox() []SceneGroup {
 	b2 := picogkshapes.NewBox(picogkshapes.NewLocalFrame(picogkshapes.V(50, 0, 0)), 20, line2, line1).ToVoxels()
 	b3 := picogkshapes.NewBox(picogkshapes.NewLocalFrame(picogkshapes.V(0, 0, 0)), 20, line2, line1).ToVoxels()
 	return []SceneGroup{
-		{b1, picogkshapes.Palette.Blue},
-		{b2, picogkshapes.Palette.Green},
-		{b3, picogkshapes.Palette.Yellow},
+		{Voxels: b1, Color: picogkshapes.Palette.Blue},
+		{Voxels: b2, Color: picogkshapes.Palette.Green},
+		{Voxels: b3, Color: picogkshapes.Palette.Yellow},
 	}
 }
 
@@ -190,9 +186,9 @@ func buildSphere() []SceneGroup {
 	s3 := picogkshapes.NewSphere(picogkshapes.NewLocalFrame(picogkshapes.V(150, 0, 0)),
 		func(phi, theta float64) float64 { return 40 - 10*math.Cos(6*theta) + 30*math.Cos(2*phi) }).ToVoxels()
 	return []SceneGroup{
-		{s1, picogkshapes.Palette.Frozen},
-		{s2, picogkshapes.Palette.Pitaya},
-		{s3, picogkshapes.Palette.Warning},
+		{Voxels: s1, Color: picogkshapes.Palette.Frozen},
+		{Voxels: s2, Color: picogkshapes.Palette.Pitaya},
+		{Voxels: s3, Color: picogkshapes.Palette.Warning},
 	}
 }
 
@@ -202,9 +198,9 @@ func buildCylinder() []SceneGroup {
 		func(phi, lr float64) float64 { return line1(lr) }).ToVoxels()
 	c3 := picogkshapes.NewCylinder(picogkshapes.NewLocalFrame(picogkshapes.V(0, 0, 0)), 60, surf1).ToVoxels()
 	return []SceneGroup{
-		{c1, picogkshapes.Palette.Blue},
-		{c2, picogkshapes.Palette.Green},
-		{c3, picogkshapes.Palette.Yellow},
+		{Voxels: c1, Color: picogkshapes.Palette.Blue},
+		{Voxels: c2, Color: picogkshapes.Palette.Green},
+		{Voxels: c3, Color: picogkshapes.Palette.Yellow},
 	}
 }
 
@@ -217,10 +213,10 @@ func buildRing() []SceneGroup {
 	r4 := picogkshapes.NewRing(picogkshapes.NewLocalFrame(picogkshapes.V(50, -50, 0)), 30,
 		func(phi, alpha float64) float64 { return 10 - 2*math.Cos(5*(phi+alpha)) + 3*math.Cos(5*alpha) }).ToVoxels()
 	return []SceneGroup{
-		{r1, picogkshapes.Palette.Frozen},
-		{r2, picogkshapes.Palette.Pitaya},
-		{r3, picogkshapes.Palette.Warning},
-		{r4, picogkshapes.Palette.Blueberry},
+		{Voxels: r1, Color: picogkshapes.Palette.Frozen},
+		{Voxels: r2, Color: picogkshapes.Palette.Pitaya},
+		{Voxels: r3, Color: picogkshapes.Palette.Warning},
+		{Voxels: r4, Color: picogkshapes.Palette.Blueberry},
 	}
 }
 
@@ -236,29 +232,51 @@ func buildLens() []SceneGroup {
 		picogkshapes.LensUpper(picogkshapes.NewSurfaceModulation(func(phi, rr float64) float64 { return 5 + math.Cos(6*(phi+0.3*math.Pi*rr)) + 3*math.Cos(20*rr) })),
 	).ToVoxels()
 	return []SceneGroup{
-		{l1, picogkshapes.Palette.Frozen},
-		{l2, picogkshapes.Palette.Pitaya},
-		{l3, picogkshapes.Palette.Warning},
+		{Voxels: l1, Color: picogkshapes.Palette.Frozen},
+		{Voxels: l2, Color: picogkshapes.Palette.Pitaya},
+		{Voxels: l3, Color: picogkshapes.Palette.Warning},
 	}
 }
 
 func buildPipe() []SceneGroup {
+	// Pipe 1: static blue pipe
 	p1 := picogkshapes.NewPipe(picogkshapes.NewLocalFrame(picogkshapes.V(-50, 0, 0)), 60, 10, 20).ToVoxels()
-	p2 := picogkshapes.NewPipe(picogkshapes.NewLocalFrame(picogkshapes.V(0, 0, 0)), 60, 10, 20).ToVoxels()
-	p3 := picogkshapes.NewPipe(picogkshapes.NewLocalFrame(picogkshapes.V(50, -50, 0)), 60, 6,
-		func(phi, lr float64) float64 { return line1(lr) }).ToVoxels()
-	p4 := picogkshapes.NewPipe(picogkshapes.NewLocalFrame(picogkshapes.V(0, 0, 0)), 60,
-		surf3, surf1, picogkshapes.PipeFrames(nil)).ToVoxels()
-	// p4 uses a spine — build it properly below
-	p4.Destroy()
-	// Build p4 with the spine
+
+	// Pipe 2: green pipe with vertex transform (creates a skewed/vase shape)
+	trafo := func(pts []picogkshapes.Vec3) []picogkshapes.Vec3 {
+		result := make([]picogkshapes.Vec3, len(pts))
+		for i, p := range pts {
+			result[i] = picogkshapes.V(
+				p.Y+0.2*p.Z-50, // new_x = y + 0.2*z - 50
+				0.5*p.Z+50,     // new_y = 0.5*z + 50
+				0.5*p.X,        // new_z = 0.5*x
+			)
+		}
+		return result
+	}
+	p2 := picogkshapes.NewPipe(picogkshapes.NewLocalFrame(picogkshapes.V(0, 0, 0)), 60, 10, 20,
+		picogkshapes.PipeTransform(trafo),
+	).ToVoxels()
+
+	// Pipe 3: lemongrass pipe with modulated outer radius
+	p3 := picogkshapes.NewPipe(picogkshapes.NewLocalFrame(picogkshapes.V(50, -50, 0)), 60,
+		6, // inner_radius = 6
+		func(phi, lr float64) float64 { return line1(lr) }, // outer_radius = _line1(lr)
+	).ToVoxels()
+
+	// Pipe 4: orchid pipe with modulated radii along a spline spine
 	spine := picogkshapes.FramesAlignedToX(splinePoints(), picogkshapes.V(0, 1, 0))
-	p4 = picogkshapes.NewPipe(nil, 60, surf3, surf1, picogkshapes.PipeFrames(spine)).ToVoxels()
+	p4 := picogkshapes.NewPipe(nil, 60,
+		surf3, // inner_radius = _surf3
+		surf1, // outer_radius = _surf1
+		picogkshapes.PipeFrames(spine),
+	).ToVoxels()
+
 	return []SceneGroup{
-		{p1, picogkshapes.Palette.Blue},
-		{p2, picogkshapes.Palette.Green},
-		{p3, picogkshapes.Palette.Lemongrass},
-		{p4, picogkshapes.Palette.Orchid},
+		{Voxels: p1, Color: picogkshapes.Palette.Blue},
+		{Voxels: p2, Color: picogkshapes.Palette.Green},
+		{Voxels: p3, Color: picogkshapes.Palette.Lemongrass},
+		{Voxels: p4, Color: picogkshapes.Palette.Orchid},
 	}
 }
 
@@ -280,9 +298,9 @@ func buildPipeSegment() []SceneGroup {
 		picogkshapes.PipeFrames(spine), picogkshapes.PipePolarSteps(360),
 	).ToVoxels()
 	return []SceneGroup{
-		{p1, picogkshapes.Palette.Blue},
-		{p2, picogkshapes.Palette.Ruby},
-		{p3, picogkshapes.Palette.RacingGreen},
+		{Voxels: p1, Color: picogkshapes.Palette.Blue},
+		{Voxels: p2, Color: picogkshapes.Palette.Ruby},
+		{Voxels: p3, Color: picogkshapes.Palette.RacingGreen},
 	}
 }
 
@@ -292,36 +310,36 @@ func buildBasicLattices() []SceneGroup {
 	lat.AddBeam(picogkffi.Vec3{X: 5, Y: 3, Z: 0}, picogkffi.Vec3{X: -3, Y: 0, Z: 7}, 1, 3, true)
 	v := lat.ToVoxels()
 	lat.Destroy()
-	return []SceneGroup{{v, picogkshapes.Palette.Blueberry}}
+	return []SceneGroup{{Voxels: v, Color: picogkshapes.Palette.Blueberry}}
 }
 
 func buildLatticePipe() []SceneGroup {
 	lp1 := picogkshapes.NewLatticePipe(picogkshapes.NewLocalFrame(picogkshapes.V(-50, 0, 0)), 60, 10).ToVoxels()
 	lp2 := picogkshapes.NewLatticePipe(picogkshapes.NewLocalFrame(picogkshapes.V(50, -50, 0)), 60, line1).ToVoxels()
-	lp3 := picogkshapes.NewLatticePipe(picogkshapes.NewLocalFrame(picogkshapes.V(0, 0, 0)), 60, line1).ToVoxels()
+	spine := picogkshapes.FramesAlignedToX(splinePoints(), picogkshapes.V(0, 1, 0))
+	lp3 := picogkshapes.NewLatticePipe(nil, 60, line1, picogkshapes.LatticePipeFrames(spine)).ToVoxels()
 	return []SceneGroup{
-		{lp1, picogkshapes.Palette.Yellow},
-		{lp2, picogkshapes.Palette.Frozen},
-		{lp3, picogkshapes.Palette.RacingGreen},
+		{Voxels: lp1, Color: picogkshapes.Palette.Yellow},
+		{Voxels: lp2, Color: picogkshapes.Palette.Frozen},
+		{Voxels: lp3, Color: picogkshapes.Palette.RacingGreen},
 	}
 }
 
 func buildLatticeManifold() []SceneGroup {
-	// local_z=(0,1,0) means the manifold extends along Y axis
-	// The frame's local_z defines the "up" direction for the tear-drop tips
+	// local_z=(0,1,0) means the manifold extends along Y from the frame position
 	lm1 := picogkshapes.NewLatticeManifold(
-		picogkshapes.NewLocalFrameXYZ(picogkshapes.V(-50, -25, 0), picogkshapes.V(0, 1, 0), picogkshapes.V(1, 0, 0)),
+		picogkshapes.NewLocalFrameXYZ(picogkshapes.V(-50, 0, 0), picogkshapes.V(0, 1, 0), picogkshapes.V(1, 0, 0)),
 		50, 5, 45).ToVoxels()
 	lm2 := picogkshapes.NewLatticeManifold(
-		picogkshapes.NewLocalFrameXYZ(picogkshapes.V(0, -25, 0), picogkshapes.V(0, 1, 0), picogkshapes.V(1, 0, 0)),
+		picogkshapes.NewLocalFrameXYZ(picogkshapes.V(0, 0, 0), picogkshapes.V(0, 1, 0), picogkshapes.V(1, 0, 0)),
 		50, 10, 30, picogkshapes.LMExtendBothSides(true)).ToVoxels()
 	lm3 := picogkshapes.NewLatticeManifold(
-		picogkshapes.NewLocalFrameXYZ(picogkshapes.V(50, -25, 0), picogkshapes.V(0, 1, 0), picogkshapes.V(1, 0, 0)),
+		picogkshapes.NewLocalFrameXYZ(picogkshapes.V(50, 0, 0), picogkshapes.V(0, 1, 0), picogkshapes.V(1, 0, 0)),
 		50, 5, 60, picogkshapes.LMExtendBothSides(true)).ToVoxels()
 	return []SceneGroup{
-		{lm1, picogkshapes.Palette.Yellow},
-		{lm2, picogkshapes.Palette.Crystal},
-		{lm3, picogkshapes.Palette.Green},
+		{Voxels: lm1, Color: picogkshapes.Palette.Yellow},
+		{Voxels: lm2, Color: picogkshapes.Palette.Crystal},
+		{Voxels: lm3, Color: picogkshapes.Palette.Green},
 	}
 }
 
@@ -342,7 +360,7 @@ func buildGyroidSphere() []SceneGroup {
 		Min: picogkffi.Vec3{-float32(r) - pad, -float32(r) - pad, -float32(r) - pad},
 		Max: picogkffi.Vec3{float32(r) + pad, float32(r) + pad, float32(r) + pad},
 	}, sdf)
-	return []SceneGroup{{v, picogkshapes.Palette.Billie}}
+	return []SceneGroup{{Voxels: v, Color: picogkshapes.Palette.Billie}}
 }
 
 func buildGyroidGenus() []SceneGroup {
@@ -360,7 +378,7 @@ func buildGyroidGenus() []SceneGroup {
 		Min: picogkffi.Vec3{float32(-3 * s), float32(-3 * s), float32(-1.6 * s)},
 		Max: picogkffi.Vec3{float32(3 * s), float32(3 * s), float32(1.6 * s)},
 	}, sdf)
-	return []SceneGroup{{v, picogkshapes.Palette.Lavender}}
+	return []SceneGroup{{Voxels: v, Color: picogkshapes.Palette.Lavender}}
 }
 
 func buildSuperellipsoid() []SceneGroup {
@@ -395,7 +413,7 @@ func buildSuperellipsoid() []SceneGroup {
 		mesh.Destroy()
 		translatedVox := picogkffi.FromMesh(translatedMesh)
 		translatedMesh.Destroy()
-		groups = append(groups, SceneGroup{translatedVox, spec.color})
+		groups = append(groups, SceneGroup{Voxels: translatedVox, Color: spec.color})
 	}
 	return groups
 }
@@ -407,6 +425,8 @@ func buildMeshPainter() []SceneGroup {
 	scale := picogkshapes.NewColorScale3D(picogkshapes.RainbowSpectrum(), 0.0, 90.0)
 	groups := picogkshapes.SplitByOverhangAngle(mesh, scale, 50)
 	mesh.Destroy()
+	// The painter returns mesh-based groups, but we need voxels for the viewer.
+	// Each group is already a voxel field from the SplitByOverhangAngle function.
 	return groups
 }
 
@@ -430,8 +450,8 @@ func buildMeshTrafo() []SceneGroup {
 	rotatedMesh.Destroy()
 	originalBox := picogkshapes.NewBox(picogkshapes.NewLocalFrame(picogkshapes.V(0, 0, 0)), 40, 30, 20).ToVoxels()
 	return []SceneGroup{
-		{originalBox, picogkshapes.Palette.Gray},
-		{rotatedVox, picogkshapes.Palette.Orchid},
+		{Voxels: originalBox, Color: picogkshapes.Palette.Gray},
+		{Voxels: rotatedVox, Color: picogkshapes.Palette.Orchid},
 	}
 }
 
@@ -441,7 +461,7 @@ func buildOverOffset() []SceneGroup {
 	b1.BoolAdd(b2)
 	b2.Destroy()
 	b1.DoubleOffset(4, -4)
-	return []SceneGroup{{b1, picogkshapes.Palette.Bubblegum}}
+	return []SceneGroup{{Voxels: b1, Color: picogkshapes.Palette.Bubblegum}}
 }
 
 // --- STL writer ---

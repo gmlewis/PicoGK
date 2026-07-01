@@ -46,7 +46,11 @@ func bboxFromC(cb C.PKBBox3) BBox3 {
 
 // cString writes a Go string into a C char buffer and returns it.
 func cStringBuf(s string, buf []C.char) {
-	for i := 0; i < len(buf) && i < len(s); i++ {
+	minLen := len(buf)
+	if len(s) < minLen {
+		minLen = len(s)
+	}
+	for i := range minLen {
 		buf[i] = C.char(s[i])
 	}
 	if len(buf) > 0 {
@@ -66,7 +70,7 @@ func goStringFromC(buf []C.char) string {
 	}
 	// Convert byte-by-byte (safe for ASCII)
 	result := make([]byte, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		result[i] = byte(buf[i])
 	}
 	return string(result)

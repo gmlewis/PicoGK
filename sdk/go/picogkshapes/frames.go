@@ -84,7 +84,7 @@ func FramesExtrude(length float64, frame *LocalFrame, spacing float64) *Frames {
 		n = 2
 	}
 	pts := make([]Vec3, n+1)
-	for i := 0; i <= n; i++ {
+	for i := range n + 1 {
 		lr := float64(i) / float64(n)
 		pts[i] = frame.Pos.Add(frame.LocalZ.Mul(length * lr))
 	}
@@ -137,7 +137,7 @@ func FramesAlignedToX(points []Vec3, targetX Vec3) *Frames {
 	ly := make([]Vec3, n)
 	lz := make([]Vec3, n)
 	// Compute tangents
-	for i := 0; i < n; i++ {
+	for i := range n {
 		var tangent Vec3
 		if i == 0 {
 			tangent = points[1].Sub(points[0])
@@ -150,7 +150,7 @@ func FramesAlignedToX(points []Vec3, targetX Vec3) *Frames {
 	}
 	// Align X to target
 	lastX := targetX
-	for i := 0; i < n; i++ {
+	for i := range n {
 		lx[i] = alignWithTargetX(lz[i], lastX)
 		lastX = lx[i]
 		ly[i] = lz[i].Cross(lx[i]).Normalized()

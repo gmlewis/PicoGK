@@ -30,7 +30,7 @@ func NewColorScale3D(spectrum []RGB, minValue, maxValue float64) *ColorScale3D {
 	n := 500
 	rgb := make([]RGB, n)
 	nc := len(spectrum)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		t := float64(i) / float64(n-1)
 		idx := t * float64(nc-1)
 		lo := int(idx)
@@ -71,7 +71,7 @@ func (cs *ColorScale3D) Color(value float64) RGB {
 
 // SplitByOverhangAngle splits a mesh into colored sub-meshes by triangle
 // overhang angle (degrees: 0 = vertical wall, 90 = horizontal).
-// Returns (sub-mesh voxels, color) pairs.
+// Returns (sub-mesh, color) pairs — meshes are added to the viewer directly.
 func SplitByOverhangAngle(mesh *picogkffi.Mesh, scale *ColorScale3D, nClasses int) []SceneGroup {
 	verts := mesh.Vertices()
 	tris := mesh.Triangles()
@@ -79,15 +79,13 @@ func SplitByOverhangAngle(mesh *picogkffi.Mesh, scale *ColorScale3D, nClasses in
 
 	// Compute per-triangle overhang angle
 	angles := make([]float64, nt)
-	for i := 0; i < nt; i++ {
+	for i := range nt {
 		a := tris[i*3] * 3
 		b := tris[i*3+1] * 3
 		c := tris[i*3+2] * 3
-		// Vertices
 		ax, ay, az := float64(verts[a]), float64(verts[a+1]), float64(verts[a+2])
 		bx, by, bz := float64(verts[b]), float64(verts[b+1]), float64(verts[b+2])
 		cx, cy, cz := float64(verts[c]), float64(verts[c+1]), float64(verts[c+2])
-		// Normal = cross(a-b, c-b)
 		nx := (ay-by)*(cz-bz) - (az-bz)*(cy-by)
 		ny := (az-bz)*(cx-bx) - (ax-bx)*(cz-bz)
 		nz := (ax-bx)*(cy-by) - (ay-by)*(cx-bx)
@@ -109,15 +107,14 @@ func SplitByOverhangAngle(mesh *picogkffi.Mesh, scale *ColorScale3D, nClasses in
 		angles[i] = angle
 	}
 
-	// Group by angle class
 	lo, hi := scale.MinValue, scale.MaxValue
 	var groups []SceneGroup
-	for k := 0; k < nClasses; k++ {
+	for k := range nClasses {
 		loK := lo + float64(k)*(hi-lo)/float64(nClasses-1)
 		hiK := lo + float64(k+1)*(hi-lo)/float64(nClasses-1)
 		var subVerts []float32
 		var subTris []int32
-		for i := 0; i < nt; i++ {
+		for i := range nt {
 			if angles[i] >= loK && (angles[i] < hiK || k == nClasses-1) {
 				a := tris[i*3] * 3
 				b := tris[i*3+1] * 3
@@ -131,17 +128,16 @@ func SplitByOverhangAngle(mesh *picogkffi.Mesh, scale *ColorScale3D, nClasses in
 		}
 		if len(subTris) > 0 {
 			subMesh := picogkffi.MeshFromArrays(subVerts, subTris)
-			subVox := picogkffi.FromMesh(subMesh)
-			subMesh.Destroy()
 			color := scale.Color(loK)
-			groups = append(groups, SceneGroup{Voxels: subVox, Color: color})
+			groups = append(groups, SceneGroup{Mesh: subMesh, Color: color})
 		}
 	}
 	return groups
 }
 
-// SceneGroup is one (voxels, color) pair for rendering.
+// SceneGroup is one (voxels or mesh, color) pair for rendering.
 type SceneGroup struct {
 	Voxels *picogkffi.Voxels
+	Mesh   *picogkffi.Mesh
 	Color  RGB
 }
