@@ -136,11 +136,31 @@ namespace PicoGK.Numerics
         }
 
         /// <summary>
+        /// Helper function to convert a point to world coordinates using a supplied frame.
+        /// Usage: Vector3 vecWorld = vecLocal.vecPtWorld(frm);
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Vector3 vecPtWorld(this Vector2 vec, Frame3d frm)
+        {
+            return frm.vecPtToWorld(vec);
+        }
+
+        /// <summary>
         /// Helper function to convert a direction to world coordinates using a supplied frame.
         /// Usage: Vector3 vecWorld = vecLocal.vecDirWorld(frm);
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Vector3 vecDirWorld(this Vector3 vec, Frame3d frm)
+        {
+            return frm.vecDirToWorld(vec);
+        }
+
+        /// <summary>
+        /// Helper function to convert a direction to world coordinates using a supplied frame.
+        /// Usage: Vector3 vecWorld = vecLocal.vecDirWorld(frm);
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Vector3 vecDirWorld(this Vector2 vec, Frame3d frm)
         {
             return frm.vecDirToWorld(vec);
         }
@@ -193,5 +213,36 @@ namespace PicoGK.Numerics
                                         vecPlaneNormalUnitVector) 
                     * vecPlaneNormalUnitVector;
 		}
+
+        /// <summary>
+        /// Checks whether all vector coordinate values are finite, i.e. not NaN and not positive or negative infinity.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool bIsFinite(this Vector2 vec)
+        {
+            return vec.X.bIsFinite() && vec.Y.bIsFinite();
+        }
+
+        /// <summary>
+        /// Checks whether all vector coordinate values are finite, i.e. not NaN and not positive or negative infinity.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool bIsFinite(this Vector3 vec)
+        {
+            return vec.X.bIsFinite() && vec.Y.bIsFinite() && vec.Z.bIsFinite();
+        }
+    }
+
+    public static class FloatExt
+    {
+        /// <summary>
+        /// Checks whether the value is finite, i.e. not NaN and not positive or negative infinity.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool bIsFinite(this float f)
+        {
+            return float.IsFinite(f);
+        }
+        
     }
 }
