@@ -4,12 +4,4 @@ members = [
   "picogkffi",
   "picogkffi/test",
   "picogkshapes",
-  "examples/blender-scene",
-  "examples/full-api",
-  "examples/hello-picogk",
-  "examples/fields-and-io",
-  "examples/viewer-demo",
-  "examples/visualize",
-  "examples/web-demo",
-  "examples/shapekernel-gallery",
 ]

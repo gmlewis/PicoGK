@@ -58,8 +58,8 @@ jobs:
 
       - name: moon check
         working-directory: sdk/mbt
-        run: moon check --target native picogkffi picogkshapes
+        run: moon check --target native
 
       - name: moon test
         working-directory: sdk/mbt
-        run: moon test --target native picogkffi picogkffi/test picogkshapes
+        run: moon test --target native
