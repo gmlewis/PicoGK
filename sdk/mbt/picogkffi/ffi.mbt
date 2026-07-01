@@ -306,23 +306,6 @@ extern "C" fn voxels_render_mesh(
 ) -> Unit = "Voxels_RenderMesh"
 
 ///|
-#borrow(p_bbox, p_sdf)
-extern "C" fn voxels_render_implicit(
-  h_this : Int64,
-  h_vox : Int64,
-  p_bbox : FixedArray[Byte],
-  p_sdf : FixedArray[Byte],
-) -> Unit = "Voxels_RenderImplicit"
-
-///|
-#borrow(p_sdf)
-extern "C" fn voxels_intersect_implicit(
-  h_this : Int64,
-  h_vox : Int64,
-  p_sdf : FixedArray[Byte],
-) -> Unit = "Voxels_IntersectImplicit"
-
-///|
 extern "C" fn voxels_render_lattice(
   h_this : Int64,
   h_vox : Int64,
@@ -665,14 +648,6 @@ extern "C" fn scalar_field_get_slice(
   p_out : FixedArray[Byte],
 ) -> Unit = "ScalarField_GetSlice"
 
-///|
-#borrow(p_cb)
-extern "C" fn scalar_field_traverse_active(
-  h_this : Int64,
-  h_sf : Int64,
-  p_cb : FixedArray[Byte],
-) -> Unit = "ScalarField_TraverseActive"
-
 // --- VectorField ---
 
 ///|
@@ -730,14 +705,6 @@ extern "C" fn vector_field_remove_value(
   h_vf : Int64,
   p_pt : FixedArray[Byte],
 ) -> Unit = "VectorField_RemoveValue"
-
-///|
-#borrow(p_cb)
-extern "C" fn vector_field_traverse_active(
-  h_this : Int64,
-  h_vf : Int64,
-  p_cb : FixedArray[Byte],
-) -> Unit = "VectorField_TraverseActive"
 
 // --- Metadata ---
 
@@ -858,51 +825,71 @@ extern "C" fn metadata_remove_value(
   p_name : FixedArray[Byte],
 ) -> Unit = "MetaData_RemoveValue"
 
+// --- Voxels: Implicit rendering ---
+
+#borrow(p_bbox, p_sdf)
+extern "C" fn voxels_render_implicit(
+  h_this : Int64,
+  h_vox : Int64,
+  p_bbox : FixedArray[Byte],
+  p_sdf : FixedArray[Byte],
+) -> Unit = "Voxels_RenderImplicit"
+
+#borrow(p_sdf)
+extern "C" fn voxels_intersect_implicit(
+  h_this : Int64,
+  h_vox : Int64,
+  p_sdf : FixedArray[Byte],
+) -> Unit = "Voxels_IntersectImplicit"
+
+// --- ScalarField: Traverse ---
+
+#borrow(p_cb)
+extern "C" fn scalar_field_traverse_active(
+  h_this : Int64,
+  h_sf : Int64,
+  p_cb : FixedArray[Byte],
+) -> Unit = "ScalarField_TraverseActive"
+
+// --- VectorField: Traverse ---
+
+#borrow(p_cb)
+extern "C" fn vector_field_traverse_active(
+  h_this : Int64,
+  h_vf : Int64,
+  p_cb : FixedArray[Byte],
+) -> Unit = "VectorField_TraverseActive"
+
 // --- Viewer ---
 
-///|
-#borrow(p_title, p_size, p_info, p_update, p_key, p_mouse_move, p_mouse_button, p_scroll, p_window_size)
+#borrow(p_title, p_size)
 extern "C" fn viewer_h_create(
   p_title : FixedArray[Byte],
   p_size : FixedArray[Byte],
-  p_info : FixedArray[Byte],
-  p_update : FixedArray[Byte],
-  p_key : FixedArray[Byte],
-  p_mouse_move : FixedArray[Byte],
-  p_mouse_button : FixedArray[Byte],
-  p_scroll : FixedArray[Byte],
-  p_window_size : FixedArray[Byte],
+  pInfo : Int64,
+  pUpdate : Int64,
+  pKey : Int64,
+  pMouseMove : Int64,
+  pMouseButton : Int64,
+  pScroll : Int64,
+  pWindowSize : Int64,
 ) -> Int64 = "Viewer_hCreate"
 
-///|
 extern "C" fn viewer_b_is_valid(h_viewer : Int64) -> Bool = "Viewer_bIsValid"
 
-///|
 extern "C" fn viewer_destroy(h_viewer : Int64) -> Unit = "Viewer_Destroy"
 
-///|
 extern "C" fn viewer_request_update(h_viewer : Int64) -> Unit = "Viewer_RequestUpdate"
 
-///|
 extern "C" fn viewer_b_poll(h_viewer : Int64) -> Bool = "Viewer_bPoll"
 
-///|
 #borrow(p_path)
-extern "C" fn viewer_request_screen_shot(
-  h_viewer : Int64,
-  p_path : FixedArray[Byte],
-) -> Unit = "Viewer_RequestScreenShot"
+extern "C" fn viewer_request_screen_shot(h_viewer : Int64, p_path : FixedArray[Byte]) -> Unit = "Viewer_RequestScreenShot"
 
-///|
-extern "C" fn viewer_enable_experimental(
-  h_viewer : Int64,
-  b_enable : Bool,
-) -> Unit = "Viewer_EnableExperimental"
+extern "C" fn viewer_enable_experimental(h_viewer : Int64, b_enable : Bool) -> Unit = "Viewer_EnableExperimental"
 
-///|
 extern "C" fn viewer_request_close(h_viewer : Int64) -> Unit = "Viewer_RequestClose"
 
-///|
 #borrow(p_diffuse, p_specular)
 extern "C" fn viewer_b_load_light_setup(
   h_viewer : Int64,
@@ -912,123 +899,85 @@ extern "C" fn viewer_b_load_light_setup(
   n_specular_len : Int,
 ) -> Bool = "Viewer_bLoadLightSetup"
 
-///|
-extern "C" fn viewer_add_mesh(
-  h_this : Int64,
-  h_viewer : Int64,
-  n_group : Int,
-  h_mesh : Int64,
-) -> Unit = "Viewer_AddMesh"
+extern "C" fn viewer_add_mesh(h_this : Int64, h_viewer : Int64, n_group : Int, h_mesh : Int64) -> Unit = "Viewer_AddMesh"
 
-///|
-extern "C" fn viewer_remove_mesh(
-  h_this : Int64,
-  h_viewer : Int64,
-  h_mesh : Int64,
-) -> Unit = "Viewer_RemoveMesh"
+extern "C" fn viewer_remove_mesh(h_this : Int64, h_viewer : Int64, h_mesh : Int64) -> Unit = "Viewer_RemoveMesh"
 
-///|
 #borrow(p_matrix)
-extern "C" fn viewer_set_mesh_matrix(
-  h_this : Int64,
-  h_viewer : Int64,
-  h_mesh : Int64,
-  p_matrix : FixedArray[Byte],
-) -> Unit = "Viewer_SetMeshMatrix"
+extern "C" fn viewer_set_mesh_matrix(h_this : Int64, h_viewer : Int64, h_mesh : Int64, p_matrix : FixedArray[Byte]) -> Unit = "Viewer_SetMeshMatrix"
 
-///|
-extern "C" fn viewer_add_voxels(
-  h_this : Int64,
-  h_viewer : Int64,
-  n_group : Int,
-  h_vox : Int64,
-) -> Unit = "Viewer_AddVoxels"
+extern "C" fn viewer_add_voxels(h_this : Int64, h_viewer : Int64, n_group : Int, h_vox : Int64) -> Unit = "Viewer_AddVoxels"
 
-///|
-extern "C" fn viewer_remove_voxels(
-  h_this : Int64,
-  h_viewer : Int64,
-  h_vox : Int64,
-) -> Unit = "Viewer_RemoveVoxels"
+extern "C" fn viewer_remove_voxels(h_this : Int64, h_viewer : Int64, h_vox : Int64) -> Unit = "Viewer_RemoveVoxels"
 
-///|
 #borrow(p_matrix)
-extern "C" fn viewer_set_voxels_matrix(
-  h_this : Int64,
-  h_viewer : Int64,
-  h_vox : Int64,
-  p_matrix : FixedArray[Byte],
-) -> Unit = "Viewer_SetVoxelsMatrix"
+extern "C" fn viewer_set_voxels_matrix(h_this : Int64, h_viewer : Int64, h_vox : Int64, p_matrix : FixedArray[Byte]) -> Unit = "Viewer_SetVoxelsMatrix"
 
-///|
-extern "C" fn viewer_add_poly_line(
-  h_this : Int64,
-  h_viewer : Int64,
-  n_group : Int,
-  h_pl : Int64,
-) -> Unit = "Viewer_AddPolyLine"
+extern "C" fn viewer_add_poly_line(h_this : Int64, h_viewer : Int64, n_group : Int, h_pl : Int64) -> Unit = "Viewer_AddPolyLine"
 
-///|
-extern "C" fn viewer_remove_poly_line(
-  h_this : Int64,
-  h_viewer : Int64,
-  h_pl : Int64,
-) -> Unit = "Viewer_RemovePolyLine"
+extern "C" fn viewer_remove_poly_line(h_this : Int64, h_viewer : Int64, h_pl : Int64) -> Unit = "Viewer_RemovePolyLine"
 
-///|
 #borrow(p_matrix)
-extern "C" fn viewer_set_poly_line_matrix(
-  h_this : Int64,
-  h_viewer : Int64,
-  h_pl : Int64,
-  p_matrix : FixedArray[Byte],
-) -> Unit = "Viewer_SetPolyLineMatrix"
+extern "C" fn viewer_set_poly_line_matrix(h_this : Int64, h_viewer : Int64, h_pl : Int64, p_matrix : FixedArray[Byte]) -> Unit = "Viewer_SetPolyLineMatrix"
 
-///|
 extern "C" fn viewer_remove_all_objects(h_viewer : Int64) -> Unit = "Viewer_RemoveAllObjects"
 
-///|
-extern "C" fn viewer_set_group_visible(
-  h_viewer : Int64,
-  n_group : Int,
-  b_visible : Bool,
-) -> Unit = "Viewer_SetGroupVisible"
+extern "C" fn viewer_set_group_visible(h_viewer : Int64, n_group : Int, b_visible : Bool) -> Unit = "Viewer_SetGroupVisible"
 
-///|
 #borrow(p_color)
-extern "C" fn viewer_set_group_material(
-  h_viewer : Int64,
-  n_group : Int,
-  p_color : FixedArray[Byte],
-  f_metallic : Float,
-  f_roughness : Float,
-) -> Unit = "Viewer_SetGroupMaterial"
+extern "C" fn viewer_set_group_material(h_viewer : Int64, n_group : Int, p_color : FixedArray[Byte], f_metallic : Float, f_roughness : Float) -> Unit = "Viewer_SetGroupMaterial"
 
-///|
 #borrow(p_matrix)
-extern "C" fn viewer_set_group_matrix(
-  h_viewer : Int64,
-  n_group : Int,
-  p_matrix : FixedArray[Byte],
-) -> Unit = "Viewer_SetGroupMatrix"
+extern "C" fn viewer_set_group_matrix(h_viewer : Int64, n_group : Int, p_matrix : FixedArray[Byte]) -> Unit = "Viewer_SetGroupMatrix"
 
-///|
-extern "C" fn viewer_enable_group_warn_overhang(
-  h_viewer : Int64,
-  n_group : Int,
-  f_max_angle : Float,
-  f_min_length : Float,
-) -> Unit = "Viewer_EnableGroupWarnOverhang"
+extern "C" fn viewer_enable_group_warn_overhang(h_viewer : Int64, n_group : Int, f_max_angle : Float, f_min_length : Float) -> Unit = "Viewer_EnableGroupWarnOverhang"
 
-///|
-extern "C" fn viewer_disable_group_warn_overhang(
-  h_viewer : Int64,
-  n_group : Int,
-) -> Unit = "Viewer_DisableGroupWarnOverhang"
+extern "C" fn viewer_disable_group_warn_overhang(h_viewer : Int64, n_group : Int) -> Unit = "Viewer_DisableGroupWarnOverhang"
 
-///|
 #borrow(p_out)
-extern "C" fn viewer_get_bounding_box(
+extern "C" fn viewer_get_bounding_box(h_viewer : Int64, p_out : FixedArray[Byte]) -> Unit = "Viewer_GetBoundingBox"
+
+// --- Viewer: GPU Textures ---
+
+#borrow(p_name)
+extern "C" fn viewer_gpu_tex_h_create(h_viewer : Int64, n_width : Int, n_height : Int, p_name : FixedArray[Byte]) -> Int64 = "Viewer_GpuTex_hCreate"
+
+#borrow(p_name)
+extern "C" fn viewer_gpu_tex_refresh(h_viewer : Int64, h_tex : Int64, p_name : FixedArray[Byte]) -> Unit = "Viewer_GpuTex_Refresh"
+
+extern "C" fn viewer_gpu_tex_mark_for_cleanup(h_viewer : Int64, h_tex : Int64) -> Unit = "Viewer_GpuTex_MarkForCleanup"
+
+// --- Viewer: Quads ---
+
+#borrow(p_color, p_matrix)
+extern "C" fn viewer_quad_h_create(
   h_viewer : Int64,
-  p_out : FixedArray[Byte],
-) -> Unit = "Viewer_GetBoundingBox"
+  h_tex : Int64,
+  p_color : FixedArray[Byte],
+  f_size : Float,
+  p_matrix : FixedArray[Byte],
+  b_screen_space : Bool,
+  b_centered : Bool,
+  b_flip_y : Bool,
+) -> Int64 = "Viewer_Quad_hCreate"
+
+extern "C" fn viewer_quad_destroy(h_viewer : Int64, h_quad : Int64) -> Unit = "Viewer_Quad_Destroy"
+
+#borrow(p_matrix)
+extern "C" fn viewer_quad_set_matrix(h_viewer : Int64, h_quad : Int64, p_matrix : FixedArray[Byte]) -> Unit = "Viewer_Quad_SetMatrix"
+
+// --- Viewer: SideBar ---
+
+#borrow(p_bg_color, p_fg_color)
+extern "C" fn viewer_sidebar_h_create(
+  h_viewer : Int64,
+  b_right : Bool,
+  n_width : Int,
+  n_height : Int,
+  n_font_size : Int,
+  p_bg_color : FixedArray[Byte],
+  p_fg_color : FixedArray[Byte],
+) -> Int64 = "Viewer_SideBar_hCreate"
+
+extern "C" fn viewer_sidebar_destroy(h_viewer : Int64, h_gui : Int64) -> Unit = "Viewer_SideBar_Destroy"
+

@@ -35,7 +35,7 @@ pub fn Lattice::add_sphere(
     get_instance(),
     self.h,
     pack_vec3(center),
-    radius.to_float(),
+    Float::from_double(radius),
   )
 }
 
@@ -53,8 +53,8 @@ pub fn Lattice::add_beam(
     self.h,
     pack_vec3(start),
     pack_vec3(end),
-    radius1.to_float(),
-    radius2.to_float(),
+    Float::from_double(radius1),
+    Float::from_double(radius2),
     round_cap,
   )
 }

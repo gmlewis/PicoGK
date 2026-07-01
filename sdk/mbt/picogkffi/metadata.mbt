@@ -40,7 +40,7 @@ pub fn Metadata::name_at(self : Metadata, index : Int) -> String {
   ignore(
     metadata_b_get_name_at(get_instance(), self.h, index, buf, name_len + 1),
   )
-  buf.to_string()
+  bytes_to_string(buf)
 }
 
 ///|
@@ -57,7 +57,7 @@ pub fn Metadata::get_string(self : Metadata, name : String) -> String? {
   }
   let buf = FixedArray::make(str_len + 1, 0L.to_byte())
   if metadata_b_get_string_at(get_instance(), self.h, p, buf, str_len + 1) {
-    Some(buf.to_string())
+    Some(bytes_to_string(buf))
   } else {
     None
   }
@@ -98,7 +98,7 @@ pub fn Metadata::set_float(
   name : String,
   value : Double,
 ) -> Unit {
-  metadata_set_float_value(get_instance(), self.h, cstr(name), value.to_float())
+  metadata_set_float_value(get_instance(), self.h, cstr(name), Float::from_double(value))
 }
 
 ///|

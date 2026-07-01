@@ -13,7 +13,7 @@ pub fn get_instance() -> Int64 {
 
 ///|
 fn do_init(vs : Double) -> Result[Unit, String] {
-  let inst = library_h_create_instance(vs.to_float())
+  let inst = library_h_create_instance(Float::from_double(vs))
   let is_zero = inst == 0L
   ignore(is_zero)
   instance.val = inst
@@ -61,21 +61,21 @@ pub fn total_memory_usage() -> Int64 {
 pub fn version() -> String {
   let buf = FixedArray::make(256, 0L.to_byte())
   library_get_version(buf)
-  buf.to_string()
+  bytes_to_string(buf)
 }
 
 ///|
 pub fn name() -> String {
   let buf = FixedArray::make(256, 0L.to_byte())
   library_get_name(buf)
-  buf.to_string()
+  bytes_to_string(buf)
 }
 
 ///|
 pub fn build_info() -> String {
   let buf = FixedArray::make(256, 0L.to_byte())
   library_get_build_info(buf)
-  buf.to_string()
+  bytes_to_string(buf)
 }
 
 ///|

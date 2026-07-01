@@ -23,9 +23,9 @@ pub fn mesh_from_arrays(
   let m = new_mesh()
   for i in 0..<(vertices.length() / 3) {
     let buf = FixedArray::make(12, 0L.to_byte())
-    write_float_le(buf, 0, vertices[i * 3].to_float())
-    write_float_le(buf, 4, vertices[i * 3 + 1].to_float())
-    write_float_le(buf, 8, vertices[i * 3 + 2].to_float())
+    write_float_le(buf, 0, Float::from_double(vertices[i * 3]))
+    write_float_le(buf, 4, Float::from_double(vertices[i * 3 + 1]))
+    write_float_le(buf, 8, Float::from_double(vertices[i * 3 + 2]))
     ignore(mesh_n_add_vertex(get_instance(), m.h, buf))
   }
   for i in 0..<(triangles.length() / 3) {

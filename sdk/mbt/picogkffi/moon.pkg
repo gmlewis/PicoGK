@@ -1,9 +1,11 @@
 // picogkffi package configuration
 
 import {
-  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/encoding/utf8" @utf8,
   "moonbitlang/core/ref",
 }
+
+warnings = "-unused_value"
 
 options(
   link: { "native": { "cc-link-flags": "-lpicogk" } },

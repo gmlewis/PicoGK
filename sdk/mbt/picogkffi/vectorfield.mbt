@@ -26,7 +26,7 @@ pub fn vector_field_build_from_voxels(
       get_instance(),
       v.h,
       pack_vec3(ref_vec),
-      scale.to_float(),
+      Float::from_double(scale),
     ),
   }
 }

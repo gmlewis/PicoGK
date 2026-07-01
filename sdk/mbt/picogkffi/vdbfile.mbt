@@ -82,7 +82,7 @@ pub fn VdbFile::field_count(self : VdbFile) -> Int {
 pub fn VdbFile::get_field_name(self : VdbFile, index : Int) -> String {
   let buf = FixedArray::make(256, 0L.to_byte())
   vdb_file_get_field_name(get_instance(), self.h, index, buf)
-  buf.to_string()
+  bytes_to_string(buf)
 }
 
 ///|

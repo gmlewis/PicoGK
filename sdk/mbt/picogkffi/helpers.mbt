@@ -19,7 +19,7 @@ fn read_float_le(buf : FixedArray[Byte], offset : Int) -> Float {
   let b2 = buf[offset + 2].to_int()
   let b3 = buf[offset + 3].to_int()
   let bits = b0 | (b1 << 8) | (b2 << 16) | (b3 << 24)
-  Int::to_float(bits)
+  Float::from_int(bits)
 }
 
 ///|
@@ -45,9 +45,9 @@ fn read_int32_le(buf : FixedArray[Byte], offset : Int) -> Int {
 /// Pack a Vec3 into a 12-byte buffer.
 fn pack_vec3(v : Vec3) -> FixedArray[Byte] {
   let buf = FixedArray::make(12, 0L.to_byte())
-  write_float_le(buf, 0, v.x.to_float())
-  write_float_le(buf, 4, v.y.to_float())
-  write_float_le(buf, 8, v.z.to_float())
+  write_float_le(buf, 0, Float::from_double(v.x))
+  write_float_le(buf, 4, Float::from_double(v.y))
+  write_float_le(buf, 8, Float::from_double(v.z))
   buf
 }
 
@@ -59,19 +59,6 @@ fn unpack_vec3(buf : FixedArray[Byte]) -> Vec3 {
     y: read_float_le(buf, 4).to_double(),
     z: read_float_le(buf, 8).to_double(),
   }
-}
-
-///|
-/// Pack a BBox3 into a 24-byte buffer.
-fn pack_bbox3(b : BBox3) -> FixedArray[Byte] {
-  let buf = FixedArray::make(24, 0L.to_byte())
-  write_float_le(buf, 0, b.min.x.to_float())
-  write_float_le(buf, 4, b.min.y.to_float())
-  write_float_le(buf, 8, b.min.z.to_float())
-  write_float_le(buf, 12, b.max.x.to_float())
-  write_float_le(buf, 16, b.max.y.to_float())
-  write_float_le(buf, 20, b.max.z.to_float())
-  buf
 }
 
 ///|
@@ -95,11 +82,22 @@ fn unpack_bbox3(buf : FixedArray[Byte]) -> BBox3 {
 /// Pack a ColorFloat into a 16-byte buffer.
 fn pack_color(c : ColorFloat) -> FixedArray[Byte] {
   let buf = FixedArray::make(16, 0L.to_byte())
-  write_float_le(buf, 0, c.r.to_float())
-  write_float_le(buf, 4, c.g.to_float())
-  write_float_le(buf, 8, c.b.to_float())
-  write_float_le(buf, 12, c.a.to_float())
+  write_float_le(buf, 0, Float::from_double(c.r))
+  write_float_le(buf, 4, Float::from_double(c.g))
+  write_float_le(buf, 8, Float::from_double(c.b))
+  write_float_le(buf, 12, Float::from_double(c.a))
   buf
+}
+
+///|
+/// Read a NUL-terminated byte buffer as a String.
+fn bytes_to_string(buf : FixedArray[Byte]) -> String {
+  let mut i = 0
+  while i < buf.length() && buf[i] != 0L.to_byte() {
+    i = i + 1
+  }
+  let bytes = Bytes::from_array(buf[0:i])
+  @utf8.decode_lossy(bytes)
 }
 
 ///|

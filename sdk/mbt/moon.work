@@ -2,6 +2,7 @@ members = [
   "blender",
   "picogk",
   "picogkffi",
+  "picogkffi/test",
   "picogkshapes",
   "examples/blender-scene",
   "examples/full-api",

@@ -25,8 +25,8 @@ pub fn scalar_field_build_from_voxels(
     h: scalar_field_h_build_from_voxels(
       get_instance(),
       v.h,
-      min_val.to_float(),
-      max_val.to_float(),
+      Float::from_double(min_val),
+      Float::from_double(max_val),
     ),
   }
 }
@@ -57,7 +57,7 @@ pub fn ScalarField::set_value(
   pt : Vec3,
   val : Double,
 ) -> Unit {
-  scalar_field_set_value(get_instance(), self.h, pack_vec3(pt), val.to_float())
+  scalar_field_set_value(get_instance(), self.h, pack_vec3(pt), Float::from_double(val))
 }
 
 ///|

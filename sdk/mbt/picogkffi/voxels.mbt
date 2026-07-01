@@ -16,7 +16,7 @@ pub fn new_sphere(center : Vec3, radius : Double) -> Voxels {
     h: voxels_h_create_sphere(
       get_instance(),
       pack_vec3(center),
-      radius.to_float(),
+      Float::from_double(radius),
     ),
   }
 }
@@ -33,8 +33,8 @@ pub fn new_capsule(
       get_instance(),
       pack_vec3(start),
       pack_vec3(end),
-      radius1.to_float(),
-      radius2.to_float(),
+      Float::from_double(radius1),
+      Float::from_double(radius2),
     ),
   }
 }
@@ -42,7 +42,7 @@ pub fn new_capsule(
 ///|
 pub fn new_mesh_shell(mesh : Mesh, radius : Double) -> Voxels {
   Voxels::{
-    h: voxels_h_create_mesh_shell(get_instance(), mesh.h, radius.to_float()),
+    h: voxels_h_create_mesh_shell(get_instance(), mesh.h, Float::from_double(radius)),
   }
 }
 
@@ -94,7 +94,7 @@ pub fn Voxels::voxel_size(self : Voxels) -> Double {
 pub fn Voxels::diagnose(self : Voxels) -> String {
   let buf = FixedArray::make(256, 0L.to_byte())
   ignore(voxels_b_diagnose(get_instance(), self.h, buf))
-  buf.to_string()
+  bytes_to_string(buf)
 }
 
 ///|
@@ -135,17 +135,17 @@ pub fn Voxels::intersect(self : Voxels, other : Voxels) -> Voxels {
 
 ///|
 pub fn Voxels::offset(self : Voxels, dist : Double) -> Unit {
-  voxels_offset(get_instance(), self.h, dist.to_float())
+  voxels_offset(get_instance(), self.h, Float::from_double(dist))
 }
 
 ///|
 pub fn Voxels::double_offset(self : Voxels, d1 : Double, d2 : Double) -> Unit {
-  voxels_double_offset(get_instance(), self.h, d1.to_float(), d2.to_float())
+  voxels_double_offset(get_instance(), self.h, Float::from_double(d1), Float::from_double(d2))
 }
 
 ///|
 pub fn Voxels::triple_offset(self : Voxels, dist : Double) -> Unit {
-  voxels_triple_offset(get_instance(), self.h, dist.to_float())
+  voxels_triple_offset(get_instance(), self.h, Float::from_double(dist))
 }
 
 ///|
@@ -175,8 +175,8 @@ pub fn Voxels::project_z_slice(
   voxels_project_z_slice(
     get_instance(),
     self.h,
-    start_z.to_float(),
-    end_z.to_float(),
+    Float::from_double(start_z),
+    Float::from_double(end_z),
   )
 }
 
@@ -262,9 +262,9 @@ pub fn Voxels::bounding_box(self : Voxels) -> BBox3 {
   write_float_le(vox_min, 0, 0.0)
   write_float_le(vox_min, 4, 0.0)
   write_float_le(vox_min, 8, 0.0)
-  write_float_le(vox_max, 0, sx.to_double().to_float())
-  write_float_le(vox_max, 4, sy.to_double().to_float())
-  write_float_le(vox_max, 8, sz.to_double().to_float())
+  write_float_le(vox_max, 0, Float::from_int(sx))
+  write_float_le(vox_max, 4, Float::from_int(sy))
+  write_float_le(vox_max, 8, Float::from_int(sz))
   let mm_min = FixedArray::make(12, 0L.to_byte())
   let mm_max = FixedArray::make(12, 0L.to_byte())
   library_voxels_to_mm(get_instance(), vox_min, mm_min)
@@ -368,7 +368,7 @@ pub fn Voxels::get_interpolated_z_slice(
   voxels_get_interpolated_z_slice(
     get_instance(),
     self.h,
-    z.to_float(),
+    Float::from_double(z),
     out,
     FixedArray::make(0, 0L.to_byte()),
   )
