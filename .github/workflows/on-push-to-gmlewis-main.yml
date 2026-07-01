@@ -4,10 +4,18 @@ on:
   push:
     branches: [gmlewis-main]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
   go-tests:
     name: Go Unit Tests (${{ matrix.package }})
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     strategy:
       matrix:
         package:
@@ -30,14 +38,26 @@ jobs:
   moonbit-tests:
     name: MoonBit Unit Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
 
       - name: Install MoonBit
         run: |
-          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
-          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+          /bin/bash -c "$(curl -fsSL https://cli.moonbitlang.com/install/unix.sh)"
+          echo "/home/runner/.moon/bin" >> $GITHUB_PATH
 
-      - name: Run MoonBit tests
+      - name: Moon version
+        run: moon version --all
+
+      - name: moon update
         working-directory: sdk/mbt
-        run: moon test --target native
+        run: moon update
+
+      - name: moon check
+        working-directory: sdk/mbt
+        run: moon check --target native picogkffi picogkshapes
+
+      - name: moon test
+        working-directory: sdk/mbt
+        run: moon test --target native picogkffi picogkffi/test picogkshapes
