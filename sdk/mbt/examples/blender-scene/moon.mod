@@ -17,3 +17,7 @@ import {
   "gmlewis/blender@0.1.0",
   "moonbitlang/async@0.19.2",
 }
+
+replace {
+  "gmlewis/blender@0.1.0" = "../../blender",
+}

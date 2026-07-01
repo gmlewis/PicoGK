@@ -1,13 +1,13 @@
-// full-api: Exercise all PicoGK MCP tools from MoonBit
+// visualize: PicoGK MCP SDK for MoonBit
 // DO NOT EDIT — auto-generated
 
-name = "gmlewis/picogk-full-api-example"
+name = "gmlewis/picogk-visualize-example"
 
 version = "0.1.0"
 
 license = "Apache-2.0"
 
-description = "Full API exercise for the picogk MoonBit SDK"
+description = "Visualize example for MoonBit"
 
 preferred_target = "native"
 

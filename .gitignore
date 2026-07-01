@@ -487,6 +487,7 @@ xcuserdata/
 
 # Fortran module files
 *.mod
+!moon.mod
 *.smod
 
 # Compiled Static libraries
