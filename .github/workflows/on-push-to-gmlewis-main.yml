@@ -6,14 +6,12 @@ on:
 
 jobs:
   go-tests:
-    name: Go Unit Tests
+    name: Go Unit Tests (${{ matrix.package }})
     runs-on: ubuntu-latest
     strategy:
       matrix:
         package:
           - sdk/go/picogk
-          - sdk/go/picogkffi
-          - sdk/go/picogkshapes
           - sdk/go/blender
     steps:
       - uses: actions/checkout@v4
@@ -26,6 +24,9 @@ jobs:
         working-directory: ${{ matrix.package }}
         run: go test -v -count=1 ./...
 
+  # picogkffi and picogkshapes require cgo + libpicogk which is not available in CI
+  # They are tested locally via the smoke test and ffi_test.go
+
   moonbit-tests:
     name: MoonBit Unit Tests
     runs-on: ubuntu-latest
@@ -34,7 +35,7 @@ jobs:
 
       - name: Install MoonBit
         run: |
-          curl -fsSL https://moonbitlang.com/install.sh | bash
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
           echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
 
       - name: Run MoonBit tests
