@@ -72,14 +72,6 @@ namespace PicoGK
         /// <param name="vecScale">Scale the mesh (first step)</param>
         /// <param name="vecOffset">Offset the mesh (second step)</param>
         /// <returns>A new mesh that has the transformation applied</returns>
-        //
-        // BUG: This overload scales each triangle vertex by only ONE component
-        // of vecScale (A *= vecScale.X, B *= vecScale.Y, C *= vecScale.Z) rather
-        // than component-wise scaling all vertices by the full vecScale vector.
-        // A non-uniform vecScale (e.g. (2,1,1)) therefore produces a garbled mesh
-        // where each triangle's three vertices are scaled differently.
-        // Use the Matrix4x4 overload (mshCreateTransformed(Matrix4x4)) instead,
-        // which applies the transform correctly to every vertex.
         public Mesh mshCreateTransformed(   Vector3 vecScale,
                                             Vector3 vecOffset)
         {
