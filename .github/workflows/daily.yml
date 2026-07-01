@@ -1,0 +1,44 @@
+name: Daily Tests
+
+on:
+  schedule:
+    # 3:00 AM Eastern Time = 7:00 UTC (EST) / 8:00 UTC (EDT)
+    - cron: "0 7 * * *"
+  workflow_dispatch:
+
+jobs:
+  go-tests:
+    name: Go Unit Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        package:
+          - sdk/go/picogk
+          - sdk/go/picogkffi
+          - sdk/go/picogkshapes
+          - sdk/go/blender
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - name: Run Go tests
+        working-directory: ${{ matrix.package }}
+        run: go test -v -count=1 ./...
+
+  moonbit-tests:
+    name: MoonBit Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install MoonBit
+        run: |
+          curl -fsSL https://moonbitlang.com/install.sh | bash
+          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+
+      - name: Run MoonBit tests
+        working-directory: sdk/mbt
+        run: moon test --target native
