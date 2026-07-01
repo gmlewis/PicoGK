@@ -344,9 +344,10 @@ func buildLatticeManifold() []SceneGroup {
 }
 
 func buildGyroidSphere() []SceneGroup {
-	// Compose gyroid + sphere clip inside a single SDF (the robust approach,
-	// matching PicoPie's hello_picogk.py pattern).
-	// This avoids IntersectImplicit which requires grid outside value > 0.
+	// Compose gyroid + sphere clip inside a single SDF callback.
+	// This matches PicoPie's approach (render_implicit with a composed SDF)
+	// and avoids the IntersectImplicit native library bug (narrow-band
+	// truncation at voxel sizes < 0.33mm — see PicoPie's patch_runtime.py).
 	gyroid := picogkshapes.NewImplicitGyroid(3, 1)
 	r := 10.0
 	sdf := picogkffi.NewSDF(func(x, y, z float32) float32 {
@@ -367,7 +368,7 @@ func buildGyroidGenus() []SceneGroup {
 	s := 8.0
 	genus := picogkshapes.NewImplicitGenus(0.0)
 	gyroid := picogkshapes.NewImplicitGyroid(6, 0.6)
-	// Compose genus + gyroid clip in a single SDF
+	// Compose genus + gyroid clip in a single SDF callback
 	sdf := picogkffi.NewSDF(func(x, y, z float32) float32 {
 		g := genus.Eval(float64(x)/s, float64(y)/s, float64(z)/s)
 		gy := gyroid.Eval(float64(x), float64(y), float64(z))
