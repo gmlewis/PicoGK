@@ -604,18 +604,22 @@ type Pipe struct {
 	polarSteps  int
 	radialSteps int
 	lengthSteps int
+	// phiAngleFunc is the angle function for this pipe.
+	// Pipe uses 2*pi*phiRatio; PipeSegment overrides with mid+(phiRatio-0.5)*range.
+	phiAngleFunc func(phiRatio, lr float64) float64
 }
 
 // NewPipe creates a pipe. innerRadius/outerRadius can be float64 or func(phi,lr float64) float64.
 func NewPipe(frame *LocalFrame, length, innerRadius, outerRadius any, opts ...PipeOpt) *Pipe {
 	p := &Pipe{
-		frame:       frame,
-		length:      toFloat(length),
-		inner:       NewSurfaceModulation(innerRadius),
-		outer:       NewSurfaceModulation(outerRadius),
-		polarSteps:  360,
-		radialSteps: 5,
-		lengthSteps: 5,
+		frame:        frame,
+		length:       toFloat(length),
+		inner:        NewSurfaceModulation(innerRadius),
+		outer:        NewSurfaceModulation(outerRadius),
+		polarSteps:   360,
+		radialSteps:  5,
+		lengthSteps:  5,
+		phiAngleFunc: func(phiRatio, lr float64) float64 { return 2 * math.Pi * phiRatio },
 	}
 	if frame == nil {
 		p.frame = NewLocalFrame(V(0, 0, 0))
@@ -655,72 +659,83 @@ func (p *Pipe) pipeSpine(lr float64) (Vec3, Vec3, Vec3) {
 	return pos, p.frame.LocalX, p.frame.LocalY
 }
 
-func (p *Pipe) phiAngle(phiRatio, lr float64) float64 {
-	return 2 * math.Pi * phiRatio
-}
-
 func (p *Pipe) pipeSurface(lrs, phiRs, radRs []float64) [][]Vec3 {
-	// Broadcast: grid is (len(lrs) or len(phiRs), max of the other two)
-	// Following the Python pattern: lrs varies on axis0 if len>1,
-	// phiRs varies on axis1 if len>1.
-	nl := len(lrs)
-	np := len(phiRs)
-	nr := len(radRs)
-	// Determine grid shape
-	r0, r1 := 1, 1
-	if nl > 1 {
-		r0 = nl
-	}
+	// Match Python's NumPy broadcasting exactly:
+	// Top/bottom cap: _surface(lr_scalar, p[:,None], rr[None,:]) → grid (polar, radial)
+	//   phi on axis0, rad on axis1, lr scalar
+	// Inner/outer mantle: _surface(lr[None,:], p[:,None], 0.0) → grid (polar, length)
+	//   phi on axis0, lr on axis1, rad scalar
+	// Segment start/end cap: _surface(lr[:,None], 0.0, rr[None,:]) → grid (length, radial)
+	//   lr on axis0, rad on axis1, phi scalar
+	//
+	// Rule: phi ALWAYS goes on axis0 (via p[:,None]).
+	// lr goes on axis1 for mantles (via lr[None,:]) or axis0 for segment caps (via lr[:,None]).
+	// rad goes on axis1 for caps (via rr[None,:]).
+	//
+	// We determine the axis assignment by the "which array varies" heuristic:
+	// - If phi varies (len>1) AND lr varies (len>1): phi=axis0, lr=axis1 (mantle case)
+	// - If phi varies AND rad varies: phi=axis0, rad=axis1 (top/bottom cap case)
+	// - If lr varies AND rad varies: lr=axis0, rad=axis1 (segment cap case)
+	// - If only one varies: that one = axis0, axis1=1
+	nl, np, nr := len(lrs), len(phiRs), len(radRs)
+
+	var r0, r1 int = 1, 1
+	var lrAxis, phiAxis, radAxis int = -1, -1, -1 // -1 = scalar, 0 = axis0, 1 = axis1
+
 	if np > 1 && nl > 1 {
-		r1 = np
-	}
-	if np > 1 && nl == 1 {
+		// Mantle: phi=axis0, lr=axis1
+		phiAxis, lrAxis = 0, 1
+		r0, r1 = np, nl
+	} else if np > 1 && nr > 1 {
+		// Top/bottom cap: phi=axis0, rad=axis1
+		phiAxis, radAxis = 0, 1
+		r0, r1 = np, nr
+	} else if nl > 1 && nr > 1 {
+		// Segment cap: lr=axis0, rad=axis1
+		lrAxis, radAxis = 0, 1
+		r0, r1 = nl, nr
+	} else if np > 1 {
+		phiAxis = 0
 		r0 = np
-	}
-	if nr > 1 && nl == 1 && np > 1 {
-		r1 = nr
-	}
-	if nr > 1 && nl > 1 {
-		r1 = nr
-	} // radial on axis1 when lr varies on axis0
-	if nr > 1 && np > 1 && nl == 1 {
+	} else if nl > 1 {
+		lrAxis = 0
+		r0 = nl
+	} else if nr > 1 {
+		radAxis = 0
 		r0 = nr
-	} // radial on axis0 when phi varies on axis1
-	// Actually follow Python broadcasting more carefully:
-	// For top/bottom cap: lr is scalar, p[:,None] is (np,1), rr[None,:] is (1,nr) → grid (np, nr)
-	// For inner/outer mantle: lr[None,:] is (1,nl), p[:,None] is (np,1), radR scalar → grid (np, nl)
-	// For segment start/end cap: lr[:,None] is (nl,1), phiR scalar, rr[None,:] is (1,nr) → grid (nl, nr)
-	r0, r1 = pipeGridShape(lrs, phiRs, radRs)
+	}
 
 	grid := makeGrid(r0, r1)
 	for i := range r0 {
 		for j := range r1 {
-			var lr, phiR, radR float64
-			if nl == 1 {
-				lr = lrs[0]
-			} else if nl > 1 {
-				lr = lrs[min(i, nl-1)]
+			var lrVal, phiVal, radVal float64
+			if lrAxis == 0 {
+				lrVal = lrs[min(i, nl-1)]
+			} else if lrAxis == 1 {
+				lrVal = lrs[min(j, nl-1)]
+			} else {
+				lrVal = lrs[0]
 			}
-			if np == 1 {
-				phiR = phiRs[0]
-			} else if np > 1 {
-				if nl > 1 {
-					phiR = phiRs[min(j, np-1)]
-				} else {
-					phiR = phiRs[min(i, np-1)]
-				}
+			if phiAxis == 0 {
+				phiVal = phiRs[min(i, np-1)]
+			} else if phiAxis == 1 {
+				phiVal = phiRs[min(j, np-1)]
+			} else {
+				phiVal = phiRs[0]
 			}
-			if nr == 1 {
-				radR = radRs[0]
-			} else if nr > 1 {
-				radR = radRs[min(j, nr-1)]
+			if radAxis == 0 {
+				radVal = radRs[min(i, nr-1)]
+			} else if radAxis == 1 {
+				radVal = radRs[min(j, nr-1)]
+			} else {
+				radVal = radRs[0]
 			}
 
-			sp, lx, ly := p.pipeSpine(lr)
-			phi := p.phiAngle(phiR, lr)
-			outer := p.outer.Call(phi, lr)
-			inner := p.inner.Call(phi, lr)
-			radius := radR*(outer-inner) + inner
+			sp, lx, ly := p.pipeSpine(lrVal)
+			phi := p.phiAngleFunc(phiVal, lrVal)
+			outer := p.outer.Call(phi, lrVal)
+			inner := p.inner.Call(phi, lrVal)
+			radius := radVal*(outer-inner) + inner
 			grid[i][j] = sp.Add(lx.Mul(radius * math.Cos(phi))).Add(ly.Mul(radius * math.Sin(phi)))
 		}
 	}
@@ -740,27 +755,6 @@ func (p *Pipe) pipeSurface(lrs, phiRs, radRs []float64) [][]Vec3 {
 		}
 	}
 	return grid
-}
-
-func pipeGridShape(lrs, phiRs, radRs []float64) (int, int) {
-	nl, np, nr := len(lrs), len(phiRs), len(radRs)
-	// Default: each array with len>1 gets its own axis
-	// axis0 = first array with len>1 (priority: lr, then phi, then rad)
-	// axis1 = second array with len>1
-	var axis0, axis1 int = 1, 1
-	assigned := 0
-	for _, n := range []int{nl, np, nr} {
-		if n > 1 {
-			if assigned == 0 {
-				axis0 = n
-				assigned++
-			} else if assigned == 1 {
-				axis1 = n
-				assigned++
-			}
-		}
-	}
-	return axis0, axis1
 }
 
 func (p *Pipe) ToMesh() *picogkffi.Mesh {
@@ -797,18 +791,21 @@ func NewPipeSegment(frame *LocalFrame, length, innerRadius, outerRadius any,
 	a := NewLineModulation(start)
 	b := NewLineModulation(end)
 	ps := &PipeSegment{Pipe: pipe}
+	var mid, rng *LineModulation
 	if method == "start_end" {
-		ps.mid = a.Add(b).Mul(0.5)
-		ps.rng = b.Sub(a)
+		mid = a.Add(b).Mul(0.5)
+		rng = b.Sub(a)
 	} else { // mid_range
-		ps.mid = a
-		ps.rng = b
+		mid = a
+		rng = b
+	}
+	ps.mid = mid
+	ps.rng = rng
+	// Override the angle function so pipeSurface uses the segment's phi
+	ps.phiAngleFunc = func(phiRatio, lr float64) float64 {
+		return mid.Call(lr) + (phiRatio-0.5)*rng.Call(lr)
 	}
 	return ps
-}
-
-func (ps *PipeSegment) phiAngle(phiRatio, lr float64) float64 {
-	return ps.mid.Call(lr) + (phiRatio-0.5)*ps.rng.Call(lr)
 }
 
 func (ps *PipeSegment) ToMesh() *picogkffi.Mesh {
@@ -826,6 +823,10 @@ func (ps *PipeSegment) ToMesh() *picogkffi.Mesh {
 	// Segment end cap (phiR=1, flip)
 	smb.Add(ps.pipeSurface(lr, []float64{1.0}, rr), true)
 	return smb.Build()
+}
+
+func (ps *PipeSegment) ToVoxels() *picogkffi.Voxels {
+	return ToVoxels(ps.ToMesh())
 }
 
 func isConstant(v any) bool {

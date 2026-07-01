@@ -283,7 +283,7 @@ func buildPipe() []SceneGroup {
 func buildPipeSegment() []SceneGroup {
 	p1 := picogkshapes.NewPipeSegment(
 		picogkshapes.NewLocalFrame(picogkshapes.V(-50, 0, 0)), 60, 20, 40,
-		math.Pi, 0.5*math.Pi, "start_end",
+		math.Pi, 0.5*math.Pi, "mid_range",
 		picogkshapes.PipePolarSteps(360),
 	).ToVoxels()
 	p2 := picogkshapes.NewPipeSegment(
