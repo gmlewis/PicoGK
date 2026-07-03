@@ -4,6 +4,7 @@ import {
   "gmlewis/picogkffi" @pk,
   "moonbitlang/core/math",
   "moonbitlang/core/argparse",
+  "moonbitlang/core/strconv",
 }
 
 supported_targets = "+native"

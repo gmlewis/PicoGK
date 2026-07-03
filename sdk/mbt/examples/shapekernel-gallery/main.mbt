@@ -8,30 +8,40 @@
 /// Run:  moon run . --target native [-out DIR] [-voxel-size MM] [-no-viewer] [-scene NAME]
 fn main {
   // Parse command-line arguments.
-  let outdir_default = "/tmp/mbt-picogk-gallery"
-  let mut outdir = outdir_default
-  let mut voxel_size = 0.2
-  let mut no_viewer = false
-  let mut scene_only = ""
-  let args = @argparse.parse_after("moon run . --")
-  let mut i = 0
-  while i < args.length() {
-    let a = args[i]
-    if a == "-out" && i + 1 < args.length() {
-      outdir = args[i + 1]
-      i = i + 2
-    } else if a == "-voxel-size" && i + 1 < args.length() {
-      voxel_size = @argparse.parse_double(args[i + 1]).or(voxel_size)
-      i = i + 2
-    } else if a == "-no-viewer" {
-      no_viewer = true
-      i = i + 1
-    } else if a == "-scene" && i + 1 < args.length() {
-      scene_only = args[i + 1]
-      i = i + 2
-    } else {
-      i = i + 1
+  let cmd = @argparse.Command(
+    "shapekernel-gallery",
+    about="PicoGK ShapeKernel Gallery (MoonBit FFI)",
+    flags=[
+      @argparse.FlagArg("no-viewer", long="no-viewer", about="Save STLs only (no display needed)"),
+    ],
+    options=[
+      @argparse.OptionArg("out", long="out", about="Output directory", default_values=["/tmp/mbt-picogk-gallery"]),
+      @argparse.OptionArg("voxel-size", long="voxel-size", about="Voxel size in mm", default_values=["0.2"]),
+      @argparse.OptionArg("scene", long="scene", about="Render only this scene", default_values=[""]),
+    ],
+  )
+  let matches = cmd.parse() catch {
+    _ => {
+      println(cmd.render_help())
+      return
     }
+  }
+  let outdir = match matches.values.get("out") {
+    Some(arr) => arr[0]
+    None => "/tmp/mbt-picogk-gallery"
+  }
+  let voxel_size_str = match matches.values.get("voxel-size") {
+    Some(arr) => arr[0]
+    None => "0.2"
+  }
+  let voxel_size = parse_double(voxel_size_str).or(0.2)
+  let no_viewer = match matches.flags.get("no-viewer") {
+    Some(v) => v
+    None => false
+  }
+  let scene_only = match matches.values.get("scene") {
+    Some(arr) => arr[0]
+    None => ""
   }
 
   println("=== ShapeKernel Gallery (MoonBit FFI) ===")
@@ -153,6 +163,16 @@ struct SceneGroup {
 /// Create a SceneGroup from voxels with a color.
 fn group(vox : @pk.Voxels, color : @pk.ColorFloat) -> SceneGroup {
   SceneGroup::{ voxels: vox, color }
+}
+
+///|
+/// Parse a double from a string, returning None on failure.
+fn parse_double(s : String) -> Double? {
+  try {
+    Some(@strconv.parse_double(s))
+  } catch {
+    _ => None
+  }
 }
 
 // --- Color palette (matching PicoPie/Go palette) ---

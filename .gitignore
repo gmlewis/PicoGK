@@ -502,6 +502,9 @@ xcuserdata/
 *.out
 *.app
 
+# Go
+go.work
+
 # MoonBit
 _build
 .moonagent
