@@ -117,17 +117,12 @@ pub fn Mesh::bounding_box(self : Mesh) -> BBox3 {
 ///|
 pub fn Mesh::vertices(self : Mesh) -> Array[Double] {
   let n = self.vertex_count()
-  let len = n * 3
-  let arr = Array::make(len, 0.0)
-  for i in 0..<len {
-    let v = self.get_vertex(i / 3)
-    if i % 3 == 0 {
-      arr[i] = v.x
-    } else if i % 3 == 1 {
-      arr[i] = v.y
-    } else {
-      arr[i] = v.z
-    }
+  let arr = Array::make(n * 3, 0.0)
+  for i in 0..<n {
+    let v = self.get_vertex(i)
+    arr[i * 3] = v.x
+    arr[i * 3 + 1] = v.y
+    arr[i * 3 + 2] = v.z
   }
   arr
 }
@@ -135,17 +130,12 @@ pub fn Mesh::vertices(self : Mesh) -> Array[Double] {
 ///|
 pub fn Mesh::triangles(self : Mesh) -> Array[Int] {
   let n = self.triangle_count()
-  let len = n * 3
-  let arr = Array::make(len, 0)
-  for i in 0..<len {
-    let t = self.get_triangle(i / 3)
-    if i % 3 == 0 {
-      arr[i] = t.a
-    } else if i % 3 == 1 {
-      arr[i] = t.b
-    } else {
-      arr[i] = t.c
-    }
+  let arr = Array::make(n * 3, 0)
+  for i in 0..<n {
+    let t = self.get_triangle(i)
+    arr[i * 3] = t.a
+    arr[i * 3 + 1] = t.b
+    arr[i * 3 + 2] = t.c
   }
   arr
 }

@@ -226,6 +226,14 @@ fn parse_double(s : String) -> Double? {
   }
 }
 
+///|
+fn col(name : String) -> @s.RGB {
+  match @s.palette.get(name) {
+    Some(c) => c
+    None => @s.RGB::new(0.5, 0.5, 0.5)
+  }
+}
+
 // --- Shared modulations (matching the Go/Python gallery) ---
 
 ///|
@@ -253,112 +261,112 @@ fn surf3(phi : Double, lr : Double) -> Double {
 ///|
 fn build_box() -> Array[@s.SceneGroup] {
   let b1 = @s.new_box(
-    Some(@s.new_local_frame(@s.V(-50.0, 0.0, 0.0), None)),
+    Some(@s.new_local_frame(@s.vec3(-50.0, 0.0, 0.0), None)),
     20.0,
     @s.line_const(10.0),
     @s.line_const(15.0),
   ).to_voxels()
   let b2 = @s.new_box(
-    Some(@s.new_local_frame(@s.V(50.0, 0.0, 0.0), None)),
+    Some(@s.new_local_frame(@s.vec3(50.0, 0.0, 0.0), None)),
     20.0,
     @s.line_fn(line2),
     @s.line_fn(line1),
   ).to_voxels()
   let b3 = @s.new_box(
-    Some(@s.new_local_frame(@s.V(0.0, 0.0, 0.0), None)),
+    Some(@s.new_local_frame(@s.vec3(0.0, 0.0, 0.0), None)),
     20.0,
     @s.line_fn(line2),
     @s.line_fn(line1),
   ).to_voxels()
   [
-    @s.scene_group_voxels(b1, @s.palette["blue"].unwrap()),
-    @s.scene_group_voxels(b2, @s.palette["green"].unwrap()),
-    @s.scene_group_voxels(b3, @s.palette["yellow"].unwrap()),
+    @s.scene_group_voxels(b1, col("blue")),
+    @s.scene_group_voxels(b2, col("green")),
+    @s.scene_group_voxels(b3, col("yellow")),
   ]
 }
 
 ///|
 fn build_sphere() -> Array[@s.SceneGroup] {
   let s1 = @s.new_sphere(
-    Some(@s.new_local_frame(@s.V(-100.0, 0.0, 0.0), None)),
+    Some(@s.new_local_frame(@s.vec3(-100.0, 0.0, 0.0), None)),
     @s.surf_const(40.0),
   ).to_voxels()
   let s2 = @s.new_sphere(
-    Some(@s.new_local_frame(@s.V(0.0, 0.0, 0.0), None)),
+    Some(@s.new_local_frame(@s.vec3(0.0, 0.0, 0.0), None)),
     @s.surf_fn(fn(phi : Double, theta : Double) {
       40.0 - 10.0 * @math.cos(6.0 * theta)
     }),
   ).to_voxels()
   let s3 = @s.new_sphere(
-    Some(@s.new_local_frame(@s.V(150.0, 0.0, 0.0), None)),
+    Some(@s.new_local_frame(@s.vec3(150.0, 0.0, 0.0), None)),
     @s.surf_fn(fn(phi : Double, theta : Double) {
       40.0 - 10.0 * @math.cos(6.0 * theta) + 30.0 * @math.cos(2.0 * phi)
     }),
   ).to_voxels()
   [
-    @s.scene_group_voxels(s1, @s.palette["frozen"].unwrap()),
-    @s.scene_group_voxels(s2, @s.palette["pitaya"].unwrap()),
-    @s.scene_group_voxels(s3, @s.palette["warning"].unwrap()),
+    @s.scene_group_voxels(s1, col("frozen")),
+    @s.scene_group_voxels(s2, col("pitaya")),
+    @s.scene_group_voxels(s3, col("warning")),
   ]
 }
 
 ///|
 fn build_cylinder() -> Array[@s.SceneGroup] {
   let c1 = @s.new_cylinder(
-    Some(@s.new_local_frame(@s.V(-50.0, 0.0, 0.0), None)),
+    Some(@s.new_local_frame(@s.vec3(-50.0, 0.0, 0.0), None)),
     60.0,
     @s.surf_const(40.0),
   ).to_voxels()
   let c2 = @s.new_cylinder(
-    Some(@s.new_local_frame(@s.V(50.0, 0.0, 0.0), None)),
+    Some(@s.new_local_frame(@s.vec3(50.0, 0.0, 0.0), None)),
     60.0,
     @s.surf_from_line(@s.line_fn(line1), "second"),
   ).to_voxels()
   let c3 = @s.new_cylinder(
-    Some(@s.new_local_frame(@s.V(0.0, 0.0, 0.0), None)),
+    Some(@s.new_local_frame(@s.vec3(0.0, 0.0, 0.0), None)),
     60.0,
     @s.surf_fn(surf1),
   ).to_voxels()
   [
-    @s.scene_group_voxels(c1, @s.palette["blue"].unwrap()),
-    @s.scene_group_voxels(c2, @s.palette["green"].unwrap()),
-    @s.scene_group_voxels(c3, @s.palette["yellow"].unwrap()),
+    @s.scene_group_voxels(c1, col("blue")),
+    @s.scene_group_voxels(c2, col("green")),
+    @s.scene_group_voxels(c3, col("yellow")),
   ]
 }
 
 ///|
 fn build_ring() -> Array[@s.SceneGroup] {
   let r1 = @s.new_ring(
-    Some(@s.new_local_frame(@s.V(-50.0, -50.0, 0.0), None)),
+    Some(@s.new_local_frame(@s.vec3(-50.0, -50.0, 0.0), None)),
     30.0,
     @s.surf_const(8.0),
   ).to_voxels()
   let r2 = @s.new_ring(
-    Some(@s.new_local_frame(@s.V(-50.0, 50.0, 0.0), None)),
+    Some(@s.new_local_frame(@s.vec3(-50.0, 50.0, 0.0), None)),
     30.0,
     @s.surf_fn(fn(phi : Double, _ : Double) {
       10.0 - 2.0 * @math.cos(5.0 * phi)
     }),
   ).to_voxels()
   let r3 = @s.new_ring(
-    Some(@s.new_local_frame(@s.V(50.0, 50.0, 0.0), None)),
+    Some(@s.new_local_frame(@s.vec3(50.0, 50.0, 0.0), None)),
     30.0,
     @s.surf_fn(fn(_ : Double, alpha : Double) {
       10.0 + 3.0 * @math.cos(5.0 * alpha)
     }),
   ).to_voxels()
   let r4 = @s.new_ring(
-    Some(@s.new_local_frame(@s.V(50.0, -50.0, 0.0), None)),
+    Some(@s.new_local_frame(@s.vec3(50.0, -50.0, 0.0), None)),
     30.0,
     @s.surf_fn(fn(phi : Double, alpha : Double) {
       10.0 - 2.0 * @math.cos(5.0 * (phi + alpha)) + 3.0 * @math.cos(5.0 * alpha)
     }),
   ).to_voxels()
   [
-    @s.scene_group_voxels(r1, @s.palette["frozen"].unwrap()),
-    @s.scene_group_voxels(r2, @s.palette["pitaya"].unwrap()),
-    @s.scene_group_voxels(r3, @s.palette["warning"].unwrap()),
-    @s.scene_group_voxels(r4, @s.palette["blueberry"].unwrap()),
+    @s.scene_group_voxels(r1, col("frozen")),
+    @s.scene_group_voxels(r2, col("pitaya")),
+    @s.scene_group_voxels(r3, col("warning")),
+    @s.scene_group_voxels(r4, col("blueberry")),
   ]
 }
 
@@ -366,13 +374,13 @@ fn build_ring() -> Array[@s.SceneGroup] {
 fn build_lens() -> Array[@s.SceneGroup] {
   let surf = fn(phi : Double, rr : Double) { 12.0 + 3.0 * @math.cos(5.0 * phi) }
   let l1 = @s.new_lens(
-    Some(@s.new_local_frame(@s.V(-50.0, -50.0, 0.0), None)),
+    Some(@s.new_local_frame(@s.vec3(-50.0, -50.0, 0.0), None)),
     10.0,
     10.0,
     40.0,
   ).to_voxels()
   let l2 = @s.new_lens_with_mods(
-    Some(@s.new_local_frame(@s.V(50.0, 50.0, 0.0), None)),
+    Some(@s.new_local_frame(@s.vec3(50.0, 50.0, 0.0), None)),
     10.0,
     10.0,
     40.0,
@@ -380,7 +388,7 @@ fn build_lens() -> Array[@s.SceneGroup] {
     @s.surf_fn(fn(phi : Double, rr : Double) { 5.0 + surf(phi, rr) }),
   ).to_voxels()
   let l3 = @s.new_lens_with_mods(
-    Some(@s.new_local_frame(@s.V(-50.0, 50.0, 0.0), None)),
+    Some(@s.new_local_frame(@s.vec3(-50.0, 50.0, 0.0), None)),
     10.0,
     10.0,
     40.0,
@@ -392,9 +400,9 @@ fn build_lens() -> Array[@s.SceneGroup] {
     }),
   ).to_voxels()
   [
-    @s.scene_group_voxels(l1, @s.palette["frozen"].unwrap()),
-    @s.scene_group_voxels(l2, @s.palette["pitaya"].unwrap()),
-    @s.scene_group_voxels(l3, @s.palette["warning"].unwrap()),
+    @s.scene_group_voxels(l1, col("frozen")),
+    @s.scene_group_voxels(l2, col("pitaya")),
+    @s.scene_group_voxels(l3, col("warning")),
   ]
 }
 
@@ -402,21 +410,21 @@ fn build_lens() -> Array[@s.SceneGroup] {
 fn build_pipe() -> Array[@s.SceneGroup] {
   // Pipe 1: static blue pipe
   let p1 = @s.new_pipe(
-    Some(@s.new_local_frame(@s.V(-50.0, 0.0, 0.0), None)),
+    Some(@s.new_local_frame(@s.vec3(-50.0, 0.0, 0.0), None)),
     60.0,
     @s.surf_const(10.0),
     @s.surf_const(20.0),
   ).to_voxels()
   // Pipe 2: green pipe with vertex transform (creates a skewed/vase shape)
   let trafo = fn(pts : Array[@s.Vec3]) -> Array[@s.Vec3] {
-    let result = Array::make(pts.length(), @s.V(0.0, 0.0, 0.0))
+    let result = Array::make(pts.length(), @s.vec3(0.0, 0.0, 0.0))
     for i, p in pts {
-      result[i] = @s.V(p.y + 0.2 * p.z - 50.0, 0.5 * p.z + 50.0, 0.5 * p.x)
+      result[i] = @s.vec3(p.y + 0.2 * p.z - 50.0, 0.5 * p.z + 50.0, 0.5 * p.x)
     }
     result
   }
   let p2 = @s.new_pipe_with_transform(
-    Some(@s.new_local_frame(@s.V(0.0, 0.0, 0.0), None)),
+    Some(@s.new_local_frame(@s.vec3(0.0, 0.0, 0.0), None)),
     60.0,
     @s.surf_const(10.0),
     @s.surf_const(20.0),
@@ -424,13 +432,13 @@ fn build_pipe() -> Array[@s.SceneGroup] {
   ).to_voxels()
   // Pipe 3: lemongrass pipe with modulated outer radius
   let p3 = @s.new_pipe(
-    Some(@s.new_local_frame(@s.V(50.0, -50.0, 0.0), None)),
+    Some(@s.new_local_frame(@s.vec3(50.0, -50.0, 0.0), None)),
     60.0,
     @s.surf_const(6.0),
     @s.surf_from_line(@s.line_fn(line1), "second"),
   ).to_voxels()
   // Pipe 4: orchid pipe with modulated radii along a spline spine
-  let spine = @s.frames_aligned_to_x(@s.spline_points(), @s.V(0.0, 1.0, 0.0))
+  let spine = @s.frames_aligned_to_x(@s.spline_points(), @s.vec3(0.0, 1.0, 0.0))
   let p4 = @s.new_pipe_with_frames(
     None,
     60.0,
@@ -439,17 +447,17 @@ fn build_pipe() -> Array[@s.SceneGroup] {
     spine,
   ).to_voxels()
   [
-    @s.scene_group_voxels(p1, @s.palette["blue"].unwrap()),
-    @s.scene_group_voxels(p2, @s.palette["green"].unwrap()),
-    @s.scene_group_voxels(p3, @s.palette["lemongrass"].unwrap()),
-    @s.scene_group_voxels(p4, @s.palette["orchid"].unwrap()),
+    @s.scene_group_voxels(p1, col("blue")),
+    @s.scene_group_voxels(p2, col("green")),
+    @s.scene_group_voxels(p3, col("lemongrass")),
+    @s.scene_group_voxels(p4, col("orchid")),
   ]
 }
 
 ///|
 fn build_pipe_segment() -> Array[@s.SceneGroup] {
   let p1 = @s.new_pipe_segment(
-    Some(@s.new_local_frame(@s.V(-50.0, 0.0, 0.0), None)),
+    Some(@s.new_local_frame(@s.vec3(-50.0, 0.0, 0.0), None)),
     60.0,
     @s.surf_const(20.0),
     @s.surf_const(40.0),
@@ -458,7 +466,7 @@ fn build_pipe_segment() -> Array[@s.SceneGroup] {
     "mid_range",
   ).to_voxels()
   let p2 = @s.new_pipe_segment(
-    Some(@s.new_local_frame(@s.V(50.0, 0.0, 0.0), None)),
+    Some(@s.new_local_frame(@s.vec3(50.0, 0.0, 0.0), None)),
     60.0,
     @s.surf_fn(surf3),
     @s.surf_fn(surf1),
@@ -466,7 +474,7 @@ fn build_pipe_segment() -> Array[@s.SceneGroup] {
     @s.line_const(1.75 * 3.14159265358979),
     "mid_range",
   ).to_voxels()
-  let spine = @s.frames_aligned_to_x(@s.spline_points(), @s.V(0.0, 1.0, 0.0))
+  let spine = @s.frames_aligned_to_x(@s.spline_points(), @s.vec3(0.0, 1.0, 0.0))
   let p3 = @s.new_pipe_segment_with_frames(
     None,
     60.0,
@@ -478,9 +486,9 @@ fn build_pipe_segment() -> Array[@s.SceneGroup] {
     spine,
   ).to_voxels()
   [
-    @s.scene_group_voxels(p1, @s.palette["blue"].unwrap()),
-    @s.scene_group_voxels(p2, @s.palette["ruby"].unwrap()),
-    @s.scene_group_voxels(p3, @s.palette["racing_green"].unwrap()),
+    @s.scene_group_voxels(p1, col("blue")),
+    @s.scene_group_voxels(p2, col("ruby")),
+    @s.scene_group_voxels(p3, col("racing_green")),
   ]
 }
 
@@ -497,22 +505,22 @@ fn build_basic_lattices() -> Array[@s.SceneGroup] {
   )
   let v = @pk.from_lattice(lat)
   lat.destroy()
-  [@s.scene_group_voxels(v, @s.palette["blueberry"].unwrap())]
+  [@s.scene_group_voxels(v, col("blueberry"))]
 }
 
 ///|
 fn build_lattice_pipe() -> Array[@s.SceneGroup] {
   let lp1 = @s.new_lattice_pipe(
-    Some(@s.new_local_frame(@s.V(-50.0, 0.0, 0.0), None)),
+    Some(@s.new_local_frame(@s.vec3(-50.0, 0.0, 0.0), None)),
     60.0,
     @s.line_const(10.0),
   ).to_voxels()
   let lp2 = @s.new_lattice_pipe(
-    Some(@s.new_local_frame(@s.V(50.0, -50.0, 0.0), None)),
+    Some(@s.new_local_frame(@s.vec3(50.0, -50.0, 0.0), None)),
     60.0,
     @s.line_fn(line1),
   ).to_voxels()
-  let spine = @s.frames_aligned_to_x(@s.spline_points(), @s.V(0.0, 1.0, 0.0))
+  let spine = @s.frames_aligned_to_x(@s.spline_points(), @s.vec3(0.0, 1.0, 0.0))
   let lp3 = @s.new_lattice_pipe_with_frames(
     None,
     60.0,
@@ -520,9 +528,9 @@ fn build_lattice_pipe() -> Array[@s.SceneGroup] {
     spine,
   ).to_voxels()
   [
-    @s.scene_group_voxels(lp1, @s.palette["yellow"].unwrap()),
-    @s.scene_group_voxels(lp2, @s.palette["frozen"].unwrap()),
-    @s.scene_group_voxels(lp3, @s.palette["racing_green"].unwrap()),
+    @s.scene_group_voxels(lp1, col("yellow")),
+    @s.scene_group_voxels(lp2, col("frozen")),
+    @s.scene_group_voxels(lp3, col("racing_green")),
   ]
 }
 
@@ -531,9 +539,9 @@ fn build_lattice_manifold() -> Array[@s.SceneGroup] {
   // local_z=(0,1,0) means the manifold extends along Y from the frame position
   let lm1 = @s.new_lattice_manifold(
     @s.new_local_frame_xyz(
-      @s.V(-50.0, 0.0, 0.0),
-      @s.V(0.0, 1.0, 0.0),
-      @s.V(1.0, 0.0, 0.0),
+      @s.vec3(-50.0, 0.0, 0.0),
+      @s.vec3(0.0, 1.0, 0.0),
+      @s.vec3(1.0, 0.0, 0.0),
     ),
     50.0,
     5.0,
@@ -541,9 +549,9 @@ fn build_lattice_manifold() -> Array[@s.SceneGroup] {
   ).to_voxels()
   let lm2 = @s.new_lattice_manifold(
     @s.new_local_frame_xyz(
-      @s.V(0.0, 0.0, 0.0),
-      @s.V(0.0, 1.0, 0.0),
-      @s.V(1.0, 0.0, 0.0),
+      @s.vec3(0.0, 0.0, 0.0),
+      @s.vec3(0.0, 1.0, 0.0),
+      @s.vec3(1.0, 0.0, 0.0),
     ),
     50.0,
     10.0,
@@ -551,18 +559,18 @@ fn build_lattice_manifold() -> Array[@s.SceneGroup] {
   ).to_voxels()
   let lm3 = @s.new_lattice_manifold(
     @s.new_local_frame_xyz(
-      @s.V(50.0, 0.0, 0.0),
-      @s.V(0.0, 1.0, 0.0),
-      @s.V(1.0, 0.0, 0.0),
+      @s.vec3(50.0, 0.0, 0.0),
+      @s.vec3(0.0, 1.0, 0.0),
+      @s.vec3(1.0, 0.0, 0.0),
     ),
     50.0,
     5.0,
     60.0,
   ).to_voxels()
   [
-    @s.scene_group_voxels(lm1, @s.palette["yellow"].unwrap()),
-    @s.scene_group_voxels(lm2, @s.palette["crystal"].unwrap()),
-    @s.scene_group_voxels(lm3, @s.palette["green"].unwrap()),
+    @s.scene_group_voxels(lm1, col("yellow")),
+    @s.scene_group_voxels(lm2, col("crystal")),
+    @s.scene_group_voxels(lm3, col("green")),
   ]
 }
 
@@ -581,7 +589,7 @@ fn build_gyroid_sphere() -> Array[@s.SceneGroup] {
     0.5,
     gyroid.frequency,
   )
-  [@s.scene_group_voxels(vox, @s.palette["billie"].unwrap())]
+  [@s.scene_group_voxels(vox, col("billie"))]
 }
 
 ///|
@@ -595,18 +603,21 @@ fn build_gyroid_genus() -> Array[@s.SceneGroup] {
     ),
     s,
     0.0,
-    2.0 * 3.14159265358979 / 10.0,
+    2.0 * 3.14159265358979 / 6.0,
   )
-  [@s.scene_group_voxels(vox, @s.palette["lavender"].unwrap())]
+  [@s.scene_group_voxels(vox, col("lavender"))]
 }
 
 ///|
 fn build_superellipsoid() -> Array[@s.SceneGroup] {
   let a = 16.0
+  let col_ruby = col("ruby")
+  let col_blue = col("blue")
+  let col_bubblegum = col("bubblegum")
   let specs = [
-    (@s.V(-45.0, 0.0, 0.0), 3.0, 0.25, @s.palette["ruby"].unwrap()),
-    (@s.V(0.0, 0.0, 0.0), 1.5, 1.5, @s.palette["blue"].unwrap()),
-    (@s.V(45.0, 0.0, 0.0), 0.25, 0.25, @s.palette["bubblegum"].unwrap()),
+    (@s.vec3(-45.0, 0.0, 0.0), 3.0, 0.25, col_ruby),
+    (@s.vec3(0.0, 0.0, 0.0), 1.5, 1.5, col_blue),
+    (@s.vec3(45.0, 0.0, 0.0), 0.25, 0.25, col_bubblegum),
   ]
   let groups : Array[@s.SceneGroup] = []
   for spec in specs {
@@ -614,19 +625,30 @@ fn build_superellipsoid() -> Array[@s.SceneGroup] {
     let e1 = spec.1
     let e2 = spec.2
     let color = spec.3
+    // Render at origin (matching Go), then translate via mesh round-trip
     let vox = @pk.new_voxels()
     vox.render_superellipsoid(
-      @pk.BBox3::new(
-        @pk.Vec3::new(center.x - a, center.y - a, center.z - a),
-        @pk.Vec3::new(center.x + a, center.y + a, center.z + a),
-      ),
+      @pk.BBox3::new(@pk.Vec3::new(-a, -a, -a), @pk.Vec3::new(a, a, a)),
       a,
       a,
       a,
       e1,
       e2,
     )
-    groups.push(@s.scene_group_voxels(vox, color))
+    let mesh = vox.to_mesh()
+    vox.destroy()
+    let verts = mesh.vertices()
+    let tris = mesh.triangles()
+    for i in 0..<(verts.length() / 3) {
+      verts[i * 3] = verts[i * 3] + center.x
+      verts[i * 3 + 1] = verts[i * 3 + 1] + center.y
+      verts[i * 3 + 2] = verts[i * 3 + 2] + center.z
+    }
+    let translated_mesh = @pk.mesh_from_arrays(verts, tris)
+    mesh.destroy()
+    let translated_vox = @pk.from_mesh(translated_mesh)
+    translated_mesh.destroy()
+    groups.push(@s.scene_group_voxels(translated_vox, color))
   }
   groups
 }
@@ -636,13 +658,13 @@ fn build_mesh_painter() -> Array[@s.SceneGroup] {
   // Build a sphere mesh and split it by overhang angle into colored groups
   // (approximated as a single sphere for now)
   let s = @s.new_sphere(None, @s.surf_const(40.0)).to_voxels()
-  [@s.scene_group_voxels(s, @s.palette["frozen"].unwrap())]
+  [@s.scene_group_voxels(s, col("frozen"))]
 }
 
 ///|
 fn build_mesh_trafo() -> Array[@s.SceneGroup] {
   let box = @s.new_box(
-    Some(@s.new_local_frame(@s.V(0.0, 0.0, 0.0), None)),
+    Some(@s.new_local_frame(@s.vec3(0.0, 0.0, 0.0), None)),
     40.0,
     @s.line_const(30.0),
     @s.line_const(20.0),
@@ -650,8 +672,8 @@ fn build_mesh_trafo() -> Array[@s.SceneGroup] {
   // Rotate 45° around Z — need mesh round-trip
   let mesh = box.to_mesh()
   box.destroy()
-  let verts = mesh.vertices_arr()
-  let tris = mesh.triangles_arr()
+  let verts = mesh.vertices()
+  let tris = mesh.triangles()
   let c = @math.cos(3.14159265358979 / 4.0)
   let s_val = @math.sin(3.14159265358979 / 4.0)
   for i in 0..<(verts.length() / 3) {
@@ -665,27 +687,27 @@ fn build_mesh_trafo() -> Array[@s.SceneGroup] {
   let rotated_vox = @pk.from_mesh(rotated_mesh)
   rotated_mesh.destroy()
   let original_box = @s.new_box(
-    Some(@s.new_local_frame(@s.V(0.0, 0.0, 0.0), None)),
+    Some(@s.new_local_frame(@s.vec3(0.0, 0.0, 0.0), None)),
     40.0,
     @s.line_const(30.0),
     @s.line_const(20.0),
   ).to_voxels()
   [
-    @s.scene_group_voxels(original_box, @s.palette["gray"].unwrap()),
-    @s.scene_group_voxels(rotated_vox, @s.palette["orchid"].unwrap()),
+    @s.scene_group_voxels(original_box, col("gray")),
+    @s.scene_group_voxels(rotated_vox, col("orchid")),
   ]
 }
 
 ///|
 fn build_over_offset() -> Array[@s.SceneGroup] {
   let b1 = @s.new_box(
-    Some(@s.new_local_frame(@s.V(-15.0, 0.0, 0.0), None)),
+    Some(@s.new_local_frame(@s.vec3(-15.0, 0.0, 0.0), None)),
     30.0,
     @s.line_const(30.0),
     @s.line_const(30.0),
   ).to_voxels()
   let b2 = @s.new_box(
-    Some(@s.new_local_frame(@s.V(15.0, 0.0, 0.0), None)),
+    Some(@s.new_local_frame(@s.vec3(15.0, 0.0, 0.0), None)),
     30.0,
     @s.line_const(30.0),
     @s.line_const(30.0),
@@ -693,5 +715,5 @@ fn build_over_offset() -> Array[@s.SceneGroup] {
   b1.bool_add(b2)
   b2.destroy()
   b1.double_offset(4.0, -4.0)
-  [@s.scene_group_voxels(b1, @s.palette["bubblegum"].unwrap())]
+  [@s.scene_group_voxels(b1, col("bubblegum"))]
 }

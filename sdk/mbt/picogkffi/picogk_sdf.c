@@ -108,6 +108,7 @@ static float sdf_gyroid_sphere_offset(const PKVector3* p) {
 }
 
 // Gyroid genus: max(genus_sdf/scale, gyroid_sdf)
+// The gyroid uses abs(gyroid) - 0.5*thickness_ratio (matching ImplicitGyroid.Eval)
 static float sdf_gyroid_genus(const PKVector3* p) {
     float s = g_sdf_param1;
     float gap = g_sdf_param2;
@@ -117,10 +118,13 @@ static float sdf_gyroid_genus(const PKVector3* p) {
     float genus = 2.0f*y*(y*y - 3.0f*x*x)*(1.0f - z*z) +
                   (x*x + y*y)*(x*x + y*y) -
                   (9.0f*z*z - 1.0f)*(1.0f - z*z) - gap;
-    float g = sinf(k*p->X)*cosf(k*p->Y) +
+    // Gyroid (matching ImplicitGyroid.Eval: abs(d) - 0.5*thickness_ratio)
+    // thickness_ratio is hardcoded as 0.6 (matching Go gallery buildGyroidGenus)
+    float d = sinf(k*p->X)*cosf(k*p->Y) +
               sinf(k*p->Y)*cosf(k*p->Z) +
               sinf(k*p->Z)*cosf(k*p->X);
-    return fmaxf(genus, g);
+    float gy = fabsf(d) - 0.5f * 0.6f;
+    return fmaxf(genus, gy);
 }
 
 // Superellipsoid: pow(pow(|x|/a, 2/e2) + pow(|y|/a, 2/e2), e2/e1) + pow(|z|/c, 2/e1) - 1
