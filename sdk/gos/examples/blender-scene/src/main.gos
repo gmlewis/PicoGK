@@ -1,0 +1,297 @@
+// Blender scene inspection and manipulation example using the blender Gossamer SDK.
+//
+// This program demonstrates a realistic Blender automation workflow:
+//   - Connect to a running Blender instance via MCP
+//   - Execute Python code to create and inspect a scene
+//   - Query scene objects and their properties
+//   - Navigate the UI (tabs, viewports)
+//   - Capture screenshots and render output
+//   - Search the Blender Python API docs
+//   - Inspect the blend file metadata
+//
+// Prerequisites:
+//   - Blender running with the MCP addon enabled and server started
+//   - The blender-mcp server running with HTTP transport:
+//       uv --directory ~/Projects/Blender/blender_mcp/mcp/blmcp run \
+//         python -m blmcp --transport http --port 8765
+//
+// Run:  gos run . [-v] [-url <base-url>]
+
+use std::encoding::json
+use std::env
+use std::flag
+use std::os
+use std::strings
+
+mod blender;
+
+fn truncate(s: String, n: i64) -> String {
+    let s = strings::trim(s)
+    if s.len() <= n {
+        s
+    } else {
+        s.substring(0, n) + "..."
+    }
+}
+
+fn main() -> Result<(), errors::Error> {
+    let mut fs = flag::Set::new("blender-scene")
+    let verbose = fs.bool("v", false, "Verbose output")
+    let url = fs.string("url", "http://127.0.0.1:8765", "Blender MCP server base URL")
+    let _positional = fs.parse(env::args())?
+
+    let outdir = "/tmp/gos-blender-scene"
+    os::mkdir_all(outdir)
+
+    println!("=== Blender Scene Inspector ===")
+    println!("Output dir: {}\n", outdir)
+
+    // --- Connect ---
+    println!("--- Connect ---")
+    let client = blender::new_client(*url)?
+    defer client.close()
+    println!("  Connected to Blender MCP server at {}", *url)
+
+    // Helper closures for calling tools with varying verbosity.
+    let do_print = |result: Result<String, errors::Error>, label: String| {
+        match result {
+            Ok(text) => println!("  OK: {} -> {}", label, truncate(text, 120)),
+            Err(e) => println!("  FAIL: {} -> {}", label, e)
+        }
+    }
+    let do = |result: Result<String, errors::Error>, label: String| {
+        if *verbose {
+            do_print(result, label)
+        } else {
+            match result {
+                Ok(_) => { () }
+                Err(e) => println!("  FAIL: {} -> {}", label, e)
+            }
+        }
+    }
+
+    // --- Execute: Set up a demonstration scene ---
+    println!("\n--- Execute: Create Scene ---")
+    let setup_code = SETUP_CODE
+    do(client.execute_blender_code(setup_code), "ExecuteBlenderCode")
+
+    // --- Query: Get scene objects ---
+    println!("\n--- Query: Scene Objects ---")
+    do_print(client.get_objects_summary(), "GetObjectsSummary")
+
+    // --- Query: Detail of specific objects ---
+    println!("\n--- Query: Object Details ---")
+    for name in ["Sphere", "Cube", "Cylinder"] {
+        println!("  [{}]", name)
+        match client.get_object_detail_summary(name) {
+            Ok(result) => {
+                match json::parse(result) {
+                    Ok(detail) => {
+                        let obj_type = match json::get(&detail, "type") {
+                            Some(v) => match json::as_str(v) {
+                                Some(s) => s,
+                                None => "?",
+                            },
+                            None => "?",
+                        }
+                        let collections = match json::get(&detail, "collections") {
+                            Some(v) => json::render(v),
+                            None => "[]".to_string(),
+                        }
+                        println!("    type={}, collections={}", obj_type, collections)
+
+                        if let Some(loc) = json::get(&detail, "location") {
+                            if let Some(arr) = json::as_array(loc) {
+                                if arr.len() >= 3 {
+                                    let x = json::as_f64(arr[0]).unwrap_or(0.0)
+                                    let y = json::as_f64(arr[1]).unwrap_or(0.0)
+                                    let z = json::as_f64(arr[2]).unwrap_or(0.0)
+                                    println!("    location=[{:.1}, {:.1}, {:.1}]", x, y, z)
+                                }
+                            }
+                        }
+                        if let Some(mods) = json::get(&detail, "modifiers") {
+                            if let Some(arr) = json::as_array(mods) {
+                                if arr.len() > 0 {
+                                    println!("    modifiers={}", json::render(mods))
+                                }
+                            }
+                        }
+                        if let Some(mats) = json::get(&detail, "materials") {
+                            println!("    materials={}", json::render(mats))
+                        }
+                    }
+                    Err(_) => println!("    {}", truncate(result, 100)),
+                }
+            }
+            Err(e) => println!("    GetObjectDetailSummary({}): {}", name, e)
+        }
+    }
+
+    // --- UI Navigation ---
+    println!("\n--- UI Navigation ---")
+    do_print(client.jump_to_tab_by_name("Layout"), "JumpToTabByName")
+    do_print(client.jump_to_tab_by_space_type("VIEW_3D", None), "JumpToTabBySpaceType")
+    do_print(client.jump_to_view3d_object_by_name("Cube", None), "JumpToView3dObjectByName")
+    do_print(client.jump_to_view3d_object_data_by_name("Torus", None), "JumpToView3dObjectDataByName")
+
+    // --- Screenshots ---
+    println!("\n--- Screenshots ---")
+    do_print(client.get_screenshot_of_window_as_json(), "GetScreenshotOfWindowAsJSON")
+
+    // Image-returning tools may fail due to MCP binary transport limits.
+    match client.get_screenshot_of_area_as_image("VIEW_3D", None) {
+        Ok(_) => println!("  OK: GetScreenshotOfAreaAsImage"),
+        Err(e) => println!("  GetScreenshotOfAreaAsImage: (known limitation) {}", e)
+    }
+    match client.get_screenshot_of_window_as_image(Some(256 * 1024)) {
+        Ok(_) => println!("  OK: GetScreenshotOfWindowAsImage"),
+        Err(e) => println!("  GetScreenshotOfWindowAsImage: (known limitation) {}", e)
+    }
+
+    // --- Render ---
+    // Rendering requires Blender to have a display context.
+    // Uncomment if running with a visible Blender window.
+    //
+    // println!("\n--- Render ---")
+    // let thumbnail_path = outdir + "/thumbnail.png"
+    // let viewport_path = outdir + "/render.png"
+    // do_print(client.render_thumbnail_to_path(thumbnail_path), "RenderThumbnailToPath")
+    // do_print(client.render_viewport_to_path(viewport_path), "RenderViewportToPath")
+
+    // --- Execute: Modify the scene ---
+    println!("\n--- Execute: Modify Scene ---")
+    let modify_code = MODIFY_CODE
+    do(client.execute_blender_code(modify_code), "ExecuteBlenderCode")
+
+    // --- Blend File Info ---
+    println!("\n--- Blend File Info ---")
+    do_print(client.get_blendfile_summary_datablocks(), "GetBlendFileSummaryDatablocks")
+    do_print(client.get_blendfile_summary_path_info(), "GetBlendFileSummaryPathInfo")
+    do_print(client.get_blendfile_summary_usage_guess(), "GetBlendFileSummaryUsageGuess")
+    do_print(client.get_blendfile_summary_missing_files(), "GetBlendFileSummaryMissingFiles")
+    do_print(client.get_blendfile_summary_of_linked_libraries(), "GetBlendFileSummaryOfLinkedLibraries")
+
+    // --- API Documentation ---
+    println!("\n--- API Docs ---")
+    do_print(client.get_python_api_docs("bpy.ops.object"), "GetPythonAPIDocs")
+    do_print(client.search_api_docs("how to add light", None, None, None), "SearchAPIDocs")
+    do_print(client.search_manual_docs("rendering engine", None, None, None), "SearchManualDocs")
+
+    // --- Execute: Final summary ---
+    println!("\n--- Execute: Final Summary ---")
+    let summary_code = SUMMARY_CODE
+    do(client.execute_blender_code(summary_code), "ExecuteBlenderCode")
+
+    println!("\n=== Blender scene inspection complete! ===")
+    Ok(())
+}
+
+const SETUP_CODE: String = r"import bpy
+import math
+
+# Clear default scene
+bpy.ops.object.select_all(action='SELECT')
+bpy.ops.object.delete()
+
+# Create a camera
+bpy.ops.object.camera_add(location=(7, -7, 5))
+cam = bpy.context.active_object
+cam.rotation_euler = (math.radians(60), 0, math.radians(45))
+bpy.context.scene.camera = cam
+
+# Create a three-point lighting setup
+bpy.ops.object.light_add(type='AREA', location=(5, -5, 8))
+bpy.context.active_object.data.energy = 200
+
+bpy.ops.object.light_add(type='POINT', location=(-5, 5, 3))
+bpy.context.active_object.data.energy = 100
+
+bpy.ops.object.light_add(type='SPOT', location=(0, -8, 4))
+spot = bpy.context.active_object
+spot.rotation_euler = (math.radians(70), 0, 0)
+spot.data.energy = 150
+
+# Create a ground plane
+bpy.ops.mesh.primitive_plane_add(size=20, location=(0, 0, 0))
+plane = bpy.context.active_object
+plane.name = 'Ground'
+
+# Create a collection of primitives
+bpy.ops.mesh.primitive_uv_sphere_add(radius=1.5, location=(-3, 0, 1.5))
+sphere = bpy.context.active_object
+sphere.name = 'Sphere'
+
+bpy.ops.mesh.primitive_cube_add(size=2, location=(0, 0, 1))
+cube = bpy.context.active_object
+cube.name = 'Cube'
+
+bpy.ops.mesh.primitive_cylinder_add(radius=1, depth=3, location=(3, 0, 1.5))
+cyl = bpy.context.active_object
+cyl.name = 'Cylinder'
+
+bpy.ops.mesh.primitive_torus_add(major_radius=1.5, minor_radius=0.3, location=(0, 3, 1.5))
+torus = bpy.context.active_object
+torus.name = 'Torus'
+
+# Add a subdivision surface modifier to the cube
+mod = cube.modifiers.new(name='Subsurf', type='SUBSURF')
+mod.levels = 2
+
+# Set up world background
+world = bpy.context.scene.world
+if world is None:
+    world = bpy.data.worlds.new('World')
+    bpy.context.scene.world = world
+world.use_nodes = True
+bg = world.node_tree.nodes.get('Background')
+if bg:
+    bg.inputs[0].default_value = (0.2, 0.2, 0.25, 1.0)
+
+result = {
+    'objects': [o.name for o in bpy.data.objects],
+    'camera': bpy.context.scene.camera.name if bpy.context.scene.camera else None,
+    'world_nodes': len(world.node_tree.nodes) if world and world.use_nodes else 0,
+}
+"
+
+const MODIFY_CODE: String = r"import bpy
+
+# Duplicate the sphere and move it
+bpy.ops.object.select_all(action='DESELECT')
+sphere = bpy.data.objects.get('Sphere')
+if sphere:
+    sphere.select_set(True)
+    bpy.context.view_layer.objects.active = sphere
+    bpy.ops.object.duplicate()
+    dup = bpy.context.active_object
+    dup.name = 'Sphere_Copy'
+    dup.location.x += 4
+
+# Add an empty as a parent for the torus
+bpy.ops.object.empty_add(type='PLAIN_AXES', location=(0, 3, 0))
+empty = bpy.context.active_object
+empty.name = 'Torus_Parent'
+torus = bpy.data.objects.get('Torus')
+if torus:
+    torus.parent = empty
+
+result = {
+    'objects_after': [o.name for o in bpy.data.objects],
+    'parent_chain': {
+        torus.name: torus.parent.name if torus.parent else None,
+    } if torus else {},
+}
+"
+
+const SUMMARY_CODE: String = r"import bpy
+result = {
+    'total_objects': len(bpy.data.objects),
+    'object_names': sorted([o.name for o in bpy.data.objects]),
+    'mesh_count': len(bpy.data.meshes),
+    'material_count': len(bpy.data.materials),
+    'camera': bpy.context.scene.camera.name if bpy.context.scene.camera else None,
+    'render_engine': bpy.context.scene.render.engine,
+    'frame_current': bpy.context.scene.frame_current,
+}
+"
