@@ -1,0 +1,225 @@
+// Full API exercise for the picogk Gossamer SDK.
+//
+// This program calls every PicoGK MCP tool at least once, demonstrating
+// the complete workflow: init -> primitives -> booleans -> transforms ->
+// lattice -> mesh -> query -> I/O -> render -> cleanup -> shutdown.
+//
+// Gossamer cannot maintain an interactive subprocess pipe, so all
+// tool calls are batched into a single pipeline run against the
+// PicoGK MCP server. Results are indexed by request id.
+//
+// Run:  gos run . [--v]
+// (Requires the PicoGK MCP server at $HOME/.local/bin/picogk-mcp/PicoGK.Mcp)
+
+use std::env
+use std::flag
+use std::os
+use std::strings
+
+fn truncate(s: String, n: i64) -> String {
+    let s = strings::trim(s)
+    if s.len() <= n {
+        s
+    } else {
+        s.substring(0, n) + "..."
+    }
+}
+
+fn main() -> Result<(), errors::Error> {
+    let mut fs = flag::Set::new("full-api")
+    let verbose = fs.bool("v", false, "Verbose output")
+    let _positional = fs.parse(env::args())?
+
+    let outdir = "/tmp/gos-picogk-full-api"
+    os::mkdir_all(outdir)
+
+    println!("=== picogk Full API Exercise ===")
+    println!("Output dir: {}\n", outdir)
+
+    // --- Session ---
+    println!("--- Session ---")
+    let mut client = picogk::new_client()
+    let id_init = client.picogk_init(Some(0.5))
+    let id_info = client.picogk_info()
+
+    // --- Primitives ---
+    println!("\n--- Primitives ---")
+    let id_sphere = client.create_sphere(0.0, 0.0, 0.0, 30.0, Some("sphere1".to_string()))
+    let id_box = client.create_box(-10.0, -10.0, -40.0, 10.0, 10.0, 40.0, Some("box1".to_string()))
+    let id_cyl = client.create_cylinder(0.0, 0.0, 0.0, 10.0, 50.0, None, None, None, Some("cyl1".to_string()))
+    let id_cylX = client.create_cylinder(0.0, 0.0, 0.0, 5.0, 40.0, Some(1.0), Some(0.0), Some(0.0), Some("cylX".to_string()))
+    let id_cap = client.create_capsule(0.0, -20.0, 0.0, 0.0, 20.0, 0.0, 8.0, Some("cap1".to_string()))
+    let id_torus = client.create_torus(25.0, 5.0, None, None, None, Some("torus1".to_string()))
+
+    // --- Booleans ---
+    println!("\n--- Booleans ---")
+    let id_union = client.boolean_add("sphere1", "cyl1", Some("union1".to_string()))
+    let id_sub = client.boolean_subtract("sphere1", "box1", Some("sub1".to_string()))
+    let id_inter = client.boolean_intersect("sphere1", "cyl1", Some("inter1".to_string()))
+    let id_combined = client.boolean_add_all(["sphere1", "cyl1"].to_vec(), Some("combined1".to_string()))
+    let id_suball = client.boolean_subtract_all("sphere1", ["box1"].to_vec(), Some("subAll1".to_string()))
+
+    // --- Transforms ---
+    println!("\n--- Transforms ---")
+    let id_offset = client.offset("sphere1", 2.0, Some("offset1".to_string()))
+    let id_doff = client.double_offset("sphere1", 3.0, -2.0, Some("doff1".to_string()))
+    let id_over = client.over_offset("sphere1", 2.0, Some(0.5), Some("over1".to_string()))
+    let id_smooth = client.smooth("sub1", 1.5, Some("smooth1".to_string()))
+    let id_trim = client.trim("sphere1", -20.0, -20.0, 0.0, 20.0, 20.0, 50.0, Some("trimmed1".to_string()))
+    let id_shell = client.shell("sphere1", 2.0, 0.0, Some(0.5), Some("shell1".to_string()))
+    let id_fillet = client.fillet("box1", 1.5, Some("fillet1".to_string()))
+    let id_proj = client.project_z_slice("sphere1", -5.0, 5.0, Some("proj1".to_string()))
+    let id_moved = client.transform_voxels("sphere1", Some(100.0), None, None, None, None, Some(45.0), None, Some("moved1".to_string()))
+    let id_pattern = client.circular_pattern("cylX", 4, Some(360.0), Some(0.0), Some(0.0), Some(0.0), Some(0.0), Some(0.0), Some(1.0), Some("pattern1".to_string()))
+
+    // --- Lattice ---
+    println!("\n--- Lattice ---")
+    let id_lat = client.create_lattice(Some("lat1".to_string()))
+    let id_beam = client.lattice_add_beam("lat1", -20.0, 0.0, 0.0, 3.0, 20.0, 0.0, 0.0, 3.0, None)
+    let id_latsph = client.lattice_add_sphere("lat1", 0.0, 0.0, 0.0, 5.0)
+    let id_latvox = client.lattice_to_voxels("lat1", Some("latVox1".to_string()))
+
+    // --- Mesh ---
+    println!("\n--- Mesh ---")
+    let id_mesh = client.create_mesh(Some("mesh1".to_string()))
+    let id_v0 = client.mesh_add_vertex("mesh1", 0.0, 0.0, 0.0)
+    let id_v1 = client.mesh_add_vertex("mesh1", 10.0, 0.0, 0.0)
+    let id_v2 = client.mesh_add_vertex("mesh1", 0.0, 10.0, 0.0)
+    let id_tri = client.mesh_add_triangle("mesh1", 0, 1, 2)
+    let id_triverts = client.mesh_add_triangle_vertices("mesh1", 0.0, 0.0, 10.0, 10.0, 0.0, 10.0, 0.0, 10.0, 10.0)
+    let id_quad = client.mesh_add_quad("mesh1", 0.0, 0.0, 20.0, 10.0, 0.0, 20.0, 10.0, 10.0, 20.0, 0.0, 10.0, 20.0, None)
+    let id_spheremesh = client.voxels_to_mesh("sphere1", Some("sphereMesh".to_string()))
+    let id_spherevox2 = client.mesh_to_voxels("sphereMesh", Some("sphereVox2".to_string()))
+    let id_mesh2x = client.mesh_transform("sphereMesh", Some(2.0), Some(50.0), None, None, Some("mesh2x".to_string()))
+    let id_meshmir = client.mesh_mirror("sphereMesh", 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, Some("meshMir".to_string()))
+    let id_append = client.mesh_append("mesh1", "mesh2x")
+
+    // --- Query ---
+    println!("\n--- Query ---")
+    let id_bbox = client.get_bounding_box("sphere1")
+    let id_vol = client.get_volume("sphere1")
+    let id_meshinfo = client.get_mesh_info("sphereMesh")
+    let id_inside1 = client.point_inside("sphere1", 0.0, 0.0, 0.0)
+    let id_inside2 = client.point_inside("sphere1", 100.0, 0.0, 0.0)
+    let id_normal = client.surface_normal("sphere1", 30.0, 0.0, 0.0)
+    let id_closest = client.closest_point("sphere1", 50.0, 0.0, 0.0)
+    let id_raycast = client.ray_cast("sphere1", 100.0, 0.0, 0.0, -1.0, 0.0, 0.0)
+    let id_thickness = client.measure_thickness("sphere1", 0.0, 0.0, 0.0, 1.0, 0.0, 0.0)
+    let id_voxdims = client.get_voxel_dimensions("sphere1")
+    let id_isempty = client.voxels_is_empty("sphere1")
+    let id_memusage = client.voxels_mem_usage("sphere1")
+    let id_dup = client.duplicate_object("sphere1", Some("sphereDup".to_string()))
+    let id_isequal = client.voxels_is_equal("sphere1", "sphereDup")
+    let id_listobj = client.list_objects()
+
+    // --- I/O ---
+    println!("\n--- I/O ---")
+    let id_stl = client.save_stl("sphereMesh", outdir + "/sphere.stl", None)
+    let id_vdb = client.save_vdb("sphere1", outdir + "/sphere.vdb", Some("myField".to_string()))
+    let id_listvdb = client.list_vdb_fields(outdir + "/sphere.vdb")
+    let id_loadvdb = client.load_vdb(outdir + "/sphere.vdb", Some("myField".to_string()), Some("loadedVox".to_string()))
+    let id_cli = client.save_cli("sphere1", outdir + "/sphere.cli", Some(2.0), None, None)
+    let id_svg = client.save_svg("sphere1", outdir + "/sphere.svg", Some(2.0))
+
+    // --- Render ---
+    println!("\n--- Render ---")
+    let id_render = client.render_to_image("sphere1", outdir + "/sphere.png", Some(600), Some(400), None, None)
+    let id_slice = client.render_slice("sphere1", 0.0, outdir + "/slice_z0.png", None)
+
+    // --- Cleanup ---
+    println!("\n--- Cleanup ---")
+    let id_del1 = client.delete_object("box1")
+    let id_del2 = client.delete_objects(["cyl1", "cap1", "torus1"].to_vec(), None)
+    let id_del3 = client.delete_objects(["sphere1"].to_vec(), Some(true))
+
+    // --- Shutdown ---
+    println!("\n--- Shutdown ---")
+    let id_shutdown = client.picogk_shutdown()
+
+    // --- Execute all at once ---
+    println!("\n--- Executing all {} requests... ---", client.requests.len())
+    let results = client.execute()?
+
+    // --- Print results ---
+    let print_result = |id: i64, label: String| {
+        match results.get(&id) {
+            Some(text) => {
+                if *verbose {
+                    println!("  OK: {} -> {}", label, truncate(text, 80))
+                }
+            },
+            None => println!("  MISSING: {} (id={})", label, id),
+        }
+    }
+
+    print_result(id_init, "Init")
+    print_result(id_info, "Info")
+    print_result(id_sphere, "CreateSphere")
+    print_result(id_box, "CreateBox")
+    print_result(id_cyl, "CreateCylinder")
+    print_result(id_cylX, "CreateCylinder(X)")
+    print_result(id_cap, "CreateCapsule")
+    print_result(id_torus, "CreateTorus")
+    print_result(id_union, "BooleanAdd")
+    print_result(id_sub, "BooleanSubtract")
+    print_result(id_inter, "BooleanIntersect")
+    print_result(id_combined, "BooleanAddAll")
+    print_result(id_suball, "BooleanSubtractAll")
+    print_result(id_offset, "Offset")
+    print_result(id_doff, "DoubleOffset")
+    print_result(id_over, "OverOffset")
+    print_result(id_smooth, "Smooth")
+    print_result(id_trim, "Trim")
+    print_result(id_shell, "Shell")
+    print_result(id_fillet, "Fillet")
+    print_result(id_proj, "ProjectZSlice")
+    print_result(id_moved, "TransformVoxels")
+    print_result(id_pattern, "CircularPattern")
+    print_result(id_lat, "CreateLattice")
+    print_result(id_beam, "LatticeAddBeam")
+    print_result(id_latsph, "LatticeAddSphere")
+    print_result(id_latvox, "LatticeToVoxels")
+    print_result(id_mesh, "CreateMesh")
+    print_result(id_v0, "MeshAddVertex(0)")
+    print_result(id_v1, "MeshAddVertex(1)")
+    print_result(id_v2, "MeshAddVertex(2)")
+    print_result(id_tri, "MeshAddTriangle")
+    print_result(id_triverts, "MeshAddTriangleVertices")
+    print_result(id_quad, "MeshAddQuad")
+    print_result(id_spheremesh, "VoxelsToMesh")
+    print_result(id_spherevox2, "MeshToVoxels")
+    print_result(id_mesh2x, "MeshTransform")
+    print_result(id_meshmir, "MeshMirror")
+    print_result(id_append, "MeshAppend")
+    print_result(id_bbox, "GetBoundingBox")
+    print_result(id_vol, "GetVolume")
+    print_result(id_meshinfo, "GetMeshInfo")
+    print_result(id_inside1, "PointInside(0,0,0)")
+    print_result(id_inside2, "PointInside(100,0,0)")
+    print_result(id_normal, "SurfaceNormal")
+    print_result(id_closest, "ClosestPoint")
+    print_result(id_raycast, "RayCast")
+    print_result(id_thickness, "MeasureThickness")
+    print_result(id_voxdims, "GetVoxelDimensions")
+    print_result(id_isempty, "VoxelsIsEmpty")
+    print_result(id_memusage, "VoxelsMemUsage")
+    print_result(id_dup, "DuplicateObject")
+    print_result(id_isequal, "VoxelsIsEqual")
+    print_result(id_listobj, "ListObjects")
+    print_result(id_stl, "SaveSTL")
+    print_result(id_vdb, "SaveVDB")
+    print_result(id_listvdb, "ListVDBFields")
+    print_result(id_loadvdb, "LoadVDB")
+    print_result(id_cli, "SaveCLI")
+    print_result(id_svg, "SaveSVG")
+    print_result(id_render, "RenderToImage")
+    print_result(id_slice, "RenderSlice")
+    print_result(id_del1, "DeleteObject")
+    print_result(id_del2, "DeleteObjects")
+    print_result(id_del3, "DeleteObjects(keepOnly)")
+    print_result(id_shutdown, "Shutdown")
+
+    // Count successes
+    println!("\n=== {} tool calls completed successfully! ===", results.len())
+    Ok(())
+}
