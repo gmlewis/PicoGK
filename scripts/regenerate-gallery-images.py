@@ -3,18 +3,22 @@
 Regenerate all gallery images for both the Go and MoonBit PicoGK SDKs.
 
 This script:
-  1. Runs the Go shapekernel-gallery example to produce 16 gallery PNGs
-  2. Runs the Go viewer-demo example to produce the viewer PNG
-  3. Runs the Go visualize example to produce slice + preview PNGs
+  1. Runs the Go FFI shapekernel-gallery example to produce 16 gallery PNGs
+  2. Runs the Go FFI viewer-demo example to produce the viewer PNG
+  3. Runs the Go FFI visualize example to produce slice + preview PNGs
   4. Runs the MoonBit shapekernel-gallery example to produce 16 gallery PNGs
   5. Runs the MoonBit viewer-demo example
   6. Runs the MoonBit visualize example
   7. Compares Go vs MoonBit gallery images for visual similarity
   8. Copies generated images into the docs/images/ directories
 
+Both the Go and MoonBit SDKs use the newer in-process FFI bindings
+(picogkffi / gmlewis/picogkffi), which bind directly to the native
+PicoGK C++ runtime and render via the native OpenGL Viewer.
+
 Requires:
-  - The PicoGK MCP server at ~/.local/bin/picogk-mcp/PicoGK.Mcp
-  - Go 1.26+ (go command on PATH)
+  - The PicoGK native runtime (built under native/)
+  - Go 1.22+ (go command on PATH)
   - MoonBit (moon command on PATH)
   - Python 3 with Pillow (pip install Pillow) for image comparison
 
@@ -33,10 +37,10 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 GO_SDK = REPO_ROOT / "sdk" / "go"
 MBT_SDK = REPO_ROOT / "sdk" / "mbt"
-GO_GALLERY_DIR = GO_SDK / "examples" / "shapekernel-gallery"
+GO_GALLERY_DIR = GO_SDK / "examples" / "ffi-gallery"
 MBT_GALLERY_DIR = MBT_SDK / "examples" / "shapekernel-gallery"
-GO_VIEWER_DIR = GO_SDK / "examples" / "viewer-demo"
-GO_VISUALIZE_DIR = GO_SDK / "examples" / "visualize"
+GO_VIEWER_DIR = GO_SDK / "examples" / "ffi-viewer-demo"
+GO_VISUALIZE_DIR = GO_SDK / "examples" / "ffi-visualize"
 MBT_VIEWER_DIR = MBT_SDK / "examples" / "viewer-demo"
 MBT_VISUALIZE_DIR = MBT_SDK / "examples" / "visualize"
 
@@ -188,46 +192,46 @@ def main():
     all_success = True
 
     # Output directories
-    go_output = Path("/tmp/go-picogk-gallery")
+    go_output = Path("/tmp/go-ffi-gallery")
     mbt_output = Path("/tmp/mbt-picogk-gallery")
-    go_viewer_output = Path("/tmp/go-picogk-viewer")
-    go_visualize_output = Path("/tmp/go-picogk-visualize")
+    go_viewer_output = Path("/tmp/go-picogkffi-viewer")
+    go_visualize_output = Path("/tmp/go-picogkffi-visualize")
     mbt_viewer_output = Path("/tmp/mbt-picogk-viewer")
     mbt_visualize_output = Path("/tmp/mbt-picogk-visualize")
 
     # --- Go examples ---
     if run_go:
         print("\n" + "=" * 60)
-        print("  GO SDK: Regenerating gallery images")
+        print("  GO SDK (FFI): Regenerating gallery images")
         print("=" * 60)
 
-        # Run the Go shapekernel-gallery
+        # Run the Go shapekernel-gallery (FFI)
         ok = run(
-            ["go", "run", "main.go"],
+            ["go", "run", "main.go", "-out", str(go_output)],
             cwd=GO_GALLERY_DIR,
-            label="Go: shapekernel-gallery (16 scenes)",
+            label="Go: ffi-gallery (16 scenes)",
             timeout=600,
             verbose=args.verbose,
         )
         all_success = all_success and ok
         go_files = check_files(go_output, [f"{s}.png" for s in GALLERY_SCENES], "Go gallery PNGs")
 
-        # Run the Go viewer-demo
+        # Run the Go viewer-demo (FFI)
         ok = run(
             ["go", "run", "main.go", str(go_viewer_output / "viewer_demo.png")],
             cwd=GO_VIEWER_DIR,
-            label="Go: viewer-demo",
+            label="Go: ffi-viewer-demo",
             timeout=120,
             verbose=args.verbose,
         )
         all_success = all_success and ok
         check_files(go_viewer_output, ["viewer_demo.png"], "Go viewer PNG")
 
-        # Run the Go visualize
+        # Run the Go visualize (FFI)
         ok = run(
             ["go", "run", "main.go"],
             cwd=GO_VISUALIZE_DIR,
-            label="Go: visualize",
+            label="Go: ffi-visualize",
             timeout=120,
             verbose=args.verbose,
         )
