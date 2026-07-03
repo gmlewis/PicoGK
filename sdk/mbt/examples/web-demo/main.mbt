@@ -3,8 +3,8 @@
 ///
 /// This is a MoonBit port of the PicoPie Python example web/demo.py.
 /// Uses the picogkffi package for direct in-process FFI calls.
-/// It builds three voxel objects (a box, a sphere, and a sphere at a
-/// third position), meshes them, and exports STLs.
+/// It builds three voxel objects (a box, a sphere, and a real gyroid-filled
+/// sphere via implicit SDF), meshes them, and exports STLs.
 ///
 /// Run:  moon run . --target native
 fn main {
@@ -14,8 +14,8 @@ fn main {
   println("Output dir: " + outdir)
   println("")
 
-  // Coarse voxel size so the demo stays light and fast.
-  match @pk.init_with_size(0.5) {
+  // Voxel size fine enough for the gyroid SDF.
+  match @pk.init_with_size(0.2) {
     Ok(_) => ()
     Err(e) => {
       println("Failed to init PicoGK: " + e)
@@ -28,8 +28,27 @@ fn main {
   let box = @pk.new_box(-43.0, -11.0, -11.0, -21.0, 11.0, 11.0)
   // Sphere at origin, radius 13.
   let sphere = @pk.new_sphere(@pk.Vec3::new(0.0, 0.0, 0.0), 13.0)
-  // Sphere at (32, 0, 0), radius 13 (approximating gyroid sphere).
-  let gyroid = @pk.new_sphere(@pk.Vec3::new(32.0, 0.0, 0.0), 13.0)
+  // Gyroid-filled sphere at (32, 0, 0), radius 13 via implicit SDF.
+  let gyroid = @pk.new_voxels()
+  let r = 13.0
+  let pad = 2.0
+  let ox = 32.0
+  gyroid.render_gyroid_sphere_offset(
+    @pk.BBox3::new(
+      @pk.Vec3::new(ox - r - pad, -r - pad, -r - pad),
+      @pk.Vec3::new(ox + r + pad, r + pad, r + pad),
+    ),
+    r,
+    0.5,
+    2.0 * 3.14159265358979 / 3.0,
+    ox,
+    0.0,
+    0.0,
+  )
+
+  println("  box volume:        \{box.volume()}")
+  println("  sphere volume:     \{sphere.volume()}")
+  println("  gyroid sphere vol: \{gyroid.volume()}")
 
   // Mesh all objects and export STLs.
   let box_mesh = box.to_mesh()

@@ -341,3 +341,199 @@ pub fn new_sidebar(
 pub fn SideBar::destroy(self : SideBar, viewer : Viewer) -> Unit {
   viewer_sidebar_destroy(viewer.h, self.h)
 }
+
+// --- ViewerEx: Viewer with camera callbacks ---
+
+///|
+/// ViewerEx is a viewer with full camera control callbacks (C-side).
+/// This provides the same rendering quality as the Go ViewerEx / PicoPie viewer.
+pub struct ViewerEx {
+  h : Int64
+}
+
+///|
+/// Default camera azimuth matching PicoPie / Go DefaultCameraState.
+pub let default_azimuth : Double = 45.0 * 3.14159265358979 / 180.0
+
+///|
+/// Default camera elevation matching PicoPie / Go DefaultCameraState.
+pub let default_elevation : Double = 25.0 * 3.14159265358979 / 180.0
+
+///|
+/// Create a new ViewerEx with default camera state.
+/// Requires a display + OpenGL context.
+pub fn new_viewer_ex(
+  title : String,
+  width : Int,
+  height : Int,
+  bg_r : Double,
+  bg_g : Double,
+  bg_b : Double,
+  bg_a : Double,
+) -> ViewerEx {
+  let title_buf = cstr(title)
+  let h = mbt_viewer_create(
+    title_buf,
+    Float::from_int(width),
+    Float::from_int(height),
+    0.0,
+    0.0,
+    0.0,
+    10.0,
+    Float::from_double(default_azimuth),
+    Float::from_double(default_elevation),
+    1.0,
+    Float::from_double(bg_r),
+    Float::from_double(bg_g),
+    Float::from_double(bg_b),
+    Float::from_double(bg_a),
+  )
+  ViewerEx::{ h }
+}
+
+///|
+/// Returns true if the viewer is still valid.
+pub fn ViewerEx::is_valid(self : ViewerEx) -> Bool {
+  self.h != 0L
+}
+
+///|
+/// Destroy the viewer.
+pub fn ViewerEx::destroy(self : ViewerEx) -> Unit {
+  mbt_viewer_close(self.h)
+}
+
+///|
+/// Request a redraw.
+pub fn ViewerEx::request_update(self : ViewerEx) -> Unit {
+  viewer_request_update(self.h)
+}
+
+///|
+/// Process one frame. Returns false if the viewer was closed.
+pub fn ViewerEx::poll(self : ViewerEx) -> Bool {
+  viewer_b_poll(self.h)
+}
+
+///|
+/// Request the viewer to close.
+pub fn ViewerEx::request_close(self : ViewerEx) -> Unit {
+  viewer_request_close(self.h)
+}
+
+///|
+/// Add voxels to the viewer at the given group.
+pub fn ViewerEx::add_voxels(self : ViewerEx, group : Int, vox : Voxels) -> Unit {
+  mbt_viewer_add_voxels(self.h, group, get_instance(), vox.h)
+}
+
+///|
+/// Add a mesh to the viewer at the given group.
+pub fn ViewerEx::add_mesh(self : ViewerEx, group : Int, mesh : Mesh) -> Unit {
+  viewer_add_mesh(get_instance(), self.h, group, mesh.h)
+}
+
+///|
+/// Set PBR material for a group.
+pub fn ViewerEx::set_group_material(
+  self : ViewerEx,
+  group : Int,
+  color : ColorFloat,
+  metallic : Double,
+  roughness : Double,
+) -> Unit {
+  mbt_viewer_set_group_material(
+    self.h,
+    group,
+    Float::from_double(color.r),
+    Float::from_double(color.g),
+    Float::from_double(color.b),
+    Float::from_double(color.a),
+    Float::from_double(metallic),
+    Float::from_double(roughness),
+  )
+}
+
+///|
+/// Set visibility of a group.
+pub fn ViewerEx::set_group_visible(self : ViewerEx, group : Int, visible : Bool) -> Unit {
+  viewer_set_group_visible(self.h, group, visible)
+}
+
+///|
+/// Remove all objects from the viewer.
+pub fn ViewerEx::remove_all_objects(self : ViewerEx) -> Unit {
+  viewer_remove_all_objects(self.h)
+}
+
+///|
+/// Get the scene bounding box.
+pub fn ViewerEx::bounding_box(self : ViewerEx) -> BBox3 {
+  let out = FixedArray::make(24, 0L.to_byte())
+  viewer_get_bounding_box(self.h, out)
+  unpack_bbox3(out)
+}
+
+///|
+/// Take a screenshot to PNG. Does autofit + warm-up frames + screenshot.
+/// Returns true on success.
+pub fn ViewerEx::screenshot_png(self : ViewerEx, path : String, frames : Int) -> Bool {
+  let result = mbt_viewer_screenshot_png(self.h, cstr(path), frames)
+  result == 0
+}
+
+///|
+/// Run the viewer event loop until closed.
+pub fn ViewerEx::run(self : ViewerEx) -> Unit {
+  while self.poll() {
+
+  }
+  self.destroy()
+}
+
+// --- C extern declarations for ViewerEx ---
+
+#borrow(title)
+extern "C" fn mbt_viewer_create(
+  title : FixedArray[Byte],
+  width : Float,
+  height : Float,
+  target_x : Float,
+  target_y : Float,
+  target_z : Float,
+  radius : Float,
+  azimuth : Float,
+  elevation : Float,
+  zoom : Float,
+  bg_r : Float,
+  bg_g : Float,
+  bg_b : Float,
+  bg_a : Float,
+) -> Int64 = "mbt_viewer_create"
+
+extern "C" fn mbt_viewer_close(viewer : Int64) -> Unit = "mbt_viewer_close"
+
+extern "C" fn mbt_viewer_add_voxels(
+  viewer : Int64,
+  group : Int,
+  instance : Int64,
+  vox : Int64,
+) -> Unit = "mbt_viewer_add_voxels"
+
+extern "C" fn mbt_viewer_set_group_material(
+  viewer : Int64,
+  group : Int,
+  r : Float,
+  g : Float,
+  b : Float,
+  a : Float,
+  metallic : Float,
+  roughness : Float,
+) -> Unit = "mbt_viewer_set_group_material"
+
+#borrow(png_path)
+extern "C" fn mbt_viewer_screenshot_png(
+  viewer : Int64,
+  png_path : FixedArray[Byte],
+  frames : Int,
+) -> Int = "mbt_viewer_screenshot_png"

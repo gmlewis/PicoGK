@@ -7,6 +7,7 @@
 
 #include "picogk_ffi.h"
 #include <math.h>
+#include <stdio.h>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -102,7 +103,8 @@ static float sdf_gyroid_sphere_offset(const PKVector3* p) {
     float r = g_sdf_param1;
     float wall = g_sdf_param2;
     float sphere = sqrtf(dx*dx + dy*dy + dz*dz) - r;
-    return fmaxf(g, sphere);
+    float gyroid_val = fabsf(g) - wall;
+    return fmaxf(gyroid_val, sphere);
 }
 
 // Gyroid genus: max(genus_sdf/scale, gyroid_sdf)
@@ -110,32 +112,29 @@ static float sdf_gyroid_genus(const PKVector3* p) {
     float s = g_sdf_param1;
     float gap = g_sdf_param2;
     float k = g_sdf_param3;
-    // Genus-2 surface: (x^2+y^2-1)^2 + z^2 - gap (scaled)
+    // Genus-2 surface (matching PicoPie/Go ImplicitGenus)
     float x = p->X / s, y = p->Y / s, z = p->Z / s;
-    float r2 = x*x + y*y;
-    float genus = (r2 - 1.0f)*(r2 - 1.0f) + z*z - gap;
+    float genus = 2.0f*y*(y*y - 3.0f*x*x)*(1.0f - z*z) +
+                  (x*x + y*y)*(x*x + y*y) -
+                  (9.0f*z*z - 1.0f)*(1.0f - z*z) - gap;
     float g = sinf(k*p->X)*cosf(k*p->Y) +
               sinf(k*p->Y)*cosf(k*p->Z) +
               sinf(k*p->Z)*cosf(k*p->X);
     return fmaxf(genus, g);
 }
 
-// Superellipsoid: |x/a|^n1 + |y/b|^n1 + |z/c|^n2 - 1 (approximate SDF)
+// Superellipsoid: pow(pow(|x|/a, 2/e2) + pow(|y|/a, 2/e2), e2/e1) + pow(|z|/c, 2/e1) - 1
 static float sdf_superellipsoid(const PKVector3* p) {
     float a = g_sdf_param1, b = g_sdf_param2, c = g_sdf_param3;
     float e1 = g_sdf_param4, e2 = g_sdf_param5;
-    // Superellipsoid: (|x/a|^n + |y/a|^n)^m + |z/c|^m <= 1
-    // where n = 2/e1, m = 2/e2
-    float n = 2.0f / e1;
-    float m = 2.0f / e2;
-    float xa = fabsf(p->X) / a;
-    float ya = fabsf(p->Y) / a;
-    float za = fabsf(p->Z) / c;
-    // Use powf for the general case
-    float xy = powf(xa, n) + powf(ya, n);
-    float val = powf(xy, m / n) + powf(za, m) - 1.0f;
-    // This is not a true SDF but works for rasterization
-    return val * fminf(a, fminf(b, c));  // scale to approximate distance
+    float dx = fabsf(p->X) / a;
+    float dy = fabsf(p->Y) / a;  // Go uses Ax for both x and y (Ay is unused)
+    float dz = fabsf(p->Z) / c;
+    float n2 = 2.0f / e2;
+    float n1 = 2.0f / e1;
+    float xy = powf(dx, n2) + powf(dy, n2);
+    float val = powf(xy, e2 / e1) + powf(dz, n1);
+    return val - 1.0f;
 }
 
 // Plain gyroid: abs(gyroid) - wall
@@ -175,12 +174,13 @@ void mbt_render_gyroid_sphere(uint64_t instance, uint64_t vox,
 }
 
 // Render implicit gyroid sphere with offset into voxels.
+// Uses a PKVector3 for the offset to avoid exceeding float register count.
 void mbt_render_gyroid_sphere_offset(uint64_t instance, uint64_t vox,
                                       float minX, float minY, float minZ,
                                       float maxX, float maxY, float maxZ,
                                       float radius, float wall, float k,
-                                      float ox, float oy, float oz) {
-    mbt_sdf_set_gyroid_sphere_offset(radius, wall, k, ox, oy, oz);
+                                      const PKVector3* offset) {
+    mbt_sdf_set_gyroid_sphere_offset(radius, wall, k, offset->X, offset->Y, offset->Z);
     PKBBox3 bbox;
     bbox.vecMin.X = minX; bbox.vecMin.Y = minY; bbox.vecMin.Z = minZ;
     bbox.vecMax.X = maxX; bbox.vecMax.Y = maxY; bbox.vecMax.Z = maxZ;

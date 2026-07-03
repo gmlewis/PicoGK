@@ -40,6 +40,7 @@ pub fn Voxels::render_gyroid_sphere_offset(
   oy : Double,
   oz : Double,
 ) -> Unit {
+  let offset = Vec3::new(ox, oy, oz)
   mbt_render_gyroid_sphere_offset(
     get_instance(),
     self.h,
@@ -52,9 +53,7 @@ pub fn Voxels::render_gyroid_sphere_offset(
     Float::from_double(radius),
     Float::from_double(wall),
     Float::from_double(k),
-    Float::from_double(ox),
-    Float::from_double(oy),
-    Float::from_double(oz),
+    pack_vec3(offset),
   )
 }
 
@@ -165,6 +164,7 @@ extern "C" fn mbt_render_gyroid_sphere(
   k : Float,
 ) -> Unit = "mbt_render_gyroid_sphere"
 
+#borrow(offset)
 extern "C" fn mbt_render_gyroid_sphere_offset(
   instance : Int64,
   vox : Int64,
@@ -177,9 +177,7 @@ extern "C" fn mbt_render_gyroid_sphere_offset(
   radius : Float,
   wall : Float,
   k : Float,
-  ox : Float,
-  oy : Float,
-  oz : Float,
+  offset : FixedArray[Byte],
 ) -> Unit = "mbt_render_gyroid_sphere_offset"
 
 extern "C" fn mbt_render_gyroid_genus(

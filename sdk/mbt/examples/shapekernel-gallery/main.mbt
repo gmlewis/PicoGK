@@ -107,8 +107,16 @@ fn main {
         }
       }
     } else {
-      // Render via the native Viewer.
-      let v = @pk.new_viewer("PicoGK Gallery — " + name, 1280, 960)
+      // Render via the native ViewerEx (with camera callbacks for 3D rendering).
+      let v = @pk.new_viewer_ex(
+        "PicoGK Gallery — " + name,
+        1280,
+        960,
+        0.16,
+        0.16,
+        0.20,
+        1.0,
+      )
       if v.is_valid() {
         for idx, g in groups {
           if g.voxels.is_valid() {

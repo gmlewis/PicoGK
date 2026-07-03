@@ -3,17 +3,25 @@
 A MoonBit SDK for the PicoGK computational-geometry kernel — a voxel/level-set
 modeling engine built on OpenVDB by LEAP 71.
 
-The MoonBit SDK communicates with the PicoGK MCP server using
-`moonbitlang/async` for subprocess management. Build primitives, combine them
-with boolean operations, transform, shell, offset, lattice, mesh, and export
-to STL/VDB/CLI/SVG — all from idiomatic MoonBit.
+The MoonBit SDK comes in two flavors:
+
+- **`picogk`** — MCP client SDK (talks to the PicoGK MCP server via JSON-RPC
+  over stdio, using `moonbitlang/async` for subprocess management)
+- **`picogkffi`** — FFI SDK (binds directly to the native PicoGK C++ runtime
+  via `extern "C"` declarations, no MCP server needed)
+
+The FFI SDK provides the same API surface as the Go `picogkffi` package,
+including: voxel primitives, boolean CSG, transforms, lattice, mesh, queries,
+file I/O, rendering (native OpenGL ViewerEx), and implicit SDF rendering.
 
 ## Feature highlights
 
 - **Voxel primitives**: sphere, box, cylinder, capsule, torus
 - **Boolean CSG**: union, subtract, intersect (single and multi-object)
-- **Transforms**: offset, double offset, over offset, smooth, trim, shell,
+- **Transforms**: offset, double offset, triple offset, smooth, trim, shell,
   fillet, project Z-slice, translate/rotate/scale, circular pattern
+- **Implicit SDF rendering**: gyroid sphere, gyroid genus, superellipsoid
+  (via C-side SDF callbacks — same approach as PicoPie/Go FFI)
 - **Lattice**: beam and sphere nodes, rasterize to voxels
 - **Mesh**: vertex/triangle building, voxels↔mesh conversion, STL import,
   transform, mirror, append
@@ -21,9 +29,33 @@ to STL/VDB/CLI/SVG — all from idiomatic MoonBit.
   closest point, ray cast, thickness, voxel dimensions, emptiness, equality,
   memory usage
 - **File I/O**: STL, OpenVDB, CLI (3D printing), SVG (slice contours)
-- **Rendering**: isometric PNG render, Z-slice cross-section PNG
+- **Rendering**: native OpenGL ViewerEx with camera callbacks (PBR shading),
+  Z-slice cross-section PNG (headless)
+- **ScalarField / VectorField / Metadata**: full access (FFI-only)
 
-## Quick start
+## Quick start (FFI SDK)
+
+```moonbit
+///|
+fn main {
+  @pk.init_with_size(0.2).unwrap()
+  defer @pk.shutdown()
+
+  let body = @pk.new_sphere(@pk.Vec3::new(0.0, 0.0, 0.0), 10.0)
+  let hole = @pk.new_sphere(@pk.Vec3::new(6.0, 0.0, 0.0), 6.0)
+  let part = body.sub(hole)
+  hole.destroy()
+  body.destroy()
+  part.shell(1.0)
+
+  let mesh = part.to_mesh()
+  mesh.save_stl("/tmp/part.stl")
+  mesh.destroy()
+  part.destroy()
+}
+```
+
+## Quick start (MCP SDK)
 
 ```moonbit
 ///|
@@ -36,9 +68,6 @@ async fn main {
   let _ = client.create_sphere(6.0, 0.0, 0.0, 6.0, Some("hole"))
   let _ = client.boolean_subtract("body", "hole", Some("part"))
   let _ = client.shell("part", 1.0, 0.0, None, Some("shelled"))
-
-  let vol = client.get_volume("shelled")
-  println(vol)
 
   let _ = client.voxels_to_mesh("shelled", Some("mesh"))
   let _ = client.save_stl("mesh", "/tmp/part.stl", None)
@@ -63,14 +92,23 @@ async fn main {
 
 ## Examples
 
-The `examples/` directory contains runnable MoonBit programs:
+The `examples/` directory contains runnable MoonBit programs using the FFI SDK:
 
 | Example | Description |
 |---------|-------------|
-| `hello-picogk` | Primitives, booleans, shell, lattice, STL export |
-| `fields-and-io` | VDB persistence, STL round-trip, offset |
-| `viewer-demo` | Headless PNG render of a shelled part |
-| `visualize` | Z-slice and 3D isometric renders |
-| `web-demo` | Scene export with STL + render PNG |
-| `shapekernel-gallery` | 16 parametric shape scenes |
-| `full-api` | Every MCP tool exercised once |
+| `hello-picogk` | Primitives, booleans, shell, lattice, gyroid SDF, STL export |
+| `fields-and-io` | VDB persistence, scalar field extraction, STL round-trip, offset |
+| `viewer-demo` | Native OpenGL Viewer render of a shelled part |
+| `visualize` | Z-slice PNG + 3D Viewer render |
+| `web-demo` | Real gyroid-filled sphere via implicit SDF, STL export |
+| `shapekernel-gallery` | 16 parametric shape scenes rendered to PNG |
+| `full-api` | Every FFI function exercised once |
+| `blender-scene` | Blender automation via the blender MCP SDK |
+
+All FFI examples use the `picogkffi` package and link against the native
+PicoGK shared library. Run with:
+
+```bash
+cd examples/hello-picogk
+moon run . --target native
+```

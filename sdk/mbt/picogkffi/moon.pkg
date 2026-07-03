@@ -12,5 +12,6 @@ options(
     "picogk_stl.c",
     "picogk_png.c",
     "picogk_sdf.c",
+    "picogk_viewer.c",
   ],
 )

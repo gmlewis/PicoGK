@@ -52,12 +52,18 @@ int picogk_write_png(const char* path, int width, int height,
 // This is a convenience function that reads the TGA file, converts it to PNG,
 // and removes the TGA file.
 int picogk_screenshot_png(void* viewer, const char* png_path, int frames) {
+    // Pump warm-up frames to ensure the scene is fully rendered
+    for (int i = 0; i < frames; i++) {
+        Viewer_RequestUpdate(viewer);
+        Viewer_bPoll(viewer);
+    }
     // First, request the screenshot as TGA
     char tga_path[4096];
     snprintf(tga_path, sizeof(tga_path), "%s.tga", png_path);
     Viewer_RequestScreenShot(viewer, tga_path);
     // Poll frames to let the screenshot complete
     for (int i = 0; i < frames; i++) {
+        Viewer_RequestUpdate(viewer);
         Viewer_bPoll(viewer);
     }
     // Read the TGA file

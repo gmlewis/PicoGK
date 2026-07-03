@@ -42,9 +42,9 @@ fn main {
     println("  ERROR: failed to write STL (is the output directory created?)")
   }
 
-  // Try to render a PNG via the native Viewer
+  // Try to render a PNG via the native ViewerEx (with camera callbacks)
   let png_path = outdir + "/viewer_demo.png"
-  let v = @pk.new_viewer("PicoGK Viewer Demo", 1280, 960)
+  let v = @pk.new_viewer_ex("PicoGK Viewer Demo", 1280, 960, 0.16, 0.16, 0.20, 1.0)
   if v.is_valid() {
     println("  Viewer created, rendering...")
     v.add_voxels(0, part)

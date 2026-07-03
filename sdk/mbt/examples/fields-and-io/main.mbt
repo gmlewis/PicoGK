@@ -71,6 +71,16 @@ fn main {
   if vdb2.is_valid() {
     let loaded_part = vdb2.get_voxels(0)
     println("  loaded volume: \{loaded_part.volume()}")
+
+    // --- Scalar field extraction (FFI-only — not available via MCP) ---
+    println("")
+    println("--- Scalar field ---")
+    let sf = @pk.scalar_field_from_voxels(loaded_part)
+    let (sfox, sfoy, sfoz, sfsx, sfsy, sfsz) = sf.voxel_dimensions()
+    println(
+      "  scalar field grid: origin=(\{sfox},\{sfoy},\{sfoz}) size=(\{sfsx},\{sfsy},\{sfsz})",
+    )
+    sf.destroy()
     loaded_part.destroy()
   } else {
     println("  ERROR: failed to load VDB")
