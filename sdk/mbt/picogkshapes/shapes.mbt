@@ -1328,6 +1328,11 @@ pub fn new_pipe(
     Some(fr) => fr
     None => new_local_frame(vec3(0.0, 0.0, 0.0), None)
   }
+  // Check if radii are constant — if not, bump lengthSteps to 500
+  // (matching Go's isConstant check)
+  let inner_const = inner_radius(0.0, 0.0) == inner_radius(1.0, 1.0)
+  let outer_const = outer_radius(0.0, 0.0) == outer_radius(1.0, 1.0)
+  let l_steps = if inner_const && outer_const { 5 } else { 500 }
   Pipe::{
     frame: f,
     length,
@@ -1336,7 +1341,7 @@ pub fn new_pipe(
     frames: None,
     polar_steps: 360,
     radial_steps: 5,
-    length_steps: 5,
+    length_steps: l_steps,
     transform: None,
     phi_angle_func: fn(phi_ratio : Double, _ : Double) {
       2.0 * 3.14159265358979 * phi_ratio
@@ -1869,4 +1874,145 @@ pub fn scene_group_voxels(vox : @picogkffi.Voxels, color : RGB) -> SceneGroup {
 ///|
 pub fn scene_group_mesh(mesh : @picogkffi.Mesh, color : RGB) -> SceneGroup {
   SceneGroup::{ voxels: None, mesh: Some(mesh), color }
+}
+
+// --- ColorScale3D and SplitByOverhangAngle (for mesh_painter) ---
+
+///|
+/// RainbowSpectrum returns blue→green→yellow→orange→red control colors.
+pub fn rainbow_spectrum() -> Array[RGB] {
+  [
+    RGB::{ r: 0.0, g: 0.0, b: 1.0 },
+    RGB::{ r: 0.0, g: 1.0, b: 0.0 },
+    RGB::{ r: 1.0, g: 1.0, b: 0.0 },
+    RGB::{ r: 1.0, g: 130.0 / 255.0, b: 0.0 },
+    RGB::{ r: 1.0, g: 0.0, b: 0.0 },
+  ]
+}
+
+///|
+pub struct ColorScale3D {
+  rgb_arr : Array[RGB]
+  min_value : Double
+  max_value : Double
+}
+
+///|
+pub fn new_color_scale_3d(
+  spectrum : Array[RGB],
+  min_value : Double,
+  max_value : Double,
+) -> ColorScale3D {
+  let n = 500
+  let nc = spectrum.length()
+  let rgb = Array::make(n, RGB::{ r: 0.0, g: 0.0, b: 0.0 })
+  for i in 0..<n {
+    let t = i.to_double() / (n - 1).to_double()
+    let idx = t * (nc - 1).to_double()
+    let lo = if idx.to_int() >= nc - 1 { nc - 2 } else { idx.to_int() }
+    let frac = idx - lo.to_double()
+    let c1 = spectrum[lo]
+    let c2 = spectrum[lo + 1]
+    rgb[i] = RGB::{
+      r: c1.r + frac * (c2.r - c1.r),
+      g: c1.g + frac * (c2.g - c1.g),
+      b: c1.b + frac * (c2.b - c1.b),
+    }
+  }
+  ColorScale3D::{ rgb_arr: rgb, min_value, max_value }
+}
+
+///|
+pub fn ColorScale3D::color(self : ColorScale3D, value : Double) -> RGB {
+  let v = if value < self.min_value {
+    self.min_value
+  } else if value > self.max_value {
+    self.max_value
+  } else {
+    value
+  }
+  let ratio = (v - self.min_value) / (self.max_value - self.min_value)
+  let idx = (ratio * (self.rgb_arr.length() - 1).to_double()).to_int()
+  let i = if idx < 0 { 0 } else if idx >= self.rgb_arr.length() { self.rgb_arr.length() - 1 } else { idx }
+  let c = self.rgb_arr[i]
+  RGB::{ r: clamp_d(c.r, 0.0, 1.0), g: clamp_d(c.g, 0.0, 1.0), b: clamp_d(c.b, 0.0, 1.0) }
+}
+
+///|
+fn clamp_d(v : Double, lo : Double, hi : Double) -> Double {
+  if v < lo { lo } else if v > hi { hi } else { v }
+}
+
+///|
+/// SplitByOverhangAngle splits a mesh into colored sub-meshes by triangle
+/// overhang angle (degrees: 0 = vertical wall, 90 = horizontal).
+pub fn split_by_overhang_angle(
+  mesh : @picogkffi.Mesh,
+  scale : ColorScale3D,
+  n_classes : Int,
+) -> Array[SceneGroup] {
+  let verts = mesh.vertices()
+  let tris = mesh.triangles()
+  let nt = tris.length() / 3
+  // Compute per-triangle overhang angle
+  let angles = Array::make(nt, 0.0)
+  for i in 0..<nt {
+    let a = tris[i * 3] * 3
+    let b = tris[i * 3 + 1] * 3
+    let c = tris[i * 3 + 2] * 3
+    let ax = verts[a]; let ay = verts[a + 1]; let az = verts[a + 2]
+    let bx = verts[b]; let by = verts[b + 1]; let bz = verts[b + 2]
+    let cx = verts[c]; let cy = verts[c + 1]; let cz = verts[c + 2]
+    let nx = (ay - by) * (cz - bz) - (az - bz) * (cy - by)
+    let ny = (az - bz) * (cx - bx) - (ax - bx) * (cz - bz)
+    let nz = (ax - bx) * (cy - by) - (ay - by) * (cx - bx)
+    let nlen = (nx * nx + ny * ny + nz * nz).sqrt()
+    let mut nx = nx; let mut ny = ny; let mut nz = nz
+    if nlen > 0.0 {
+      nx = nx / nlen
+      ny = ny / nlen
+      nz = nz / nlen
+    }
+    let dr = (nx * nx + ny * ny).sqrt()
+    let dz = nz.abs()
+    let mut angle = @math.atan2(dz, dr) * 180.0 / 3.14159265358979
+    if angle > 90.0 { angle = 90.0 }
+    if angle < 0.0 { angle = 0.0 }
+    angles[i] = angle
+  }
+  let lo = scale.min_value
+  let hi = scale.max_value
+  let groups : Array[SceneGroup] = []
+  for k in 0..<n_classes {
+    let lo_k = lo + k.to_double() * (hi - lo) / (n_classes - 1).to_double()
+    let hi_k = lo + (k + 1).to_double() * (hi - lo) / (n_classes - 1).to_double()
+    let sub_verts : Array[Double] = []
+    let sub_tris : Array[Int] = []
+    for i in 0..<nt {
+      if angles[i] >= lo_k && (angles[i] < hi_k || k == n_classes - 1) {
+        let a = tris[i * 3] * 3
+        let b = tris[i * 3 + 1] * 3
+        let c = tris[i * 3 + 2] * 3
+        let idx = sub_verts.length() / 3
+        sub_verts.push(verts[a])
+        sub_verts.push(verts[a + 1])
+        sub_verts.push(verts[a + 2])
+        sub_verts.push(verts[b])
+        sub_verts.push(verts[b + 1])
+        sub_verts.push(verts[b + 2])
+        sub_verts.push(verts[c])
+        sub_verts.push(verts[c + 1])
+        sub_verts.push(verts[c + 2])
+        sub_tris.push(idx)
+        sub_tris.push(idx + 1)
+        sub_tris.push(idx + 2)
+      }
+    }
+    if sub_tris.length() > 0 {
+      let sub_mesh = @picogkffi.mesh_from_arrays(sub_verts, sub_tris)
+      let color = scale.color(lo_k)
+      groups.push(scene_group_mesh(sub_mesh, color))
+    }
+  }
+  groups
 }

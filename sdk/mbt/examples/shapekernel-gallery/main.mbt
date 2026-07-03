@@ -660,9 +660,10 @@ fn build_superellipsoid() -> Array[@s.SceneGroup] {
 ///|
 fn build_mesh_painter() -> Array[@s.SceneGroup] {
   // Build a sphere mesh and split it by overhang angle into colored groups
-  // (approximated as a single sphere for now)
-  let s = @s.new_sphere(None, @s.surf_const(40.0)).to_voxels()
-  [@s.scene_group_voxels(s, col("frozen"))]
+  let ball = @s.new_sphere(None, @s.surf_const(40.0))
+  let mesh = ball.to_mesh()
+  let scale = @s.new_color_scale_3d(@s.rainbow_spectrum(), 0.0, 90.0)
+  @s.split_by_overhang_angle(mesh, scale, 50)
 }
 
 ///|
