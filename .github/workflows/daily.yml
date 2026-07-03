@@ -43,7 +43,7 @@ jobs:
 
       - name: Install MoonBit
         run: |
-          curl -fsSL https://moonbitlang.com/download.sh | bash
+          /bin/bash -c "$(curl -fsSL https://cli.moonbitlang.com/install/unix.sh)"
           echo "$HOME/.moon/bin" >> $GITHUB_PATH
 
       - name: Moon version

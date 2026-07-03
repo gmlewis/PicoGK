@@ -1,9 +1,6 @@
 ///|
 /// ShapeKernel example gallery — a MoonBit port of LEAP71_ShapeKernel/Examples.
-///
-/// Each scene constructs one or more voxel objects using the PicoGK FFI SDK
-/// primitives, booleans, lattices, and implicit SDF rendering. The scenes
-/// are exported as STL files and rendered to PNG via the native Viewer.
+/// Uses the picogkshapes parametric shape library, matching the Go FFI gallery.
 ///
 /// Run:  moon run . --target native [-out DIR] [-voxel-size MM] [-no-viewer] [-scene NAME]
 fn main {
@@ -12,12 +9,28 @@ fn main {
     "shapekernel-gallery",
     about="PicoGK ShapeKernel Gallery (MoonBit FFI)",
     flags=[
-      @argparse.FlagArg("no-viewer", long="no-viewer", about="Save STLs only (no display needed)"),
+      @argparse.FlagArg(
+        "no-viewer",
+        long="no-viewer",
+        about="Save STLs only (no display needed)",
+      ),
     ],
     options=[
-      @argparse.OptionArg("out", long="out", about="Output directory", default_values=["/tmp/mbt-picogk-gallery"]),
-      @argparse.OptionArg("voxel-size", long="voxel-size", about="Voxel size in mm", default_values=["0.2"]),
-      @argparse.OptionArg("scene", long="scene", about="Render only this scene", default_values=[""]),
+      @argparse.OptionArg("out", long="out", about="Output directory", default_values=[
+        "/tmp/mbt-picogk-gallery",
+      ]),
+      @argparse.OptionArg(
+        "voxel-size",
+        long="voxel-size",
+        about="Voxel size in mm",
+        default_values=["0.2"],
+      ),
+      @argparse.OptionArg(
+        "scene",
+        long="scene",
+        about="Render only this scene",
+        default_values=[""],
+      ),
     ],
   )
   let matches = cmd.parse() catch {
@@ -59,7 +72,7 @@ fn main {
   println("  PicoGK version: " + @pk.version())
 
   // Build all scenes.
-  let scenes : Array[(String, Array[SceneGroup])] = []
+  let scenes : Array[(String, Array[@s.SceneGroup])] = []
   scenes.push(("box", build_box()))
   scenes.push(("sphere", build_sphere()))
   scenes.push(("cylinder", build_cylinder()))
@@ -82,8 +95,13 @@ fn main {
     let groups = scene.1
     if scene_only != "" && scene_only != name {
       for g in groups {
-        if g.voxels.is_valid() {
-          g.voxels.destroy()
+        match g.voxels {
+          Some(v) => v.destroy()
+          None => ()
+        }
+        match g.mesh {
+          Some(m) => m.destroy()
+          None => ()
         }
       }
       continue
@@ -97,17 +115,34 @@ fn main {
     if no_viewer {
       // Save STLs only.
       for idx, g in groups {
-        if g.voxels.is_valid() {
-          let mesh = g.voxels.to_mesh()
-          let stl_path = outdir + "/" + name + "_" + idx.to_string() + ".stl"
-          if mesh.save_stl(stl_path) {
-            println("  -> " + stl_path)
+        match g.voxels {
+          Some(v) => {
+            let mesh = v.to_mesh()
+            let stl_path = outdir + "/" + name + "_" + idx.to_string() + ".stl"
+            if mesh.save_stl(stl_path) {
+              println("  -> " + stl_path)
+            }
+            mesh.destroy()
           }
-          mesh.destroy()
+          None =>
+            match g.mesh {
+              Some(m) => {
+                let stl_path = outdir +
+                  "/" +
+                  name +
+                  "_" +
+                  idx.to_string() +
+                  ".stl"
+                if m.save_stl(stl_path) {
+                  println("  -> " + stl_path)
+                }
+              }
+              None => ()
+            }
         }
       }
     } else {
-      // Render via the native ViewerEx (with camera callbacks for 3D rendering).
+      // Render via the native ViewerEx (with camera callbacks for PBR rendering).
       let v = @pk.new_viewer_ex(
         "PicoGK Gallery — " + name,
         1280,
@@ -119,9 +154,19 @@ fn main {
       )
       if v.is_valid() {
         for idx, g in groups {
-          if g.voxels.is_valid() {
-            v.add_voxels(idx, g.voxels)
-            v.set_group_material(idx, g.color, 0.1, 0.5)
+          match g.voxels {
+            Some(vox) => {
+              v.add_voxels(idx, vox)
+              v.set_group_material(idx, g.color.to_ffi(), 0.1, 0.5)
+            }
+            None =>
+              match g.mesh {
+                Some(m) => {
+                  v.add_mesh(idx, m)
+                  v.set_group_material(idx, g.color.to_ffi(), 0.1, 0.5)
+                }
+                None => ()
+              }
           }
         }
         let png_path = outdir + "/" + name + ".png"
@@ -136,13 +181,21 @@ fn main {
         // No display — fall back to STL.
         println("  (Viewer not available — saving STLs only)")
         for idx, g in groups {
-          if g.voxels.is_valid() {
-            let mesh = g.voxels.to_mesh()
-            let stl_path = outdir + "/" + name + "_" + idx.to_string() + ".stl"
-            if mesh.save_stl(stl_path) {
-              println("  -> " + stl_path)
+          match g.voxels {
+            Some(vox) => {
+              let mesh = vox.to_mesh()
+              let stl_path = outdir +
+                "/" +
+                name +
+                "_" +
+                idx.to_string() +
+                ".stl"
+              if mesh.save_stl(stl_path) {
+                println("  -> " + stl_path)
+              }
+              mesh.destroy()
             }
-            mesh.destroy()
+            None => ()
           }
         }
       }
@@ -150,8 +203,13 @@ fn main {
 
     // Cleanup.
     for g in groups {
-      if g.voxels.is_valid() {
-        g.voxels.destroy()
+      match g.voxels {
+        Some(v) => v.destroy()
+        None => ()
+      }
+      match g.mesh {
+        Some(m) => m.destroy()
+        None => ()
       }
     }
   }
@@ -162,78 +220,13 @@ fn main {
 }
 
 ///|
-struct SceneGroup {
-  voxels : @pk.Voxels
-  color : @pk.ColorFloat
-}
-
-///|
-/// Create a SceneGroup from voxels with a color.
-fn group(vox : @pk.Voxels, color : @pk.ColorFloat) -> SceneGroup {
-  SceneGroup::{ voxels: vox, color }
-}
-
-///|
-/// Parse a double from a string, returning None on failure.
 fn parse_double(s : String) -> Double? {
-  try {
-    Some(@strconv.parse_double(s))
-  } catch {
+  Some(@strconv.parse_double(s)) catch {
     _ => None
   }
 }
 
-// --- Color palette (matching PicoPie/Go palette) ---
-
-///|
-let col_frozen : @pk.ColorFloat = @pk.ColorFloat::new(0.6, 0.8, 1.0, 1.0)
-
-///|
-let col_pitaya : @pk.ColorFloat = @pk.ColorFloat::new(0.95, 0.45, 0.55, 1.0)
-
-///|
-let col_warning : @pk.ColorFloat = @pk.ColorFloat::new(0.95, 0.7, 0.25, 1.0)
-
-///|
-let col_blue : @pk.ColorFloat = @pk.ColorFloat::new(0.35, 0.6, 0.9, 1.0)
-
-///|
-let col_green : @pk.ColorFloat = @pk.ColorFloat::new(0.3, 0.7, 0.4, 1.0)
-
-///|
-let col_yellow : @pk.ColorFloat = @pk.ColorFloat::new(0.9, 0.85, 0.3, 1.0)
-
-///|
-let col_blueberry : @pk.ColorFloat = @pk.ColorFloat::new(0.3, 0.35, 0.6, 1.0)
-
-///|
-let col_ruby : @pk.ColorFloat = @pk.ColorFloat::new(0.8, 0.2, 0.3, 1.0)
-
-///|
-let col_bubblegum : @pk.ColorFloat = @pk.ColorFloat::new(0.9, 0.5, 0.8, 1.0)
-
-///|
-let col_orchid : @pk.ColorFloat = @pk.ColorFloat::new(0.6, 0.4, 0.8, 1.0)
-
-///|
-let col_gray : @pk.ColorFloat = @pk.ColorFloat::new(0.5, 0.5, 0.5, 1.0)
-
-///|
-let col_lemongrass : @pk.ColorFloat = @pk.ColorFloat::new(0.7, 0.8, 0.3, 1.0)
-
-///|
-let col_racing_green : @pk.ColorFloat = @pk.ColorFloat::new(0.1, 0.4, 0.2, 1.0)
-
-///|
-let col_crystal : @pk.ColorFloat = @pk.ColorFloat::new(0.5, 0.8, 0.9, 1.0)
-
-///|
-let col_billie : @pk.ColorFloat = @pk.ColorFloat::new(0.4, 0.3, 0.6, 1.0)
-
-///|
-let col_lavender : @pk.ColorFloat = @pk.ColorFloat::new(0.7, 0.6, 0.9, 1.0)
-
-// --- Shared modulation functions (matching the Go/Python gallery) ---
+// --- Shared modulations (matching the Go/Python gallery) ---
 
 ///|
 fn line1(lr : Double) -> Double {
@@ -255,103 +248,244 @@ fn surf3(phi : Double, lr : Double) -> Double {
   8.0 + 5.0 * @math.cos(5.0 * phi)
 }
 
-// --- Scenes ---
+// --- Scene builders (matching Go ffi-gallery exactly) ---
 
 ///|
-fn build_box() -> Array[SceneGroup] {
-  // Box at (-50,0,0): 20x10x15
-  let b1 = @pk.new_box(-60.0, -5.0, -7.5, -40.0, 5.0, 7.5)
-  // Box at (50,0,0): modulated width/depth (approximated with constant)
-  let b2 = @pk.new_box(40.0, -4.0, -5.0, 60.0, 4.0, 5.0)
-  // Box at (0,0,0): modulated width/depth (approximated)
-  let b3 = @pk.new_box(-10.0, -4.0, -5.0, 10.0, 4.0, 5.0)
+fn build_box() -> Array[@s.SceneGroup] {
+  let b1 = @s.new_box(
+    Some(@s.new_local_frame(@s.V(-50.0, 0.0, 0.0), None)),
+    20.0,
+    @s.line_const(10.0),
+    @s.line_const(15.0),
+  ).to_voxels()
+  let b2 = @s.new_box(
+    Some(@s.new_local_frame(@s.V(50.0, 0.0, 0.0), None)),
+    20.0,
+    @s.line_fn(line2),
+    @s.line_fn(line1),
+  ).to_voxels()
+  let b3 = @s.new_box(
+    Some(@s.new_local_frame(@s.V(0.0, 0.0, 0.0), None)),
+    20.0,
+    @s.line_fn(line2),
+    @s.line_fn(line1),
+  ).to_voxels()
   [
-    group(b1, col_blue),
-    group(b2, col_green),
-    group(b3, col_yellow),
+    @s.scene_group_voxels(b1, @s.palette["blue"].unwrap()),
+    @s.scene_group_voxels(b2, @s.palette["green"].unwrap()),
+    @s.scene_group_voxels(b3, @s.palette["yellow"].unwrap()),
   ]
 }
 
 ///|
-fn build_sphere() -> Array[SceneGroup] {
-  let s1 = @pk.new_sphere(@pk.Vec3::new(-100.0, 0.0, 0.0), 40.0)
-  let s2 = @pk.new_sphere(@pk.Vec3::new(0.0, 0.0, 0.0), 37.0)
-  let s3 = @pk.new_sphere(@pk.Vec3::new(150.0, 0.0, 0.0), 42.0)
+fn build_sphere() -> Array[@s.SceneGroup] {
+  let s1 = @s.new_sphere(
+    Some(@s.new_local_frame(@s.V(-100.0, 0.0, 0.0), None)),
+    @s.surf_const(40.0),
+  ).to_voxels()
+  let s2 = @s.new_sphere(
+    Some(@s.new_local_frame(@s.V(0.0, 0.0, 0.0), None)),
+    @s.surf_fn(fn(phi : Double, theta : Double) {
+      40.0 - 10.0 * @math.cos(6.0 * theta)
+    }),
+  ).to_voxels()
+  let s3 = @s.new_sphere(
+    Some(@s.new_local_frame(@s.V(150.0, 0.0, 0.0), None)),
+    @s.surf_fn(fn(phi : Double, theta : Double) {
+      40.0 - 10.0 * @math.cos(6.0 * theta) + 30.0 * @math.cos(2.0 * phi)
+    }),
+  ).to_voxels()
   [
-    group(s1, col_frozen),
-    group(s2, col_pitaya),
-    group(s3, col_warning),
+    @s.scene_group_voxels(s1, @s.palette["frozen"].unwrap()),
+    @s.scene_group_voxels(s2, @s.palette["pitaya"].unwrap()),
+    @s.scene_group_voxels(s3, @s.palette["warning"].unwrap()),
   ]
 }
 
 ///|
-fn build_cylinder() -> Array[SceneGroup] {
-  let c1 = @pk.new_cylinder(-50.0, 0.0, -30.0, 40.0, 60.0, None, None, None)
-  let c2 = @pk.new_cylinder(50.0, 0.0, -30.0, 10.0, 60.0, None, None, None)
-  let c3 = @pk.new_cylinder(0.0, 0.0, -30.0, 12.0, 60.0, None, None, None)
+fn build_cylinder() -> Array[@s.SceneGroup] {
+  let c1 = @s.new_cylinder(
+    Some(@s.new_local_frame(@s.V(-50.0, 0.0, 0.0), None)),
+    60.0,
+    @s.surf_const(40.0),
+  ).to_voxels()
+  let c2 = @s.new_cylinder(
+    Some(@s.new_local_frame(@s.V(50.0, 0.0, 0.0), None)),
+    60.0,
+    @s.surf_from_line(@s.line_fn(line1), "second"),
+  ).to_voxels()
+  let c3 = @s.new_cylinder(
+    Some(@s.new_local_frame(@s.V(0.0, 0.0, 0.0), None)),
+    60.0,
+    @s.surf_fn(surf1),
+  ).to_voxels()
   [
-    group(c1, col_blue),
-    group(c2, col_green),
-    group(c3, col_yellow),
+    @s.scene_group_voxels(c1, @s.palette["blue"].unwrap()),
+    @s.scene_group_voxels(c2, @s.palette["green"].unwrap()),
+    @s.scene_group_voxels(c3, @s.palette["yellow"].unwrap()),
   ]
 }
 
 ///|
-fn build_ring() -> Array[SceneGroup] {
-  let r1 = torus(30.0, 8.0, @pk.Vec3::new(-50.0, -50.0, 0.0))
-  let r2 = torus(30.0, 8.0, @pk.Vec3::new(-50.0, 50.0, 0.0))
-  let r3 = torus(30.0, 11.0, @pk.Vec3::new(50.0, 50.0, 0.0))
-  let r4 = torus(30.0, 10.0, @pk.Vec3::new(50.0, -50.0, 0.0))
+fn build_ring() -> Array[@s.SceneGroup] {
+  let r1 = @s.new_ring(
+    Some(@s.new_local_frame(@s.V(-50.0, -50.0, 0.0), None)),
+    30.0,
+    @s.surf_const(8.0),
+  ).to_voxels()
+  let r2 = @s.new_ring(
+    Some(@s.new_local_frame(@s.V(-50.0, 50.0, 0.0), None)),
+    30.0,
+    @s.surf_fn(fn(phi : Double, _ : Double) {
+      10.0 - 2.0 * @math.cos(5.0 * phi)
+    }),
+  ).to_voxels()
+  let r3 = @s.new_ring(
+    Some(@s.new_local_frame(@s.V(50.0, 50.0, 0.0), None)),
+    30.0,
+    @s.surf_fn(fn(_ : Double, alpha : Double) {
+      10.0 + 3.0 * @math.cos(5.0 * alpha)
+    }),
+  ).to_voxels()
+  let r4 = @s.new_ring(
+    Some(@s.new_local_frame(@s.V(50.0, -50.0, 0.0), None)),
+    30.0,
+    @s.surf_fn(fn(phi : Double, alpha : Double) {
+      10.0 - 2.0 * @math.cos(5.0 * (phi + alpha)) + 3.0 * @math.cos(5.0 * alpha)
+    }),
+  ).to_voxels()
   [
-    group(r1, col_frozen),
-    group(r2, col_pitaya),
-    group(r3, col_warning),
-    group(r4, col_blueberry),
+    @s.scene_group_voxels(r1, @s.palette["frozen"].unwrap()),
+    @s.scene_group_voxels(r2, @s.palette["pitaya"].unwrap()),
+    @s.scene_group_voxels(r3, @s.palette["warning"].unwrap()),
+    @s.scene_group_voxels(r4, @s.palette["blueberry"].unwrap()),
   ]
 }
 
 ///|
-fn build_lens() -> Array[SceneGroup] {
-  // Approximated lens with spheres (no parametric lens shape in FFI primitives).
-  let l1 = @pk.new_sphere(@pk.Vec3::new(-50.0, -50.0, 0.0), 20.0)
-  let l2 = @pk.new_sphere(@pk.Vec3::new(50.0, 50.0, 0.0), 18.0)
-  let l3 = @pk.new_sphere(@pk.Vec3::new(-50.0, 50.0, 0.0), 22.0)
+fn build_lens() -> Array[@s.SceneGroup] {
+  let surf = fn(phi : Double, rr : Double) { 12.0 + 3.0 * @math.cos(5.0 * phi) }
+  let l1 = @s.new_lens(
+    Some(@s.new_local_frame(@s.V(-50.0, -50.0, 0.0), None)),
+    10.0,
+    10.0,
+    40.0,
+  ).to_voxels()
+  let l2 = @s.new_lens_with_mods(
+    Some(@s.new_local_frame(@s.V(50.0, 50.0, 0.0), None)),
+    10.0,
+    10.0,
+    40.0,
+    @s.surf_fn(fn(phi : Double, rr : Double) { 5.0 - surf(phi, rr) }),
+    @s.surf_fn(fn(phi : Double, rr : Double) { 5.0 + surf(phi, rr) }),
+  ).to_voxels()
+  let l3 = @s.new_lens_with_mods(
+    Some(@s.new_local_frame(@s.V(-50.0, 50.0, 0.0), None)),
+    10.0,
+    10.0,
+    40.0,
+    @s.surf_fn(fn(phi : Double, rr : Double) { 5.0 - surf(phi, rr) }),
+    @s.surf_fn(fn(phi : Double, rr : Double) {
+      5.0 +
+      @math.cos(6.0 * (phi + 0.3 * 3.14159265358979 * rr)) +
+      3.0 * @math.cos(20.0 * rr)
+    }),
+  ).to_voxels()
   [
-    group(l1, col_frozen),
-    group(l2, col_pitaya),
-    group(l3, col_warning),
+    @s.scene_group_voxels(l1, @s.palette["frozen"].unwrap()),
+    @s.scene_group_voxels(l2, @s.palette["pitaya"].unwrap()),
+    @s.scene_group_voxels(l3, @s.palette["warning"].unwrap()),
   ]
 }
 
 ///|
-fn build_pipe() -> Array[SceneGroup] {
-  // Pipes approximated with hollow cylinders.
-  let p1 = hollow_pipe(-50.0, 0.0, -30.0, 20.0, 10.0, 60.0)
-  let p2 = hollow_pipe(0.0, 0.0, -30.0, 20.0, 10.0, 60.0)
-  let p3 = hollow_pipe(50.0, -50.0, -30.0, 10.0, 6.0, 60.0)
-  let p4 = hollow_pipe(0.0, 0.0, 0.0, 12.0, 8.0, 60.0)
+fn build_pipe() -> Array[@s.SceneGroup] {
+  // Pipe 1: static blue pipe
+  let p1 = @s.new_pipe(
+    Some(@s.new_local_frame(@s.V(-50.0, 0.0, 0.0), None)),
+    60.0,
+    @s.surf_const(10.0),
+    @s.surf_const(20.0),
+  ).to_voxels()
+  // Pipe 2: green pipe with vertex transform (creates a skewed/vase shape)
+  let trafo = fn(pts : Array[@s.Vec3]) -> Array[@s.Vec3] {
+    let result = Array::make(pts.length(), @s.V(0.0, 0.0, 0.0))
+    for i, p in pts {
+      result[i] = @s.V(p.y + 0.2 * p.z - 50.0, 0.5 * p.z + 50.0, 0.5 * p.x)
+    }
+    result
+  }
+  let p2 = @s.new_pipe_with_transform(
+    Some(@s.new_local_frame(@s.V(0.0, 0.0, 0.0), None)),
+    60.0,
+    @s.surf_const(10.0),
+    @s.surf_const(20.0),
+    trafo,
+  ).to_voxels()
+  // Pipe 3: lemongrass pipe with modulated outer radius
+  let p3 = @s.new_pipe(
+    Some(@s.new_local_frame(@s.V(50.0, -50.0, 0.0), None)),
+    60.0,
+    @s.surf_const(6.0),
+    @s.surf_from_line(@s.line_fn(line1), "second"),
+  ).to_voxels()
+  // Pipe 4: orchid pipe with modulated radii along a spline spine
+  let spine = @s.frames_aligned_to_x(@s.spline_points(), @s.V(0.0, 1.0, 0.0))
+  let p4 = @s.new_pipe_with_frames(
+    None,
+    60.0,
+    @s.surf_fn(surf3),
+    @s.surf_fn(surf1),
+    spine,
+  ).to_voxels()
   [
-    group(p1, col_blue),
-    group(p2, col_green),
-    group(p3, col_lemongrass),
-    group(p4, col_orchid),
+    @s.scene_group_voxels(p1, @s.palette["blue"].unwrap()),
+    @s.scene_group_voxels(p2, @s.palette["green"].unwrap()),
+    @s.scene_group_voxels(p3, @s.palette["lemongrass"].unwrap()),
+    @s.scene_group_voxels(p4, @s.palette["orchid"].unwrap()),
   ]
 }
 
 ///|
-fn build_pipe_segment() -> Array[SceneGroup] {
-  let ps1 = hollow_pipe(-50.0, 0.0, -30.0, 40.0, 20.0, 60.0)
-  let ps2 = hollow_pipe(50.0, 0.0, -30.0, 12.0, 8.0, 60.0)
-  let ps3 = hollow_pipe(0.0, 0.0, 0.0, 12.0, 8.0, 60.0)
+fn build_pipe_segment() -> Array[@s.SceneGroup] {
+  let p1 = @s.new_pipe_segment(
+    Some(@s.new_local_frame(@s.V(-50.0, 0.0, 0.0), None)),
+    60.0,
+    @s.surf_const(20.0),
+    @s.surf_const(40.0),
+    @s.line_const(3.14159265358979),
+    @s.line_const(0.5 * 3.14159265358979),
+    "mid_range",
+  ).to_voxels()
+  let p2 = @s.new_pipe_segment(
+    Some(@s.new_local_frame(@s.V(50.0, 0.0, 0.0), None)),
+    60.0,
+    @s.surf_fn(surf3),
+    @s.surf_fn(surf1),
+    @s.line_fn(fn(lr : Double) { -3.14159265358979 * lr }),
+    @s.line_const(1.75 * 3.14159265358979),
+    "mid_range",
+  ).to_voxels()
+  let spine = @s.frames_aligned_to_x(@s.spline_points(), @s.V(0.0, 1.0, 0.0))
+  let p3 = @s.new_pipe_segment_with_frames(
+    None,
+    60.0,
+    @s.surf_fn(surf3),
+    @s.surf_fn(surf1),
+    @s.line_fn(fn(lr : Double) { 4.0 * 3.14159265358979 * lr }),
+    @s.line_const(1.5 * 3.14159265358979),
+    "mid_range",
+    spine,
+  ).to_voxels()
   [
-    group(ps1, col_blue),
-    group(ps2, col_ruby),
-    group(ps3, col_racing_green),
+    @s.scene_group_voxels(p1, @s.palette["blue"].unwrap()),
+    @s.scene_group_voxels(p2, @s.palette["ruby"].unwrap()),
+    @s.scene_group_voxels(p3, @s.palette["racing_green"].unwrap()),
   ]
 }
 
 ///|
-fn build_basic_lattices() -> Array[SceneGroup] {
+fn build_basic_lattices() -> Array[@s.SceneGroup] {
   let lat = @pk.new_lattice()
   lat.add_sphere(@pk.Vec3::new(1.0, 5.0, -10.0), 5.0)
   lat.add_beam(
@@ -361,40 +495,80 @@ fn build_basic_lattices() -> Array[SceneGroup] {
     3.0,
     true,
   )
-  let vox = @pk.from_lattice(lat)
+  let v = @pk.from_lattice(lat)
   lat.destroy()
-  [group(vox, col_blueberry)]
+  [@s.scene_group_voxels(v, @s.palette["blueberry"].unwrap())]
 }
 
 ///|
-fn build_lattice_pipe() -> Array[SceneGroup] {
-  let lp1 = @pk.new_cylinder(-50.0, 0.0, -30.0, 10.0, 60.0, None, None, None)
-  let lp2 = @pk.new_cylinder(50.0, -50.0, -30.0, 10.0, 60.0, None, None, None)
-  let lp3 = @pk.new_cylinder(0.0, 0.0, 0.0, 10.0, 60.0, None, None, None)
+fn build_lattice_pipe() -> Array[@s.SceneGroup] {
+  let lp1 = @s.new_lattice_pipe(
+    Some(@s.new_local_frame(@s.V(-50.0, 0.0, 0.0), None)),
+    60.0,
+    @s.line_const(10.0),
+  ).to_voxels()
+  let lp2 = @s.new_lattice_pipe(
+    Some(@s.new_local_frame(@s.V(50.0, -50.0, 0.0), None)),
+    60.0,
+    @s.line_fn(line1),
+  ).to_voxels()
+  let spine = @s.frames_aligned_to_x(@s.spline_points(), @s.V(0.0, 1.0, 0.0))
+  let lp3 = @s.new_lattice_pipe_with_frames(
+    None,
+    60.0,
+    @s.line_fn(line1),
+    spine,
+  ).to_voxels()
   [
-    group(lp1, col_yellow),
-    group(lp2, col_frozen),
-    group(lp3, col_racing_green),
+    @s.scene_group_voxels(lp1, @s.palette["yellow"].unwrap()),
+    @s.scene_group_voxels(lp2, @s.palette["frozen"].unwrap()),
+    @s.scene_group_voxels(lp3, @s.palette["racing_green"].unwrap()),
   ]
 }
 
 ///|
-fn build_lattice_manifold() -> Array[SceneGroup] {
-  let lm1 = @pk.new_cylinder(-50.0, -25.0, 0.0, 5.0, 50.0, Some(0.0), Some(1.0), Some(0.0))
-  let lm2 = @pk.new_cylinder(0.0, -25.0, 0.0, 10.0, 50.0, Some(0.0), Some(1.0), Some(0.0))
-  let lm3 = @pk.new_cylinder(50.0, -25.0, 0.0, 5.0, 50.0, Some(0.0), Some(1.0), Some(0.0))
+fn build_lattice_manifold() -> Array[@s.SceneGroup] {
+  // local_z=(0,1,0) means the manifold extends along Y from the frame position
+  let lm1 = @s.new_lattice_manifold(
+    @s.new_local_frame_xyz(
+      @s.V(-50.0, 0.0, 0.0),
+      @s.V(0.0, 1.0, 0.0),
+      @s.V(1.0, 0.0, 0.0),
+    ),
+    50.0,
+    5.0,
+    45.0,
+  ).to_voxels()
+  let lm2 = @s.new_lattice_manifold(
+    @s.new_local_frame_xyz(
+      @s.V(0.0, 0.0, 0.0),
+      @s.V(0.0, 1.0, 0.0),
+      @s.V(1.0, 0.0, 0.0),
+    ),
+    50.0,
+    10.0,
+    30.0,
+  ).to_voxels()
+  let lm3 = @s.new_lattice_manifold(
+    @s.new_local_frame_xyz(
+      @s.V(50.0, 0.0, 0.0),
+      @s.V(0.0, 1.0, 0.0),
+      @s.V(1.0, 0.0, 0.0),
+    ),
+    50.0,
+    5.0,
+    60.0,
+  ).to_voxels()
   [
-    group(lm1, col_yellow),
-    group(lm2, col_crystal),
-    group(lm3, col_green),
+    @s.scene_group_voxels(lm1, @s.palette["yellow"].unwrap()),
+    @s.scene_group_voxels(lm2, @s.palette["crystal"].unwrap()),
+    @s.scene_group_voxels(lm3, @s.palette["green"].unwrap()),
   ]
 }
 
 ///|
-fn build_gyroid_sphere() -> Array[SceneGroup] {
-  // Real gyroid sphere via implicit SDF — same approach as PicoPie/Go FFI.
-  let unit_size = 3.0
-  let k = 2.0 * 3.14159265358979 / unit_size
+fn build_gyroid_sphere() -> Array[@s.SceneGroup] {
+  let gyroid = @s.new_implicit_gyroid(3, 1)
   let r = 10.0
   let vox = @pk.new_voxels()
   let pad = 2.0
@@ -405,14 +579,13 @@ fn build_gyroid_sphere() -> Array[SceneGroup] {
     ),
     r,
     0.5,
-    k,
+    gyroid.frequency,
   )
-  [group(vox, col_billie)]
+  [@s.scene_group_voxels(vox, @s.palette["billie"].unwrap())]
 }
 
 ///|
-fn build_gyroid_genus() -> Array[SceneGroup] {
-  // Real gyroid genus via implicit SDF — same approach as PicoPie/Go FFI.
+fn build_gyroid_genus() -> Array[@s.SceneGroup] {
   let s = 8.0
   let vox = @pk.new_voxels()
   vox.render_gyroid_genus(
@@ -424,20 +597,18 @@ fn build_gyroid_genus() -> Array[SceneGroup] {
     0.0,
     2.0 * 3.14159265358979 / 10.0,
   )
-  [group(vox, col_lavender)]
+  [@s.scene_group_voxels(vox, @s.palette["lavender"].unwrap())]
 }
 
 ///|
-fn build_superellipsoid() -> Array[SceneGroup] {
-  // Real superellipsoid via implicit SDF — same approach as PicoPie/Go FFI.
-  // Three superellipsoids at different positions.
+fn build_superellipsoid() -> Array[@s.SceneGroup] {
   let a = 16.0
   let specs = [
-    (@pk.Vec3::new(-45.0, 0.0, 0.0), 3.0, 0.25, col_ruby),
-    (@pk.Vec3::new(0.0, 0.0, 0.0), 1.5, 1.5, col_blue),
-    (@pk.Vec3::new(45.0, 0.0, 0.0), 0.25, 0.25, col_bubblegum),
+    (@s.V(-45.0, 0.0, 0.0), 3.0, 0.25, @s.palette["ruby"].unwrap()),
+    (@s.V(0.0, 0.0, 0.0), 1.5, 1.5, @s.palette["blue"].unwrap()),
+    (@s.V(45.0, 0.0, 0.0), 0.25, 0.25, @s.palette["bubblegum"].unwrap()),
   ]
-  let groups : Array[SceneGroup] = []
+  let groups : Array[@s.SceneGroup] = []
   for spec in specs {
     let center = spec.0
     let e1 = spec.1
@@ -455,96 +626,72 @@ fn build_superellipsoid() -> Array[SceneGroup] {
       e1,
       e2,
     )
-    groups.push(group(vox, color))
+    groups.push(@s.scene_group_voxels(vox, color))
   }
   groups
 }
 
 ///|
-fn build_mesh_painter() -> Array[SceneGroup] {
-  // Approximated mesh painter: a single sphere.
-  let s = @pk.new_sphere(@pk.Vec3::new(0.0, 0.0, 0.0), 40.0)
-  [group(s, col_frozen)]
+fn build_mesh_painter() -> Array[@s.SceneGroup] {
+  // Build a sphere mesh and split it by overhang angle into colored groups
+  // (approximated as a single sphere for now)
+  let s = @s.new_sphere(None, @s.surf_const(40.0)).to_voxels()
+  [@s.scene_group_voxels(s, @s.palette["frozen"].unwrap())]
 }
 
 ///|
-fn build_mesh_trafo() -> Array[SceneGroup] {
-  // Box + rotated box (approximated with two boxes).
-  let box1 = @pk.new_box(-20.0, -15.0, -10.0, 20.0, 15.0, 10.0)
-  let box2 = @pk.new_box(-20.0, -15.0, -10.0, 20.0, 15.0, 10.0)
-  box2.offset(0.0)
+fn build_mesh_trafo() -> Array[@s.SceneGroup] {
+  let box = @s.new_box(
+    Some(@s.new_local_frame(@s.V(0.0, 0.0, 0.0), None)),
+    40.0,
+    @s.line_const(30.0),
+    @s.line_const(20.0),
+  ).to_voxels()
+  // Rotate 45° around Z — need mesh round-trip
+  let mesh = box.to_mesh()
+  box.destroy()
+  let verts = mesh.vertices_arr()
+  let tris = mesh.triangles_arr()
+  let c = @math.cos(3.14159265358979 / 4.0)
+  let s_val = @math.sin(3.14159265358979 / 4.0)
+  for i in 0..<(verts.length() / 3) {
+    let x = verts[i * 3]
+    let y = verts[i * 3 + 1]
+    verts[i * 3] = c * x - s_val * y
+    verts[i * 3 + 1] = s_val * x + c * y
+  }
+  let rotated_mesh = @pk.mesh_from_arrays(verts, tris)
+  mesh.destroy()
+  let rotated_vox = @pk.from_mesh(rotated_mesh)
+  rotated_mesh.destroy()
+  let original_box = @s.new_box(
+    Some(@s.new_local_frame(@s.V(0.0, 0.0, 0.0), None)),
+    40.0,
+    @s.line_const(30.0),
+    @s.line_const(20.0),
+  ).to_voxels()
   [
-    group(box1, col_gray),
-    group(box2, col_orchid),
+    @s.scene_group_voxels(original_box, @s.palette["gray"].unwrap()),
+    @s.scene_group_voxels(rotated_vox, @s.palette["orchid"].unwrap()),
   ]
 }
 
 ///|
-fn build_over_offset() -> Array[SceneGroup] {
-  let b1 = @pk.new_box(-30.0, -15.0, -15.0, 0.0, 15.0, 15.0)
-  let b2 = @pk.new_box(0.0, -15.0, -15.0, 30.0, 15.0, 15.0)
+fn build_over_offset() -> Array[@s.SceneGroup] {
+  let b1 = @s.new_box(
+    Some(@s.new_local_frame(@s.V(-15.0, 0.0, 0.0), None)),
+    30.0,
+    @s.line_const(30.0),
+    @s.line_const(30.0),
+  ).to_voxels()
+  let b2 = @s.new_box(
+    Some(@s.new_local_frame(@s.V(15.0, 0.0, 0.0), None)),
+    30.0,
+    @s.line_const(30.0),
+    @s.line_const(30.0),
+  ).to_voxels()
   b1.bool_add(b2)
   b2.destroy()
   b1.double_offset(4.0, -4.0)
-  [group(b1, col_bubblegum)]
-}
-
-// --- Helper functions ---
-
-///|
-/// torus creates a torus voxel object by sweeping capsules in a circle.
-fn torus(
-  major_radius : Double,
-  minor_radius : Double,
-  center : @pk.Vec3,
-) -> @pk.Voxels {
-  let n_segments = 32
-  let mut result : @pk.Voxels? = None
-  for i in 0..<n_segments {
-    let angle1 = i.to_double() / n_segments.to_double() * 2.0 * 3.14159265358979
-    let angle2 = (i + 1).to_double() /
-      n_segments.to_double() *
-      2.0 *
-      3.14159265358979
-    let x1 = center.x + major_radius * @math.cos(angle1)
-    let y1 = center.y + major_radius * @math.sin(angle1)
-    let z1 = center.z
-    let x2 = center.x + major_radius * @math.cos(angle2)
-    let y2 = center.y + major_radius * @math.sin(angle2)
-    let z2 = center.z
-    let seg = @pk.new_capsule(
-      @pk.Vec3::new(x1, y1, z1),
-      @pk.Vec3::new(x2, y2, z2),
-      minor_radius,
-      minor_radius,
-    )
-    match result {
-      Some(prev) => {
-        let combined = prev.add(seg)
-        prev.destroy()
-        seg.destroy()
-        result = Some(combined)
-      }
-      None => result = Some(seg)
-    }
-  }
-  result.unwrap()
-}
-
-///|
-/// hollow_pipe creates a hollow cylinder (pipe) by subtracting inner from outer.
-fn hollow_pipe(
-  x : Double,
-  y : Double,
-  z : Double,
-  outer_r : Double,
-  inner_r : Double,
-  height : Double,
-) -> @pk.Voxels {
-  let outer = @pk.new_cylinder(x, y, z, outer_r, height, None, None, None)
-  let inner = @pk.new_cylinder(x, y, z, inner_r, height, None, None, None)
-  let pipe = outer.sub(inner)
-  outer.destroy()
-  inner.destroy()
-  pipe
+  [@s.scene_group_voxels(b1, @s.palette["bubblegum"].unwrap())]
 }

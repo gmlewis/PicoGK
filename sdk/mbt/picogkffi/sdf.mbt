@@ -150,6 +150,7 @@ pub fn Voxels::intersect_gyroid_sphere(
 
 // --- C extern declarations ---
 
+///|
 extern "C" fn mbt_render_gyroid_sphere(
   instance : Int64,
   vox : Int64,
@@ -164,6 +165,7 @@ extern "C" fn mbt_render_gyroid_sphere(
   k : Float,
 ) -> Unit = "mbt_render_gyroid_sphere"
 
+///|
 #borrow(offset)
 extern "C" fn mbt_render_gyroid_sphere_offset(
   instance : Int64,
@@ -180,6 +182,7 @@ extern "C" fn mbt_render_gyroid_sphere_offset(
   offset : FixedArray[Byte],
 ) -> Unit = "mbt_render_gyroid_sphere_offset"
 
+///|
 extern "C" fn mbt_render_gyroid_genus(
   instance : Int64,
   vox : Int64,
@@ -194,6 +197,7 @@ extern "C" fn mbt_render_gyroid_genus(
   k : Float,
 ) -> Unit = "mbt_render_gyroid_genus"
 
+///|
 extern "C" fn mbt_render_superellipsoid(
   instance : Int64,
   vox : Int64,
@@ -210,6 +214,7 @@ extern "C" fn mbt_render_superellipsoid(
   e2 : Float,
 ) -> Unit = "mbt_render_superellipsoid"
 
+///|
 extern "C" fn mbt_render_gyroid(
   instance : Int64,
   vox : Int64,
@@ -223,6 +228,7 @@ extern "C" fn mbt_render_gyroid(
   k : Float,
 ) -> Unit = "mbt_render_gyroid"
 
+///|
 extern "C" fn mbt_intersect_gyroid_sphere(
   instance : Int64,
   vox : Int64,

@@ -396,7 +396,7 @@ pub fn new_viewer_ex(
     Float::from_int(height),
     cam,
   )
-  ViewerEx::{ h }
+  ViewerEx::{ h, }
 }
 
 ///|
@@ -464,7 +464,11 @@ pub fn ViewerEx::set_group_material(
 
 ///|
 /// Set visibility of a group.
-pub fn ViewerEx::set_group_visible(self : ViewerEx, group : Int, visible : Bool) -> Unit {
+pub fn ViewerEx::set_group_visible(
+  self : ViewerEx,
+  group : Int,
+  visible : Bool,
+) -> Unit {
   viewer_set_group_visible(self.h, group, visible)
 }
 
@@ -485,7 +489,11 @@ pub fn ViewerEx::bounding_box(self : ViewerEx) -> BBox3 {
 ///|
 /// Take a screenshot to PNG. Does autofit + warm-up frames + screenshot.
 /// Returns true on success.
-pub fn ViewerEx::screenshot_png(self : ViewerEx, path : String, frames : Int) -> Bool {
+pub fn ViewerEx::screenshot_png(
+  self : ViewerEx,
+  path : String,
+  frames : Int,
+) -> Bool {
   let result = mbt_viewer_screenshot_png(self.h, cstr(path), frames)
   result == 0
 }
@@ -501,6 +509,7 @@ pub fn ViewerEx::run(self : ViewerEx) -> Unit {
 
 // --- C extern declarations for ViewerEx ---
 
+///|
 #borrow(title, cam_params)
 extern "C" fn mbt_viewer_create(
   title : FixedArray[Byte],
@@ -509,8 +518,10 @@ extern "C" fn mbt_viewer_create(
   cam_params : FixedArray[Byte],
 ) -> Int64 = "mbt_viewer_create"
 
+///|
 extern "C" fn mbt_viewer_close(viewer : Int64) -> Unit = "mbt_viewer_close"
 
+///|
 extern "C" fn mbt_viewer_add_voxels(
   viewer : Int64,
   group : Int,
@@ -518,6 +529,7 @@ extern "C" fn mbt_viewer_add_voxels(
   vox : Int64,
 ) -> Unit = "mbt_viewer_add_voxels"
 
+///|
 extern "C" fn mbt_viewer_set_group_material(
   viewer : Int64,
   group : Int,
@@ -529,6 +541,7 @@ extern "C" fn mbt_viewer_set_group_material(
   roughness : Float,
 ) -> Unit = "mbt_viewer_set_group_material"
 
+///|
 #borrow(png_path)
 extern "C" fn mbt_viewer_screenshot_png(
   viewer : Int64,

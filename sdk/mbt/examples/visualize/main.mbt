@@ -73,7 +73,9 @@ fn main {
   // 3) 3D render via the native ViewerEx (with camera callbacks).
   println("")
   println("--- 3D render ---")
-  let v = @pk.new_viewer_ex("PicoGK Visualize", 1280, 960, 0.16, 0.16, 0.20, 1.0)
+  let v = @pk.new_viewer_ex(
+    "PicoGK Visualize", 1280, 960, 0.16, 0.16, 0.20, 1.0,
+  )
   if v.is_valid() {
     v.add_voxels(0, part)
     v.set_group_material(0, @pk.ColorFloat::new(0.35, 0.6, 0.9, 1.0), 0.1, 0.5)
