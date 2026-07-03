@@ -98,7 +98,12 @@ pub fn Metadata::set_float(
   name : String,
   value : Double,
 ) -> Unit {
-  metadata_set_float_value(get_instance(), self.h, cstr(name), Float::from_double(value))
+  metadata_set_float_value(
+    get_instance(),
+    self.h,
+    cstr(name),
+    Float::from_double(value),
+  )
 }
 
 ///|

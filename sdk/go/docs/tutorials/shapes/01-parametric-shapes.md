@@ -2,133 +2,341 @@
 
 ## Overview
 
-The Python PicoPie binding includes a high-level parametric shape library
-(`picogk.shapes`) ported from LEAP 71's ShapeKernel. It provides `Sphere`,
-`Box`, `Cylinder`, `Cone`, `Ring`, `Lens`, `Pipe`, `PipeSegment`, and more,
-all placed via `LocalFrame` and supporting callable modulations (e.g.
-`radius=lambda phi, theta: ...`).
+The `picogkshapes` package is a Go port of PicoPie's `picogk.shapes`
+parametric shape library (itself ported from LEAP 71's ShapeKernel). It
+provides `Sphere`, `Box`, `Cylinder`, `Cone`, `Ring`, `Lens`, `Pipe`,
+`PipeSegment`, and more — all placed via `LocalFrame` and supporting
+callable modulations (e.g. `radius = func(phi, theta float64) float64`).
 
-The Go MCP SDK does **not** include this high-level library. It exposes
-low-level primitives (`create_sphere`, `create_box`, `create_cylinder`,
-`create_torus`, `create_capsule`) plus transforms and booleans. This tutorial
-shows how to build parametric shapes from those primitives.
+Unlike the low-level MCP SDK (which only exposes axis-aligned primitives),
+`picogkshapes` builds meshes from parametric surface sampling and
+rasterizes them into voxel fields via the `picogkffi` FFI binding. The
+geometry is identical to the C# ShapeKernel and PicoPie output.
 
-## The shape-builder pattern
+## Setup
 
-Create a helper function for each parametric shape you need:
+Every program that uses the FFI binding must initialise the native
+runtime with a voxel size, and must lock the OS thread when using the
+OpenGL Viewer:
 
 ```go
 package main
 
 import (
-    "context"
     "log"
+    "runtime"
 
-    "github.com/gmlewis/PicoGK/sdk/go/picogk"
+    "github.com/gmlewis/PicoGK/sdk/go/picogkffi"
+    "github.com/gmlewis/PicoGK/sdk/go/picogkshapes"
 )
 
-// makeBox creates an axis-aligned box centered at (cx, cy, cz).
-func makeBox(do func(any), id string, cx, cy, cz, length, width, depth float64) string {
-    do(picogk.CreateBox{
-        MinX: cx - length/2, MinY: cy - width/2, MinZ: cz - depth/2,
-        MaxX: cx + length/2, MaxY: cy + width/2, MaxZ: cx + depth/2,
-        ID: id,
-    })
-    return id
-}
+func main() {
+    runtime.LockOSThread()
+    defer runtime.UnlockOSThread()
 
-// makeSphere creates a sphere centered at (cx, cy, cz).
-func makeSphere(do func(any), id string, cx, cy, cz, radius float64) string {
-    do(picogk.CreateSphere{X: cx, Y: cy, Z: cz, Radius: radius, ID: id})
-    return id
-}
+    if err := picogkffi.InitWithSize(0.2); err != nil {
+        log.Fatal(err)
+    }
+    defer picogkffi.Shutdown()
 
-// makeCylinder creates a Z-axis cylinder centered at (cx, cy, cz).
-func makeCylinder(do func(any), id string, cx, cy, cz, radius, height float64) string {
-    do(picogk.CreateCylinder{X: cx, Y: cy, Z: cz - height/2, Radius: radius, Height: height, ID: id})
-    return id
-}
-
-// makeTorus creates a torus centered at (cx, cy, cz).
-func makeTorus(do func(any), id string, cx, cy, cz, majorR, minorR float64) string {
-    do(picogk.CreateTorus{MajorRadius: majorR, MinorRadius: minorR,
-        X: picogk.Ptr(cx), Y: picogk.Ptr(cy), Z: picogk.Ptr(cz), ID: id})
-    return id
+    log.Println("PicoGK", picogkffi.Version())
+    // ... build shapes here ...
 }
 ```
+
+All coordinates in `picogkshapes` are `float64` millimetres; the FFI
+binding uses `float32`. Every native object (`*picogkffi.Voxels`,
+`*picogkffi.Mesh`, `*picogkffi.Lattice`) should be released with
+`defer obj.Destroy()`.
+
+## LocalFrame — positioning shapes
+
+A `LocalFrame` is a position plus a right-handed orthonormal basis
+(`LocalX`, `LocalY`, `LocalZ`). Shapes are constructed in the frame's
+local space and transformed to world space by the shape builder.
+
+`picogkshapes.V(x, y, z)` is a shorthand constructor for `Vec3`.
+
+```go
+// Frame at the origin, axes = world axes:
+f0 := picogkshapes.NewLocalFrame(picogkshapes.V(0, 0, 0))
+
+// Frame at (50, 0, 0), Z axis = +Y (cylinder extends along world Y):
+fY := picogkshapes.NewLocalFrame(picogkshapes.V(50, 0, 0),
+    picogkshapes.V(0, 1, 0))
+
+// Explicit local Z AND local X (local Y = Z × X):
+fZX := picogkshapes.NewLocalFrameXYZ(
+    picogkshapes.V(0, 0, 0),
+    picogkshapes.V(0, 1, 0),  // local Z
+    picogkshapes.V(1, 0, 0))  // local X
+```
+
+If you pass `nil` as the frame, the shape uses a default frame at the
+origin — convenient for swept shapes that carry their own `Frames`
+spine (see [Shapes 2](02-frames-and-spines.md)).
 
 ## Base shapes
 
+Every shape has a `ToMesh() *picogkffi.Mesh` and a `ToVoxels()
+*picogkffi.Voxels` method. `ToVoxels()` rasterizes the mesh; `ToMesh()`
+gives you the raw triangulated surface if you want to export or
+transform it.
+
+### Sphere
+
 ```go
-func main() {
-    log.SetFlags(0)
-    client, err := picogk.NewClient(context.Background(), "")
-    if err != nil { log.Fatal(err) }
-    defer client.Close()
-
-    do := func(cmd any) { client.Must(cmd) }
-    client.Must(picogk.Init{VoxelSizeMM: picogk.Ptr(0.5)})
-
-    // Sphere at origin, radius 10.
-    ball := makeSphere(do, "ball", 0, 0, 0, 10)
-
-    // Box at (-30, 0, 0), 20×10×8.
-    box := makeBox(do, "box", -30, 0, 0, 20, 10, 8)
-
-    // Cylinder at origin, radius 8, height 30.
-    cyl := makeCylinder(do, "cyl", 0, 0, 0, 8, 30)
-
-    // Ring (torus) at (0, 40, 0), major radius 20, minor radius 5.
-    ring := makeTorus(do, "ring", 0, 40, 0, 20, 5)
-
-    // Cone: cylinder with varying radius — approximate with a cylinder
-    // (the MCP SDK does not have a tapered cylinder primitive).
-    // For a true cone, use a capsule with different start/end radii
-    // (not available either) or build a cone mesh from scratch.
-
-    _ = ball; _ = box; _ = cyl; _ = ring
-}
+// Constant radius 10 at the origin:
+ball := picogkshapes.NewSphere(picogkshapes.NewLocalFrame(picogkshapes.V(0, 0, 0)), 10.0)
+vox := ball.ToVoxels()
+defer vox.Destroy()
 ```
 
-## Shape reference
+The radius argument accepts a `float64`, a `func(phi, theta float64)
+float64`, or a `*SurfaceModulation`. `phi` is the azimuth (0..2π) and
+`theta` is the polar angle (0..π).
 
-| Shape | MCP tool | Key parameters |
-|-------|----------|----------------|
-| Sphere | `CreateSphere` | `X, Y, Z, Radius` |
-| Box | `CreateBox` | `MinX..MaxZ` (axis-aligned) |
-| Cylinder | `CreateCylinder` | `X, Y, Z, Radius, Height, DirX/Y/Z` |
-| Capsule | `CreateCapsule` | `X1..Z2, Radius` (sphere-swept segment) |
-| Torus (ring) | `CreateTorus` | `MajorRadius, MinorRadius, X, Y, Z` |
-
-## Positioning with transforms
-
-Since there's no `LocalFrame` type, position shapes by either:
-
-1. **Setting coordinates directly** in the primitive's center/origin fields.
-2. **Using `TransformVoxels`** to translate/rotate after creation.
+### Box
 
 ```go
-    // Create at origin, then translate:
-    do(picogk.CreateSphere{X: 0, Y: 0, Z: 0, Radius: 10, ID: "ball"})
-    do(picogk.TransformVoxels{ObjectID: "ball", TranslateX: picogk.Ptr(50.0), TranslateY: picogk.Ptr(20.0), ID: "moved"})
+// 20×10×8 box at (-30, 0, 0):
+box := picogkshapes.NewBox(
+    picogkshapes.NewLocalFrame(picogkshapes.V(-30, 0, 0)),
+    20.0,  // length (along local Z)
+    10.0,  // width  (along local X)
+    8.0)   // depth  (along local Y)
+bv := box.ToVoxels()
+defer bv.Destroy()
+```
 
-    // Create at origin, rotate 45° around Z, then translate:
-    do(picogk.TransformVoxels{ObjectID: "ball", RotateZ: picogk.Ptr(45.0),
-        TranslateX: picogk.Ptr(50.0), TranslateY: picogk.Ptr(20.0), ID: "rotated"})
+`width` and `depth` accept a `float64` or a `func(lr float64) float64`
+(`*LineModulation`) — the modulation is evaluated along the length
+ratio `lr ∈ [0,1]`.
+
+### Cylinder
+
+```go
+// Cylinder radius 8, height 30, along world Z:
+cyl := picogkshapes.NewCylinder(
+    picogkshapes.NewLocalFrame(picogkshapes.V(0, 0, 0)),
+    30.0,  // length
+    8.0)   // radius
+cv := cyl.ToVoxels()
+defer cv.Destroy()
+```
+
+`radius` accepts a `float64` or a `func(phi, lr float64) float64` —
+`phi` is the azimuth, `lr` is the length ratio.
+
+### Cone
+
+A cone is a cylinder with a linearly varying radius. Pass the start and
+end radius and the cone modulates the radius automatically:
+
+```go
+cone := picogkshapes.NewCone(
+    picogkshapes.NewLocalFrame(picogkshapes.V(0, 0, 0)),
+    20.0,  // length
+    8.0,   // start radius (lr=0)
+    0.0)   // end radius   (lr=1)
+```
+
+### Ring (torus)
+
+```go
+// Torus: ring radius 20, tube radius 5, in the XY plane:
+ring := picogkshapes.NewRing(
+    picogkshapes.NewLocalFrame(picogkshapes.V(0, 40, 0)),
+    20.0,  // ringRadius (distance from center to tube center)
+    5.0)   // tube radius
+```
+
+`radius` (the tube radius) can be modulated: `func(phi, alpha float64)
+float64` where `alpha` is the angle around the ring (0..2π).
+
+### Lens
+
+A lens is a disc/annulus between `innerRadius` and `outerRadius` with a
+modulated height. The lower and upper surfaces are
+`SurfaceModulation(phi, radius_ratio)` callbacks:
+
+```go
+surf := func(phi, rr float64) float64 { return 12.0 + 3.0*math.Cos(5.0*phi) }
+
+lens := picogkshapes.NewLens(
+    picogkshapes.NewLocalFrame(picogkshapes.V(-50, -50, 0)),
+    10.0,  // height
+    10.0,  // innerRadius
+    40.0,  // outerRadius
+    picogkshapes.LensLower(picogkshapes.NewSurfaceModulation(
+        func(phi, rr float64) float64 { return 5 - surf(phi, rr) })),
+    picogkshapes.LensUpper(picogkshapes.NewSurfaceModulation(
+        func(phi, rr float64) float64 { return 5 + surf(phi, rr) })),
+)
+lv := lens.ToVoxels()
+defer lv.Destroy()
+```
+
+### Pipe
+
+A pipe is a hollow tube with separate `innerRadius` and `outerRadius`.
+Both accept `float64` or `func(phi, lr float64) float64` modulations:
+
+```go
+pipe := picogkshapes.NewPipe(
+    picogkshapes.NewLocalFrame(picogkshapes.V(-50, 0, 0)),
+    60.0,  // length
+    10.0,  // innerRadius
+    20.0)  // outerRadius
+pv := pipe.ToVoxels()
+defer pv.Destroy()
+```
+
+### PipeSegment
+
+A `PipeSegment` is an angular slice of a pipe. `start` and `end`
+describe the angular extent; `method` is either `"start_end"` (the two
+angles are the segment boundaries) or `"mid_range"` (the two arguments
+are the centre angle and the total span):
+
+```go
+seg := picogkshapes.NewPipeSegment(
+    picogkshapes.NewLocalFrame(picogkshapes.V(-50, 0, 0)),
+    60.0,  // length
+    20.0,  // innerRadius
+    40.0,  // outerRadius
+    math.Pi,           // start/mid
+    0.5*math.Pi,       // end/range
+    "mid_range",       // method
+    picogkshapes.PipePolarSteps(360),
+)
+sv := seg.ToVoxels()
+defer sv.Destroy()
 ```
 
 ## Modulated shapes
 
-The Python binding supports callable modulations (e.g.
-`radius=lambda phi, lr: 10 + 3*cos(5*phi)`). The Go MCP SDK cannot pass
-Go functions to the native runtime. Instead:
+Modulations are first-class — you pass a Go function directly and the
+shape builder samples it on its tessellation grid. There are two
+modulation types in `picogkshapes/modulations.go`:
 
-1. **Pre-compute the shape** using a Go-side SDF evaluator and save to VDB,
-   then load via `LoadVDB`.
-2. **Approximate** with multiple static primitives combined with booleans.
-3. **Use the Python binding** to generate modulated shapes and load the
-   resulting VDB in Go.
+- **`LineModulation`** — `func(ratio float64) float64`. Used for 1D
+  parameters (box width/depth along the length, lattice pipe radius).
+- **`SurfaceModulation`** — `func(phi, lr float64) float64`. Used for
+  2D parameters (sphere/cylinder/pipe radius over azimuth and length).
+
+Both types support `.Add`, `.Sub`, `.Mul` for combining modulations
+algebraically.
+
+### Modulated sphere
+
+A bumpy sphere — radius varies with the polar angle `theta`:
+
+```go
+bumpy := picogkshapes.NewSphere(
+    picogkshapes.NewLocalFrame(picogkshapes.V(0, 0, 0)),
+    func(phi, theta float64) float64 { return 40 - 10*math.Cos(6*theta) },
+).ToVoxels()
+defer bumpy.Destroy()
+```
+
+### Modulated cylinder
+
+Radius varies with both azimuth `phi` and length ratio `lr`:
+
+```go
+surf1 := func(phi, lr float64) float64 { return 12.0 + 3.0*math.Cos(5.0*phi) }
+
+cyl := picogkshapes.NewCylinder(
+    picogkshapes.NewLocalFrame(picogkshapes.V(0, 0, 0)),
+    60.0,
+    surf1,
+).ToVoxels()
+defer cyl.Destroy()
+```
+
+### Modulated box
+
+Width and depth vary along the length ratio:
+
+```go
+line1 := func(lr float64) float64 { return 10.0 - 3.0*math.Cos(8.0*lr) }
+line2 := func(lr float64) float64 { return 8.0 - math.Cos(40.0*lr) }
+
+box := picogkshapes.NewBox(
+    picogkshapes.NewLocalFrame(picogkshapes.V(50, 0, 0)),
+    20.0, line2, line1,
+).ToVoxels()
+defer box.Destroy()
+```
+
+### Modulated ring
+
+Tube radius varies around the ring:
+
+```go
+ring := picogkshapes.NewRing(
+    picogkshapes.NewLocalFrame(picogkshapes.V(50, 50, 0)),
+    30.0,
+    func(phi, alpha float64) float64 { return 10 + 3*math.Cos(5*alpha) },
+).ToVoxels()
+defer ring.Destroy()
+```
+
+## Shape reference
+
+| Shape | Constructor | Modulatable parameters |
+|-------|-------------|-------------------------|
+| Sphere | `NewSphere(frame, radius)` | `radius`: `func(phi, theta) float64` |
+| Box | `NewBox(frame, length, width, depth)` | `width`, `depth`: `func(lr) float64` |
+| Cylinder | `NewCylinder(frame, length, radius)` | `radius`: `func(phi, lr) float64` |
+| Cone | `NewCone(frame, length, startR, endR)` | (linear radius modulation) |
+| Ring | `NewRing(frame, ringRadius, radius)` | `radius`: `func(phi, alpha) float64` |
+| Lens | `NewLens(frame, height, innerR, outerR)` | `LensLower`, `LensUpper`: `SurfaceModulation` |
+| Pipe | `NewPipe(frame, length, innerR, outerR)` | `innerR`, `outerR`: `func(phi, lr) float64` |
+| PipeSegment | `NewPipeSegment(frame, length, innerR, outerR, start, end, method)` | radii + angular extent |
+
+Every shape also accepts option functions (`SphereAzimSteps`,
+`CylinderPolarSteps`, `PipeFrames`, `LensLower`, …) to control
+tessellation and sweeping — see the godoc and the gallery example.
+
+## Putting it together
+
+```go
+func main() {
+    runtime.LockOSThread()
+    defer runtime.UnlockOSThread()
+    picogkffi.InitWithSize(0.2)
+    defer picogkffi.Shutdown()
+
+    ball := picogkshapes.NewSphere(nil, 10.0).ToVoxels()
+    defer ball.Destroy()
+
+    box := picogkshapes.NewBox(
+        picogkshapes.NewLocalFrame(picogkshapes.V(-30, 0, 0)),
+        20, 10, 8).ToVoxels()
+    defer box.Destroy()
+
+    cyl := picogkshapes.NewCylinder(
+        picogkshapes.NewLocalFrame(picogkshapes.V(30, 0, 0)),
+        30, 8).ToVoxels()
+    defer cyl.Destroy()
+
+    // Union via the FFI boolean:
+    ball.BoolAdd(box)
+    box.Destroy()
+    ball.BoolAdd(cyl)
+    cyl.Destroy()
+
+    mesh := ball.ToMesh()
+    defer mesh.Destroy()
+    // mesh.Vertices(), mesh.Triangles() -> STL
+}
+```
 
 ## Next steps
 
+- See the working examples in
+  [`examples/ffi-gallery/main.go`](../../../examples/ffi-gallery/main.go)
+  — every base and modulated shape, rendered via the native Viewer.
 - [Shapes 2 — Frames & spines →](02-frames-and-spines.md)

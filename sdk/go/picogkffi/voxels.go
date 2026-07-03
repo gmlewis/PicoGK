@@ -243,7 +243,8 @@ func (v *Voxels) GetXSlice(x int32) []float32 {
 	n := int(sy * sz)
 	result := make([]float32, n)
 	if n > 0 {
-		C.Voxels_GetXSlice(instance, v.h, C.int32_t(x), (*C.float)(&result[0]), nil)
+		var bg C.float
+		C.Voxels_GetXSlice(instance, v.h, C.int32_t(x), (*C.float)(&result[0]), &bg)
 	}
 	return result
 }
@@ -255,7 +256,8 @@ func (v *Voxels) GetYSlice(y int32) []float32 {
 	n := int(sx * sz)
 	result := make([]float32, n)
 	if n > 0 {
-		C.Voxels_GetYSlice(instance, v.h, C.int32_t(y), (*C.float)(&result[0]), nil)
+		var bg C.float
+		C.Voxels_GetYSlice(instance, v.h, C.int32_t(y), (*C.float)(&result[0]), &bg)
 	}
 	return result
 }
@@ -267,7 +269,8 @@ func (v *Voxels) GetZSlice(z int32) []float32 {
 	n := int(sx * sy)
 	result := make([]float32, n)
 	if n > 0 {
-		C.Voxels_GetZSlice(instance, v.h, C.int32_t(z), (*C.float)(&result[0]), nil)
+		var bg C.float
+		C.Voxels_GetZSlice(instance, v.h, C.int32_t(z), (*C.float)(&result[0]), &bg)
 	}
 	return result
 }
@@ -279,7 +282,8 @@ func (v *Voxels) GetInterpolatedZSlice(z float32) []float32 {
 	n := int(sx * sy)
 	result := make([]float32, n)
 	if n > 0 {
-		C.Voxels_GetInterpolatedZSlice(instance, v.h, C.float(z), (*C.float)(&result[0]), nil)
+		var bg C.float
+		C.Voxels_GetInterpolatedZSlice(instance, v.h, C.float(z), (*C.float)(&result[0]), &bg)
 	}
 	return result
 }

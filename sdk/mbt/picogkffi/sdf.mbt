@@ -1,0 +1,238 @@
+// picogkffi sdf: Implicit SDF rendering via C-side callbacks.
+// MoonBit's native backend does not support C->MoonBit callbacks cleanly,
+// so the SDF implementations live in C (picogk_sdf.c) and are dispatched
+// by type. This provides the same functionality as the Go FFI NewSDF callback.
+
+///|
+/// Render a gyroid sphere (gyroid TPMS clipped to a sphere) into the voxel field.
+/// Uses max(abs(gyroid) - wall, sphere_sdf) composed SDF — same approach as PicoPie.
+pub fn Voxels::render_gyroid_sphere(
+  self : Voxels,
+  bbox : BBox3,
+  radius : Double,
+  wall : Double,
+  k : Double,
+) -> Unit {
+  mbt_render_gyroid_sphere(
+    get_instance(),
+    self.h,
+    Float::from_double(bbox.min.x),
+    Float::from_double(bbox.min.y),
+    Float::from_double(bbox.min.z),
+    Float::from_double(bbox.max.x),
+    Float::from_double(bbox.max.y),
+    Float::from_double(bbox.max.z),
+    Float::from_double(radius),
+    Float::from_double(wall),
+    Float::from_double(k),
+  )
+}
+
+///|
+/// Render a gyroid sphere with x/y/z offset (for positioning in a scene).
+pub fn Voxels::render_gyroid_sphere_offset(
+  self : Voxels,
+  bbox : BBox3,
+  radius : Double,
+  wall : Double,
+  k : Double,
+  ox : Double,
+  oy : Double,
+  oz : Double,
+) -> Unit {
+  let offset = Vec3::new(ox, oy, oz)
+  mbt_render_gyroid_sphere_offset(
+    get_instance(),
+    self.h,
+    Float::from_double(bbox.min.x),
+    Float::from_double(bbox.min.y),
+    Float::from_double(bbox.min.z),
+    Float::from_double(bbox.max.x),
+    Float::from_double(bbox.max.y),
+    Float::from_double(bbox.max.z),
+    Float::from_double(radius),
+    Float::from_double(wall),
+    Float::from_double(k),
+    pack_vec3(offset),
+  )
+}
+
+///|
+/// Render a gyroid genus (genus-2 surface intersected with gyroid) into the voxel field.
+pub fn Voxels::render_gyroid_genus(
+  self : Voxels,
+  bbox : BBox3,
+  scale : Double,
+  gap : Double,
+  k : Double,
+) -> Unit {
+  let sdf_params = FixedArray::make(12, 0L.to_byte())
+  write_float_le(sdf_params, 0, Float::from_double(scale))
+  write_float_le(sdf_params, 4, Float::from_double(gap))
+  write_float_le(sdf_params, 8, Float::from_double(k))
+  mbt_render_gyroid_genus(
+    get_instance(),
+    self.h,
+    Float::from_double(bbox.min.x),
+    Float::from_double(bbox.min.y),
+    Float::from_double(bbox.min.z),
+    Float::from_double(bbox.max.x),
+    Float::from_double(bbox.max.y),
+    Float::from_double(bbox.max.z),
+    sdf_params,
+  )
+}
+
+///|
+/// Render a superellipsoid into the voxel field.
+pub fn Voxels::render_superellipsoid(
+  self : Voxels,
+  bbox : BBox3,
+  a : Double,
+  b : Double,
+  c : Double,
+  e1 : Double,
+  e2 : Double,
+) -> Unit {
+  let sdf_params = FixedArray::make(20, 0L.to_byte())
+  write_float_le(sdf_params, 0, Float::from_double(a))
+  write_float_le(sdf_params, 4, Float::from_double(b))
+  write_float_le(sdf_params, 8, Float::from_double(c))
+  write_float_le(sdf_params, 12, Float::from_double(e1))
+  write_float_le(sdf_params, 16, Float::from_double(e2))
+  mbt_render_superellipsoid(
+    get_instance(),
+    self.h,
+    Float::from_double(bbox.min.x),
+    Float::from_double(bbox.min.y),
+    Float::from_double(bbox.min.z),
+    Float::from_double(bbox.max.x),
+    Float::from_double(bbox.max.y),
+    Float::from_double(bbox.max.z),
+    sdf_params,
+  )
+}
+
+///|
+/// Render a plain gyroid (TPMS shell) into the voxel field.
+pub fn Voxels::render_gyroid(
+  self : Voxels,
+  bbox : BBox3,
+  wall : Double,
+  k : Double,
+) -> Unit {
+  mbt_render_gyroid(
+    get_instance(),
+    self.h,
+    Float::from_double(bbox.min.x),
+    Float::from_double(bbox.min.y),
+    Float::from_double(bbox.min.z),
+    Float::from_double(bbox.max.x),
+    Float::from_double(bbox.max.y),
+    Float::from_double(bbox.max.z),
+    Float::from_double(wall),
+    Float::from_double(k),
+  )
+}
+
+///|
+/// Intersect the voxel field with a gyroid sphere SDF (in-place).
+pub fn Voxels::intersect_gyroid_sphere(
+  self : Voxels,
+  radius : Double,
+  wall : Double,
+  k : Double,
+) -> Unit {
+  mbt_intersect_gyroid_sphere(
+    get_instance(),
+    self.h,
+    Float::from_double(radius),
+    Float::from_double(wall),
+    Float::from_double(k),
+  )
+}
+
+// --- C extern declarations ---
+
+///|
+extern "C" fn mbt_render_gyroid_sphere(
+  instance : Int64,
+  vox : Int64,
+  minX : Float,
+  minY : Float,
+  minZ : Float,
+  maxX : Float,
+  maxY : Float,
+  maxZ : Float,
+  radius : Float,
+  wall : Float,
+  k : Float,
+) -> Unit = "mbt_render_gyroid_sphere"
+
+///|
+#borrow(offset)
+extern "C" fn mbt_render_gyroid_sphere_offset(
+  instance : Int64,
+  vox : Int64,
+  minX : Float,
+  minY : Float,
+  minZ : Float,
+  maxX : Float,
+  maxY : Float,
+  maxZ : Float,
+  radius : Float,
+  wall : Float,
+  k : Float,
+  offset : FixedArray[Byte],
+) -> Unit = "mbt_render_gyroid_sphere_offset"
+
+///|
+#borrow(sdf_params)
+extern "C" fn mbt_render_gyroid_genus(
+  instance : Int64,
+  vox : Int64,
+  minX : Float,
+  minY : Float,
+  minZ : Float,
+  maxX : Float,
+  maxY : Float,
+  maxZ : Float,
+  sdf_params : FixedArray[Byte],
+) -> Unit = "mbt_render_gyroid_genus"
+
+///|
+#borrow(sdf_params)
+extern "C" fn mbt_render_superellipsoid(
+  instance : Int64,
+  vox : Int64,
+  minX : Float,
+  minY : Float,
+  minZ : Float,
+  maxX : Float,
+  maxY : Float,
+  maxZ : Float,
+  sdf_params : FixedArray[Byte],
+) -> Unit = "mbt_render_superellipsoid"
+
+///|
+extern "C" fn mbt_render_gyroid(
+  instance : Int64,
+  vox : Int64,
+  minX : Float,
+  minY : Float,
+  minZ : Float,
+  maxX : Float,
+  maxY : Float,
+  maxZ : Float,
+  wall : Float,
+  k : Float,
+) -> Unit = "mbt_render_gyroid"
+
+///|
+extern "C" fn mbt_intersect_gyroid_sphere(
+  instance : Int64,
+  vox : Int64,
+  radius : Float,
+  wall : Float,
+  k : Float,
+) -> Unit = "mbt_intersect_gyroid_sphere"

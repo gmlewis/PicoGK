@@ -1,0 +1,30 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "gmlewis/picogkshapes"
+
+import {
+  "gmlewis/picogkffi",
+}
+
+// Values
+pub fn connected_hollow_spheres(@picogkffi.Vec3, @picogkffi.Vec3, Double, Double, Double, Double) -> @picogkffi.Voxels
+
+pub fn cylinder_ring(@picogkffi.Vec3, Double, Double, Double, Int) -> @picogkffi.Voxels
+
+pub fn flat_cylinder(Double, Double, Double, Double, Double) -> @picogkffi.Voxels
+
+pub fn hollow_sphere(@picogkffi.Vec3, Double, Double) -> @picogkffi.Voxels
+
+pub fn lattice_cage(Array[@picogkffi.Vec3], Double, Double) -> @picogkffi.Voxels
+
+pub fn sphere_grid(@picogkffi.Vec3, Double, Double, Double, Int, Int, Int, Double) -> @picogkffi.Voxels
+
+pub fn torus(Double, Double, @picogkffi.Vec3) -> @picogkffi.Voxels
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits
+

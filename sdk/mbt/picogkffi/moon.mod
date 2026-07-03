@@ -1,20 +1,15 @@
-// picogkffi: MoonBit FFI bindings to the PicoGK native geometry kernel.
-// Provides direct in-process access to the PicoGK C API via extern declarations.
-// Requires linking against libpicogk at build time.
+// picogkffi: PicoGK FFI for MoonBit (native target only)
+// DO NOT EDIT — auto-generated.
 
 name = "gmlewis/picogkffi"
 
 version = "0.1.0"
 
-readme = "README.md"
-
-repository = "https://github.com/gmlewis/PicoGK"
-
 license = "Apache-2.0"
 
-keywords = [ "geometry", "voxel", "cad" ]
+keywords = [ "geometry", "voxel", "cad", "computational engineering", "3D modeling" ]
 
-description = "MoonBit FFI bindings to the PicoGK native geometry kernel"
+description = "MoonBit FFI binding to the PicoGK native library"
 
 preferred_target = "native"
 

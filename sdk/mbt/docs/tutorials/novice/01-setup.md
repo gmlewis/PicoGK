@@ -1,9 +1,9 @@
-# Novice 1 — Set up a project and install the MoonBit PicoGK SDK
+# Novice 1 — Set up a project and install the MoonBit PicoGK FFI SDK
 
 ## Prerequisites
 
 - **MoonBit** (`moon` CLI tool)
-- **PicoGK MCP server** at `~/.local/bin/picogk-mcp/PicoGK.Mcp`
+- **PicoGK native library** (C shared library)
 
 ### Install MoonBit
 
@@ -14,11 +14,16 @@ brew install moonbitlang/tap/moon
 # Or download from https://www.moonbitlang.com/download/
 ```
 
-### Verify the MCP server
+### Install the PicoGK native library
+
+The FFI SDK links directly to the PicoGK C++ library. Build or install
+the native library, then set the `PICOGK_LIB` environment variable to point
+to it:
 
 ```bash
-ls ~/.local/bin/picogk-mcp/PicoGK.Mcp
-# If not present, install it following the PicoGK documentation.
+# Example: point to the shared library
+export PICOGK_LIB=/path/to/picogk.26.2.dylib   # macOS
+export PICOGK_LIB=/path/to/libpicogk.26.2.so     # Linux
 ```
 
 ## Create a project
@@ -26,17 +31,18 @@ ls ~/.local/bin/picogk-mcp/PicoGK.Mcp
 ```bash
 mkdir my-parts
 cd my-parts
-moon init
+moon new hello
 ```
 
-## Add the PicoGK MoonBit SDK
+This creates a flat project structure. Replace the generated files with:
 
-Add the dependency to your `moon.mod`:
+## Add the PicoGK FFI dependency
+
+Add to your `moon.mod`:
 
 ```toml
 import {
-  "gmlewis/picogk@0.1.0",
-  "moonbitlang/async@0.19.2"
+  "gmlewis/picogkffi@0.1.0",
 }
 ```
 
@@ -44,8 +50,7 @@ In your package's `moon.pkg`:
 
 ```
 import {
-  "gmlewis/picogk" @picogk,
-  "moonbitlang/async",
+  "gmlewis/picogkffi" @pk,
 }
 
 options(
@@ -59,47 +64,42 @@ Create `main.mbt`:
 
 ```moonbit
 ///|
-async fn main {
-  // Launch the PicoGK MCP server.
-  let client = @picogk.new_client("")
-
-  // Initialize the kernel with a 0.2mm voxel grid.
-  let _ = client.picogk_init(Some(0.2))
-
-  // Print runtime info.
-  println(client.picogk_info())
+fn main {
+  @pk@pk.init_with_size(0.2).unwrap()
+  defer @pk@pk.shutdown()
 
   // Create a sphere and query its volume.
-  let _ = client.create_sphere(0.0, 0.0, 0.0, 10.0, Some("ball"))
-  println(client.get_volume("ball"))
+  let ball = @pk@pk.new_sphere(@pk@pk.Vec3::new(0.0, 0.0, 0.0), 10.0)
+  println("volume: " + ball.volume().to_string())
 
-  let _ = client.picogk_shutdown()
-  client.close()
+  ball.destroy()
 }
 ```
 
 ## Run it
 
 ```bash
-moon run .
+moon run . --target native
 ```
 
 Expected output:
 
 ```
-{"version":"26.2.0",...}
-{"volumeMM3":4188.79,...}
+volume: 4188.79...
 ```
 
 ## How it works
 
-1. `@picogk.new_client("")` launches the PicoGK MCP server as a subprocess
-   and performs the JSON-RPC `initialize` handshake.
-2. Tool calls are async methods on `Client` — they return `String` (the tool's
-   text response) or `raise` on error.
-3. `client.picogk_init(Some(0.2))` initializes the voxel grid. The `Some(0.2)`
-   is an optional parameter — use `None` to omit it.
-4. `client.close()` shuts down the subprocess.
+1. `@pk@pk.init_with_size(0.2)` initializes the PicoGK native library with a 0.2mm
+   voxel grid. The result is a `Result[Unit, String]` — call `.unwrap()` to
+   assert success.
+2. `@pk@pk.new_sphere(...)` creates a `Voxels` object directly in-process — no
+   subprocess or JSON-RPC needed. The `@pk` prefix comes from the `moon.pkg`
+   import alias.
+3. `ball.volume()` returns a `Double` directly — no string parsing.
+4. `ball.destroy()` frees native memory. All PicoGK objects (`Voxels`, `Mesh`,
+   `Lattice`, `VdbFile`, etc.) require explicit `.destroy()` calls.
+5. `@pk.shutdown()` releases all native resources.
 
 ## Next steps
 

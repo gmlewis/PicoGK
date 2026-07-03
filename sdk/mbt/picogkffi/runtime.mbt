@@ -13,9 +13,20 @@ pub fn get_instance() -> Int64 {
 
 ///|
 fn do_init(vs : Double) -> Result[Unit, String] {
+  // Try to find the PicoGK shared library.
+  // Check environment variable PICOGK_LIB first, then fall back to default path.
+  let lib_path = @env.get_env_var("PICOGK_LIB").unwrap_or(
+    "/Users/glenn/src/github.com/gmlewis/PicoGK/native/osx-arm64/picogk.26.2.dylib",
+  )
+  let path_bytes = cstr(lib_path)
+  let result = picogk_dlopen(path_bytes)
+  if result != 0 {
+    return Err("failed to load PicoGK library at: " + lib_path)
+  }
   let inst = library_h_create_instance(Float::from_double(vs))
-  let is_zero = inst == 0L
-  ignore(is_zero)
+  if inst == 0L {
+    return Err("Library_hCreateInstance returned null handle")
+  }
   instance.val = inst
   Ok(())
 }

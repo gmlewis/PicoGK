@@ -1,148 +1,173 @@
-# Learn the MoonBit PicoGK SDK in Y minutes
+# Learn the MoonBit PicoGK FFI SDK in Y minutes
 
-This is a "learn-x-in-y-minutes" style tour of the entire MoonBit PicoGK MCP SDK.
-Every major tool is exercised in one annotated, runnable script.
+This is a "learn-x-in-y-minutes" style tour of the entire MoonBit PicoGK FFI SDK.
+Every major feature is exercised in one annotated, runnable script.
 
 ```moonbit
 ///|
-/// ============================================================================
-/// INSTALL    moon add gmlewis/picogk
-///
-/// Requires the PicoGK MCP server at ~/.local/bin/picogk-mcp/PicoGK.Mcp
-/// ============================================================================
-async fn main {
-  let outdir = "/tmp/mbt-picogk-quicklearn"
+fn main {
+  // ---- INIT / SHUTDOWN -------------------------------------------------
+  @pk@pk.init_with_size(0.3).unwrap()
+  defer @pk@pk.shutdown()
 
-  // ---- SESSION -----------------------------------------------------------
-  let client = @picogk.new_client("")
-
-  // Helper: call a tool and print the result.
-  // In production, use try/catch for error handling.
-
-  // Initialize with a 0.3mm voxel grid. Must be called first.
-  let _ = client.picogk_init(Some(0.3))
-  println(client.picogk_info())          // version, memory, object counts
+  println(@pk@pk.version())   // "PicoGK 26.2.0" or similar
+  println("memory: " + @pk@pk.total_memory_usage().to_string())
 
   // ---- VOXELS: the core object (a signed-distance / level-set volume) -----
-  // value <= 0 is INSIDE. Five primitives:
-  let _ = client.create_sphere(0.0, 0.0, 0.0, 10.0, Some("ball"))
-  let _ = client.create_box(-10.0, -10.0, -10.0, 10.0, 10.0, 10.0, Some("box"))
-  let _ = client.create_cylinder(0.0, 0.0, 0.0, 5.0, 30.0, None, None, None, Some("cyl"))
+  // value <= 0 is INSIDE. Five primitives (two built-in, three from picogkffi):
+  let ball = @pk@pk.new_sphere(@pk@pk.Vec3::new(0.0, 0.0, 0.0), 10.0)
+  let box = @pk@pk.new_box(-10.0, -10.0, -10.0, 10.0, 10.0, 10.0)
+  let cyl = @pk@pk.new_cylinder(0.0, 0.0, 0.0, 5.0, 30.0, None, None, None)
   // Cylinder along X axis (dirX=1, dirY=0, dirZ=0):
-  let _ = client.create_cylinder(0.0, 0.0, 0.0, 3.0, 30.0, Some(1.0), Some(0.0), Some(0.0), Some("rod"))
+  let rod = @pk@pk.new_cylinder(0.0, 0.0, 0.0, 3.0, 30.0, Some(1.0), Some(0.0), Some(0.0))
   // Capsule (sphere-swept segment):
-  let _ = client.create_capsule(-15.0, 0.0, 0.0, 15.0, 0.0, 0.0, 3.0, Some("cap"))
-  // Torus:
-  let _ = client.create_torus(20.0, 5.0, None, None, None, Some("torus"))
+  let cap = @pk@pk.new_capsule(
+    @pk@pk.Vec3::new(-15.0, 0.0, 0.0),
+    @pk@pk.Vec3::new(15.0, 0.0, 0.0),
+    3.0,
+    3.0,
+  )
 
-  // ---- BOOLEANS ----------------------------------------------------------
-  let _ = client.boolean_add("ball", "rod", Some("union"))
-  let _ = client.boolean_subtract("ball", "rod", Some("cut"))
-  let _ = client.boolean_intersect("ball", "rod", Some("both"))
-  // Multi-object union:
-  let _ = client.boolean_add_all(["ball", "box", "cyl"], Some("combined"))
-  // Multi-object subtract:
-  let _ = client.boolean_subtract_all("ball", ["rod", "cyl"], Some("drilled"))
+  // ---- BOOLEANS (operators return new objects, originals unchanged) -----
+  let union = ball.add(rod)
+  let cut = ball.sub(rod)
+  let overlap = ball.intersect(rod)
+  // In-place variants (modify the receiver):
+  ball.bool_add(rod)       // ball += rod
+  ball.bool_subtract(rod)  // ball -= rod
 
-  // ---- OFFSET / SHELL ----------------------------------------------------
-  let _ = client.offset("ball", 2.0, Some("grown"))     // expand 2mm
-  let _ = client.offset("ball", -1.0, Some("shrunk"))   // shrink 1mm
-  let _ = client.shell("ball", 1.5, 0.0, None, Some("shelled"))
+  // ---- OFFSET / SHELL --------------------------------------------------
+  let grown = ball.copy(); grown.offset(2.0)     // expand 2mm
+  let shrunk = ball.copy(); shrunk.offset(-1.0)   // shrink 1mm
+  // Shell: inner=1.5mm wall thickness, outer=0mm (keep outer surface)
+  let shelled = ball.copy(); shelled.shell(1.5)
   // Double offset (morphological open: expand then shrink):
-  let _ = client.double_offset("ball", 2.0, -2.0, Some("opened"))
-  // Over offset (expand, then settle at a final distance):
-  let _ = client.over_offset("ball", 3.0, Some(0.5), Some("over"))
+  let opened = ball.copy(); opened.double_offset(2.0, -2.0)
+  // Triple offset (smooth/round):
+  let smoothed = box.copy(); smoothed.triple_offset(1.5)
+  // Over-offset not in FFI; use double_offset for similar effects.
 
-  // ---- TRANSFORMS --------------------------------------------------------
-  let _ = client.smooth("box", 1.5, Some("smoothed"))
-  let _ = client.trim("ball", -20.0, -20.0, 0.0, 20.0, 20.0, 50.0, Some("half"))
-  let _ = client.fillet("box", 2.0, Some("filleted"))
-  let _ = client.transform_voxels("ball", Some(100.0), None, None, None, None, None, None, Some("moved"))
-  let _ = client.transform_voxels("ball", None, None, None, None, None, None, Some(45.0), Some("rotated"))
-  // Circular pattern: 4 copies around Z axis:
-  let _ = client.circular_pattern("cyl", 4, Some(360.0), Some(0.0), Some(0.0), Some(0.0), Some(0.0), Some(0.0), Some(1.0), Some("pattern"))
-  let _ = client.project_z_slice("ball", -5.0, 5.0, Some("proj"))
+  // ---- TRANSFORMS -------------------------------------------------------
+  let filleted = box.copy(); filleted.triple_offset(2.0)
+  let half = @pk@pk.new_box(-20.0, -20.0, 0.0, 20.0, 20.0, 50.0)
+  // (no trim/circular_pattern in FFI SDK — use primitives + booleans)
 
-  // ---- QUERIES -----------------------------------------------------------
-  println(client.get_bounding_box("ball"))
-  println(client.get_volume("ball"))
-  println(client.point_inside("ball", 0.0, 0.0, 0.0))     // "True"
-  println(client.point_inside("ball", 100.0, 0.0, 0.0))   // "False"
-  println(client.surface_normal("ball", 10.0, 0.0, 0.0))
-  println(client.closest_point("ball", 50.0, 0.0, 0.0))
-  println(client.ray_cast("ball", 100.0, 0.0, 0.0, -1.0, 0.0, 0.0))
-  println(client.measure_thickness("ball", 0.0, 0.0, 0.0, 1.0, 0.0, 0.0))
-  println(client.get_voxel_dimensions("ball"))
-  println(client.voxels_is_empty("ball"))
-  println(client.voxels_mem_usage("ball"))
-  let _ = client.duplicate_object("ball", Some("ballCopy"))
-  println(client.voxels_is_equal("ball", "ballCopy"))  // "True"
-  println(client.list_objects())
+  // ---- QUERIES ----------------------------------------------------------
+  let bbox = ball.bounding_box()
+  println("bbox min: " + bbox.min.x.to_string() + ", " + bbox.min.y.to_string() + ", " + bbox.min.z.to_string())
+  println("volume: " + ball.volume().to_string())
+  println("inside origin: " + ball.is_inside(@pk@pk.Vec3::new(0.0, 0.0, 0.0)).to_string())
+  println("surface normal: " + ball.surface_normal(@pk@pk.Vec3::new(10.0, 0.0, 0.0)).x.to_string())
+  let closest = ball.closest_point(@pk@pk.Vec3::new(50.0, 0.0, 0.0))
+  let ray_hit = ball.ray_cast(
+    @pk@pk.Vec3::new(100.0, 0.0, 0.0),
+    @pk@pk.Vec3::new(-1.0, 0.0, 0.0),
+  )
+  let dims = ball.voxel_dimensions()
+  println("empty: " + ball.is_empty().to_string())
+  println("mem: " + ball.mem_usage().to_string())
+  let ball_copy = ball.copy()
+  println("equal: " + ball.is_equal(ball_copy).to_string())
+  ball_copy.destroy()
 
-  // ---- MESH <-> VOXELS ---------------------------------------------------
-  let _ = client.voxels_to_mesh("ball", Some("ballMesh"))
-  println(client.get_mesh_info("ballMesh"))
-  let _ = client.mesh_to_voxels("ballMesh", Some("ballVox2"))
+  // ---- MESH <-> VOXELS --------------------------------------------------
+  let ball_mesh = ball.to_mesh()
+  println("vertices: " + ball_mesh.vertex_count().to_string())
+  println("triangles: " + ball_mesh.triangle_count().to_string())
+  let revox = @pk@pk.from_mesh(ball_mesh)
 
   // Build a mesh from scratch:
-  let _ = client.create_mesh(Some("myMesh"))
-  let _ = client.mesh_add_vertex("myMesh", 0.0, 0.0, 0.0)   // index 0
-  let _ = client.mesh_add_vertex("myMesh", 10.0, 0.0, 0.0)  // index 1
-  let _ = client.mesh_add_vertex("myMesh", 0.0, 10.0, 0.0)  // index 2
-  let _ = client.mesh_add_triangle("myMesh", 0, 1, 2)
+  let my_mesh = @pk@pk.new_mesh()
+  my_mesh.add_vertex(@pk@pk.Vec3::new(0.0, 0.0, 0.0))   // index 0
+  my_mesh.add_vertex(@pk@pk.Vec3::new(10.0, 0.0, 0.0))   // index 1
+  my_mesh.add_vertex(@pk@pk.Vec3::new(0.0, 10.0, 0.0))   // index 2
+  my_mesh.add_triangle(0, 1, 2)
 
-  // Mesh transform and mirror:
-  let _ = client.mesh_transform("ballMesh", Some(2.0), Some(50.0), None, None, Some("ballMesh2x"))
-  let _ = client.mesh_mirror("ballMesh", 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, Some("ballMirrored"))
-  let _ = client.mesh_append("myMesh", "ballMesh2x")
+  // ---- LATTICE ----------------------------------------------------------
+  let lat = @pk@pk.new_lattice()
+  lat.add_sphere(@pk@pk.Vec3::new(-10.0, 0.0, 0.0), 2.0)
+  lat.add_sphere(@pk@pk.Vec3::new(10.0, 0.0, 0.0), 2.0)
+  lat.add_beam(
+    @pk@pk.Vec3::new(-10.0, 0.0, 0.0),
+    @pk@pk.Vec3::new(10.0, 0.0, 0.0),
+    1.0,
+    1.0,
+    true,  // round_cap
+  )
+  let lattice_vox = @pk@pk.from_lattice(lat)
+  lat.destroy()
 
-  // ---- LATTICE -----------------------------------------------------------
-  let _ = client.create_lattice(Some("lat"))
-  let _ = client.lattice_add_sphere("lat", -10.0, 0.0, 0.0, 2.0)
-  let _ = client.lattice_add_sphere("lat", 10.0, 0.0, 0.0, 2.0)
-  let _ = client.lattice_add_beam("lat", -10.0, 0.0, 0.0, 1.0, 10.0, 0.0, 0.0, 1.0, None)
-  let _ = client.lattice_to_voxels("lat", Some("latticeVox"))
+  // ---- FILE I/O ---------------------------------------------------------
+  ignore(ball_mesh.save_stl("/tmp/mbt-quicklearn/ball.stl"))
 
-  // ---- FILE I/O ----------------------------------------------------------
-  let _ = client.save_stl("ballMesh", outdir + "/ball.stl", None)
-  let _ = client.save_vdb("ball", outdir + "/ball.vdb", Some("body"))
-  println(client.list_vdb_fields(outdir + "/ball.vdb"))
-  let _ = client.load_vdb(outdir + "/ball.vdb", Some("body"), Some("loadedBall"))
-  let _ = client.mesh_from_stl(outdir + "/ball.stl", Some("importedMesh"))
-  let _ = client.save_cli("ball", outdir + "/ball.cli", Some(2.0), None, None)
-  let _ = client.save_svg("ball", outdir + "/ball.svg", Some(2.0))
+  // VDB round-trip:
+  let vdb = @pk@pk.new_vdb_file()
+  let idx = vdb.add_voxels("body", ball)
+  ignore(vdb.save_to_file("/tmp/mbt-quicklearn/ball.vdb"))
+  let vdb2 = @pk@pk.vdb_file_from_path("/tmp/mbt-quicklearn/ball.vdb")
+  let loaded = vdb2.get_voxels(0)
+  println("field count: " + vdb2.field_count().to_string())
+  println("field name: " + vdb2.get_field_name(0))
+  vdb.destroy()
+  vdb2.destroy()
 
-  // ---- RENDERING ---------------------------------------------------------
-  // Isometric PNG with Lambertian shading:
-  let _ = client.render_to_image("ball", outdir + "/ball.png", Some(600), Some(400), None, None)
-  // Z-slice cross-section:
-  let _ = client.render_slice("ball", 0.0, outdir + "/slice_z0.png", None)
+  // ---- SDF RENDERING ----------------------------------------------------
+  let gyroid = @pk@pk.new_voxels()
+  gyroid.render_gyroid_sphere(
+    @pk@pk.BBox3::new(@pk@pk.Vec3::new(-15.0, -15.0, -15.0), @pk@pk.Vec3::new(15.0, 15.0, 15.0)),
+    15.0,
+    2.0,
+    0.5,
+  )
 
-  // ---- CLEANUP -----------------------------------------------------------
-  let _ = client.delete_object("box")
-  let _ = client.delete_objects(["cyl", "cap", "torus"], None)
-  // Keep only "ball", delete everything else:
-  let _ = client.delete_objects(["ball"], Some(true))
+  // ---- SCALAR FIELD / METADATA ------------------------------------------
+  let sf = @pk@pk.scalar_field_from_voxels(ball)
+  sf.set_value(@pk@pk.Vec3::new(0.0, 0.0, 0.0), 42.0)
+  let val = sf.get_value(@pk@pk.Vec3::new(0.0, 0.0, 0.0))
+  println("scalar value: " + val.unwrap().to_string())
 
-  // ---- SHUTDOWN ----------------------------------------------------------
-  let _ = client.picogk_shutdown()
-  client.close()
+  let meta = @pk@pk.metadata_from_voxels(ball)
+  meta.set_string("author", "quicklearn")
+  meta.set_float("version", 1.0)
+  println("meta author: " + meta.get_string("author").unwrap_or("(none)"))
 
-  println("=== All 62 tools exercised! ===")
+  // ---- CLEANUP ----------------------------------------------------------
+  ball.destroy(); box.destroy(); cyl.destroy(); rod.destroy(); cap.destroy()
+  union.destroy(); cut.destroy(); overlap.destroy()
+  grown.destroy(); shrunk.destroy(); shelled.destroy()
+  opened.destroy(); smoothed.destroy(); filleted.destroy(); half.destroy()
+  ball_mesh.destroy(); revox.destroy(); my_mesh.destroy()
+  lattice_vox.destroy(); gyroid.destroy()
+  sf.destroy(); meta.destroy(); loaded.destroy()
+
+  println("=== All major features exercised! ===")
 }
 ```
 
 ## Key differences from the Python binding
 
-| Python (PicoPie) | MoonBit SDK |
+| Python (PicoPie) | MoonBit FFI SDK |
 |---|---|
-| `picogk.init(voxel_size_mm=0.3)` | `client.picogk_init(Some(0.3))` |
-| `Voxels.sphere(radius=10)` | `client.create_sphere(0.0, 0.0, 0.0, 10.0, Some("id"))` |
-| `part = body - hole` (operator) | `client.boolean_subtract("body", "hole", Some("part"))` |
-| `part.shell_(1.5)` (in-place) | `client.shell("part", 1.5, 0.0, None, Some("shelled"))` |
-| `part.volume_mm3()` | `client.get_volume("part")` (returns String) |
-| Optional args via kwargs | Optional args via `Some(value)` / `None` |
-| `ScalarField`, `Metadata`, `VectorField` | Not available in MCP SDK |
-| `render_implicit_(sdf, bbox)` | Not available in MCP SDK |
-| `picogk.show(part)` (interactive) | `client.render_to_image(...)` (headless PNG only) |
-| `picogk.shapes.*` (parametric library) | Use primitives + transforms + booleans |
+| `picogk.init(voxel_size_mm=0.3)` | `@pk@pk.init_with_size(0.3)` |
+| `Voxels.sphere(radius=10)` | `@pk@pk.new_sphere(@pk@pk.Vec3::new(0,0,0), 10)` |
+| `part = body - hole` (operator) | `part = body.sub(hole)` |
+| `part.shell_(1.5)` (in-place) | `part.shell(1.5)` (in-place) |
+| `part.volume_mm3()` | `part.volume()` (returns `Double`) |
+| `ScalarField`, `VectorField`, `Metadata` | Full access via FFI |
+| `render_implicit_(sdf, bbox)` | `voxels.render_gyroid_sphere(bbox, ...)` |
+| `picogk.show(part)` (interactive) | `ViewerEx` for OpenGL; `screenshot_png` for headless |
+| `picogk.shapes.*` (parametric library) | `@gmlewis/picogkshapes` package |
+| Auto garbage collection | Explicit `obj.destroy()` calls |
+
+## Object lifecycle
+
+The FFI SDK manages native memory. You **must** call `destroy()` on objects
+when you're done with them, or you'll leak memory. The `defer` statement
+is your friend:
+
+```moonbit
+@pk@pk.init_with_size(0.5).unwrap()
+defer @pk@pk.shutdown()
+// Objects created after init will be cleaned up at shutdown,
+// but explicit destroy() is best practice for long-running programs.
+```

@@ -1,9 +1,13 @@
 // web-demo example package
 
 import {
-  "gmlewis/picogk",
-  "moonbitlang/async",
+  "gmlewis/picogkffi" @pk,
+  "moonbitlang/core/argparse",
+  "moonbitlang/core/string",
+  "moonbitlang/core/strconv",
 }
+
+supported_targets = "+native"
 
 options(
   "is-main": true,

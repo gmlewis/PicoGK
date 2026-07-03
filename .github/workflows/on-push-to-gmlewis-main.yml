@@ -5,7 +5,7 @@ on:
     branches: [gmlewis-main]
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -32,6 +32,33 @@ jobs:
         working-directory: ${{ matrix.package }}
         run: go test -v -count=1 ./...
 
+  moonbit-check:
+    name: MoonBit Type Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install MoonBit
+        run: |
+          /bin/bash -c "$(curl -fsSL https://cli.moonbitlang.com/install/unix.sh)"
+          echo "$HOME/.moon/bin" >> $GITHUB_PATH
+
+      - name: Moon version
+        run: moon version
+
+      - name: Moon update
+        run: moon update
+
+      - name: Type check all MoonBit packages
+        working-directory: sdk/mbt
+        run: moon check --target native
+
+      - name: Type check wasm-gc target
+        working-directory: sdk/mbt
+        run: moon check --target wasm-gc || true
+
   # picogkffi/picogkshapes (Go) require cgo + libpicogk — tested locally
   # picogkffi/picogkshapes/picogkffi/test (MoonBit) require -lpicogk — tested locally
   # picogk (MoonBit) requires moonbitlang/async process spawn — tested locally
+  # MoonBit examples (hello-picogk, fields-and-io, etc.) require libpicogk — tested locally

@@ -2,76 +2,112 @@
 
 ## Overview
 
-The Python PicoPie binding includes a high-level parametric shape library
-(`picogk.shapes`) ported from LEAP 71's ShapeKernel. The MoonBit MCP SDK does
-**not** include this high-level library. It exposes low-level primitives
-(`create_sphere`, `create_box`, `create_cylinder`, `create_torus`,
-`create_capsule`) plus transforms and booleans. This tutorial shows how to
-build parametric shapes from those primitives.
+The `@gmlewis/picogkshapes` package provides high-level parametric shape
+construction helpers built on top of `picogkffi`. It includes shapes like
+`Sphere`, `Box`, `Cylinder`, `Ring`, `Lens`, `Pipe`, `PipeSegment`, and
+implicit SDF shapes (`ImplicitGyroid`, `ImplicitGenus`, `ImplicitSuperEllipsoid`).
 
-## The shape-builder pattern
+## Setup
 
-Create helper functions for each parametric shape you need:
+Add to your `moon.mod`:
+
+```toml
+import {
+  "gmlewis/picogkffi@0.1.0",
+  "gmlewis/picogkshapes@0.1.0"
+}
+```
+
+In your `moon.pkg`:
+
+```
+import {
+  "gmlewis/picogkffi" @pk
+  "@gmlewis/picogkshapes" as shapes
+}
+```
+
+## Basic shapes
 
 ```moonbit
 ///|
-async fn main {
-  let client = @picogk.new_client("")
-  let _ = client.picogk_init(Some(0.5))
+import "@gmlewis/picogkshapes" as shapes
+
+fn main {
+  @pk@pk@pk.init_with_size(0.5).unwrap()
+  defer @pk@pk@pk.shutdown()
 
   // Sphere at origin, radius 10.
-  let _ = client.create_sphere(0.0, 0.0, 0.0, 10.0, Some("ball"))
+  let ball = (shapes@pk@pk.new_sphere(None, fn(_phi : Double, _theta : Double) { 10.0 })).to_voxels()
 
   // Box at (-30, 0, 0), 20x10x8.
-  let _ = client.create_box(-40.0, -5.0, -4.0, -20.0, 5.0, 4.0, Some("box"))
+  let box = (shapes@pk@pk.new_box(None, 8.0, fn(_lr : Double) { 10.0 }, fn(_lr : Double) { 4.0 })).to_voxels()
 
   // Cylinder at origin, radius 8, height 30.
-  let _ = client.create_cylinder(0.0, 0.0, -15.0, 8.0, 30.0, None, None, None, Some("cyl"))
+  let cyl = (shapes@pk@pk.new_cylinder(None, 30.0, fn(_phi : Double, _lr : Double) { 8.0 })).to_voxels()
 
   // Ring (torus) at (0, 40, 0), major radius 20, minor radius 5.
-  let _ = client.create_torus(20.0, 5.0, Some(0.0), Some(40.0), Some(0.0), Some("ring"))
+  let ring = (shapes.new_ring(
+    Some(shapes.new_local_frame(shapes.vec3(0.0, 40.0, 0.0), None)),
+    20.0,
+    fn(_phi : Double, _lr : Double) { 5.0 },
+  )).to_voxels()
 
-  let _ = client.picogk_shutdown()
-  client.close()
+  ball.destroy(); box.destroy(); cyl.destroy(); ring.destroy()
 }
 ```
 
 ## Shape reference
 
-| Shape | Method | Key parameters |
-|-------|--------|----------------|
-| Sphere | `create_sphere` | `x, y, z, radius` |
-| Box | `create_box` | `minX..maxZ` (axis-aligned) |
-| Cylinder | `create_cylinder` | `x, y, z, radius, height, dirX/Y/Z` |
-| Capsule | `create_capsule` | `x1..z2, radius` (sphere-swept segment) |
-| Torus (ring) | `create_torus` | `majorRadius, minorRadius, x, y, z` |
+| Shape | Constructor | Key parameters |
+|-------|-------------|---------------|
+| Sphere | `new_sphere(frame?, radius)` | `radius(phi, theta)` modulation |
+| Box | `new_box(frame?, length, width, depth)` | `width(lr)`, `depth(lr)` modulation |
+| Cylinder | `new_cylinder(frame?, length, radius)` | `radius(phi, lr)` modulation |
+| Ring | `new_ring(frame?, ring_radius, radius)` | `radius(phi, alpha)` modulation |
+| Lens | `new_lens(frame?, height, inner_r, outer_r)` | `lower(phi, r)`, `upper(phi, r)` |
+| Pipe | `new_pipe(frame?, length, inner, outer)` | `inner(phi, lr)`, `outer(phi, lr)` |
+| PipeSegment | `new_pipe_segment(...)` | Angle sweep along pipe |
+| LatticePipe | `new_lattice_pipe(frame?, length, radius)` | `radius(lr)` modulation |
+| LatticeManifold | `new_lattice_manifold(frame, length, radius, angle)` | Tear-drop support |
 
-## Positioning with transforms
+## Modulations
 
-Since there's no `LocalFrame` type, position shapes by either:
-
-1. **Setting coordinates directly** in the primitive's center/origin fields.
-2. **Using `transform_voxels`** to translate/rotate after creation.
+All surface-modulated shapes accept closure functions for the radius,
+width, or depth parameters. These closures take `phi` (angle around the
+cross-section) and/or `lr` (length ratio 0–1 along the spine):
 
 ```moonbit
-  // Create at origin, then translate:
-  let _ = client.create_sphere(0.0, 0.0, 0.0, 10.0, Some("ball"))
-  let _ = client.transform_voxels("ball", Some(50.0), Some(20.0), None, None, None, None, None, Some("moved"))
+  // Constant radius:
+  fn(_phi : Double, _lr : Double) { 8.0 }
 
-  // Create at origin, rotate 45° around Z, then translate:
-  let _ = client.transform_voxels("ball", Some(50.0), Some(20.0), None, None, None, None, Some(45.0), Some("rotated"))
+  // Tapered pipe (radius varies along length):
+  fn(_phi : Double, lr : Double) { 5.0 + 3.0 * lr }
+
+  // Fluted cylinder (radius varies around circumference):
+  fn(phi : Double, _lr : Double) { 8.0 + 1.0 * @math.cos(6.0 * phi) }
 ```
 
-## Modulated shapes
+## Positioning with LocalFrame
 
-The Python binding supports callable modulations. The MoonBit MCP SDK cannot
-pass MoonBit functions to the native runtime. Instead:
+The `LocalFrame` type positions and orients shapes in 3D space:
 
-1. **Pre-compute the shape** using a separate SDF evaluator and save to VDB,
-   then load via `load_vdb`.
-2. **Approximate** with multiple static primitives combined with booleans.
-3. **Use the Python binding** to generate modulated shapes and load the
-   resulting VDB in MoonBit.
+```moonbit
+  // Default frame at origin, Z-up:
+  let frame = shapes.new_local_frame(shapes.vec3(0.0, 0.0, 0.0), None)
+
+  // Frame at (10, 0, 0) with custom Z direction (pointing along Y):
+  let frame2 = shapes.new_local_frame(
+    shapes.vec3(10.0, 0.0, 0.0),
+    Some(shapes.vec3(0.0, 1.0, 0.0)),
+  )
+
+  // Translate a frame:
+  let moved = frame.translated(shapes.vec3(50.0, 20.0, 0.0))
+
+  // Rotate a frame:
+  let rotated = frame.rotated(45.0, shapes.vec3(0.0, 0.0, 1.0))
+```
 
 ## Next steps
 

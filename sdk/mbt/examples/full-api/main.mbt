@@ -1,381 +1,339 @@
 ///|
-/// Full API exercise for the picogk MoonBit SDK.
+/// Full API exercise for the picogkffi MoonBit FFI SDK.
 ///
-/// This program calls every PicoGK MCP tool at least once, demonstrating
+/// This program calls every PicoGK FFI function at least once, demonstrating
 /// the complete workflow: init -> primitives -> booleans -> transforms ->
-/// lattice -> mesh -> query -> I/O -> render -> cleanup -> shutdown.
+/// lattice -> mesh -> query -> I/O -> cleanup -> shutdown.
 ///
-/// Run:  moon run .  (from the sdk/mbt/examples/full-api directory)
-/// (Requires the PicoGK MCP server at $HOME/.local/bin/picogk-mcp/PicoGK.Mcp)
-async fn main {
+/// Run:  moon run . --target native
+fn main {
   let outdir = "/tmp/mbt-picogk-full-api"
 
-  println("=== picogk Full API Exercise ===")
+  println("=== picogkffi Full API Exercise ===")
   println("Output dir: " + outdir)
   println("")
 
   // --- Session ---
   println("--- Session ---")
-  let client = @picogk.new_client("")
-  check_tool("picogk_init", client.picogk_init(Some(0.5)))
-  check_tool("picogk_info", client.picogk_info())
+  match @pk.init_with_size(0.5) {
+    Ok(_) => println("  init OK")
+    Err(e) => {
+      println("Failed to init PicoGK: " + e)
+      return
+    }
+  }
+  println("  version: " + @pk.version())
+  println("  name: " + @pk.name())
+  println("  build_info: " + @pk.build_info())
+  println("  total_mem: \{@pk.total_memory_usage()}")
 
   // --- Primitives ---
   println("")
   println("--- Primitives ---")
-  check_tool(
-    "create_sphere",
-    client.create_sphere(0.0, 0.0, 0.0, 30.0, Some("sphere1")),
+  let sphere1 = @pk.new_sphere(@pk.Vec3::new(0.0, 0.0, 0.0), 30.0)
+  println("  sphere1 valid=\{sphere1.is_valid()} empty=\{sphere1.is_empty()}")
+  let box1 = @pk.new_box(-10.0, -10.0, -40.0, 10.0, 10.0, 40.0)
+  println("  box1 valid=\{box1.is_valid()}")
+  let cyl1 = @pk.new_cylinder(0.0, 0.0, 0.0, 10.0, 50.0, None, None, None)
+  println("  cyl1 valid=\{cyl1.is_valid()}")
+  let cylX = @pk.new_cylinder(
+    0.0,
+    0.0,
+    0.0,
+    5.0,
+    40.0,
+    Some(1.0),
+    Some(0.0),
+    Some(0.0),
   )
-  check_tool(
-    "create_box",
-    client.create_box(-10.0, -10.0, -40.0, 10.0, 10.0, 40.0, Some("box1")),
+  println("  cylX valid=\{cylX.is_valid()}")
+  let cap1 = @pk.new_capsule(
+    @pk.Vec3::new(0.0, -20.0, 0.0),
+    @pk.Vec3::new(0.0, 20.0, 0.0),
+    8.0,
+    8.0,
   )
-  check_tool(
-    "create_cylinder",
-    client.create_cylinder(
-      0.0,
-      0.0,
-      0.0,
-      10.0,
-      50.0,
-      None,
-      None,
-      None,
-      Some("cyl1"),
-    ),
-  )
-  check_tool(
-    "create_cylinder(X-axis)",
-    client.create_cylinder(
-      0.0,
-      0.0,
-      0.0,
-      5.0,
-      40.0,
-      Some(1.0),
-      Some(0.0),
-      Some(0.0),
-      Some("cylX"),
-    ),
-  )
-  check_tool(
-    "create_capsule",
-    client.create_capsule(0.0, -20.0, 0.0, 0.0, 20.0, 0.0, 8.0, Some("cap1")),
-  )
-  check_tool(
-    "create_torus",
-    client.create_torus(
-      25.0,
-      5.0,
-      Some(0.0),
-      Some(0.0),
-      Some(0.0),
-      Some("torus1"),
-    ),
+  println("  cap1 valid=\{cap1.is_valid()}")
+  let vox_empty = @pk.new_voxels()
+  println(
+    "  empty voxels valid=\{vox_empty.is_valid()} empty=\{vox_empty.is_empty()}",
   )
 
   // --- Booleans ---
   println("")
   println("--- Booleans ---")
-  check_tool(
-    "boolean_add",
-    client.boolean_add("sphere1", "cyl1", Some("union1")),
-  )
-  check_tool(
-    "boolean_subtract",
-    client.boolean_subtract("sphere1", "box1", Some("sub1")),
-  )
-  check_tool(
-    "boolean_intersect",
-    client.boolean_intersect("sphere1", "cyl1", Some("inter1")),
-  )
-  check_tool(
-    "boolean_add_all",
-    client.boolean_add_all(["sphere1", "cyl1"], Some("combined1")),
-  )
-  check_tool(
-    "boolean_subtract_all",
-    client.boolean_subtract_all("sphere1", ["box1"], Some("subAll1")),
-  )
+  let union1 = sphere1.add(cyl1)
+  println("  union1 volume=\{union1.volume()}")
+  let sub1 = sphere1.sub(box1)
+  println("  sub1 volume=\{sub1.volume()}")
+  let inter1 = sphere1.intersect(cyl1)
+  println("  inter1 volume=\{inter1.volume()}")
+  // In-place booleans
+  let combined1 = sphere1.copy()
+  combined1.bool_add(cyl1)
+  println("  combined1 volume=\{combined1.volume()}")
+  // In-place subtract
+  let sub_all1 = sphere1.copy()
+  sub_all1.bool_subtract(box1)
+  println("  subAll1 volume=\{sub_all1.volume()}")
 
   // --- Transforms ---
   println("")
   println("--- Transforms ---")
-  check_tool("offset", client.offset("sphere1", 2.0, Some("offset1")))
-  check_tool(
-    "double_offset",
-    client.double_offset("sphere1", 3.0, -2.0, Some("doff1")),
-  )
-  check_tool(
-    "over_offset",
-    client.over_offset("sphere1", 2.0, Some(0.5), Some("over1")),
-  )
-  check_tool("smooth", client.smooth("sub1", 1.5, Some("smooth1")))
-  check_tool(
-    "trim",
-    client.trim(
-      "sphere1",
-      -20.0,
-      -20.0,
-      0.0,
-      20.0,
-      20.0,
-      50.0,
-      Some("trimmed1"),
-    ),
-  )
-  check_tool(
-    "shell",
-    client.shell("sphere1", 2.0, 0.0, Some(0.5), Some("shell1")),
-  )
-  check_tool("fillet", client.fillet("box1", 1.5, Some("fillet1")))
-  check_tool(
-    "project_z_slice",
-    client.project_z_slice("sphere1", -5.0, 5.0, Some("proj1")),
-  )
-  check_tool(
-    "transform_voxels",
-    client.transform_voxels(
-      "sphere1",
-      Some(100.0),
-      None,
-      None,
-      None,
-      None,
-      Some(45.0),
-      None,
-      Some("moved1"),
-    ),
-  )
-  check_tool(
-    "circular_pattern",
-    client.circular_pattern(
-      "cylX",
-      4,
-      Some(360.0),
-      Some(0.0),
-      Some(0.0),
-      Some(0.0),
-      Some(0.0),
-      Some(0.0),
-      Some(1.0),
-      Some("pattern1"),
-    ),
-  )
+  let offset1 = sphere1.copy()
+  offset1.offset(2.0)
+  println("  offset1 volume=\{offset1.volume()}")
+  let doff1 = sphere1.copy()
+  doff1.double_offset(3.0, -2.0)
+  println("  doff1 volume=\{doff1.volume()}")
+  let shell1 = sphere1.copy()
+  shell1.shell(2.0)
+  println("  shell1 volume=\{shell1.volume()}")
+  let proj1 = sphere1.copy()
+  proj1.project_z_slice(-5.0, 5.0)
+  println("  proj1 volume=\{proj1.volume()}")
 
   // --- Lattice ---
   println("")
   println("--- Lattice ---")
-  check_tool("create_lattice", client.create_lattice(Some("lat1")))
-  check_tool(
-    "lattice_add_beam",
-    client.lattice_add_beam(
-      "lat1",
-      -20.0,
-      0.0,
-      0.0,
-      3.0,
-      20.0,
-      0.0,
-      0.0,
-      3.0,
-      None,
-    ),
+  let lat1 = @pk.new_lattice()
+  println("  lat1 valid=\{lat1.is_valid()}")
+  lat1.add_beam(
+    @pk.Vec3::new(-20.0, 0.0, 0.0),
+    @pk.Vec3::new(20.0, 0.0, 0.0),
+    3.0,
+    3.0,
+    false,
   )
-  check_tool(
-    "lattice_add_sphere",
-    client.lattice_add_sphere("lat1", 0.0, 0.0, 0.0, 5.0),
-  )
-  check_tool(
-    "lattice_to_voxels",
-    client.lattice_to_voxels("lat1", Some("latVox1")),
-  )
+  lat1.add_sphere(@pk.Vec3::new(0.0, 0.0, 0.0), 5.0)
+  let lat_vox1 = @pk.from_lattice(lat1)
+  println("  latVox1 volume=\{lat_vox1.volume()}")
+  lat1.destroy()
 
   // --- Mesh ---
   println("")
   println("--- Mesh ---")
-  check_tool("create_mesh", client.create_mesh(Some("mesh1")))
-  check_tool(
-    "mesh_add_vertex(v0)",
-    client.mesh_add_vertex("mesh1", 0.0, 0.0, 0.0),
+  let mesh1 = @pk.new_mesh()
+  let _ = mesh1.add_vertex(@pk.Vec3::new(0.0, 0.0, 0.0))
+  let _ = mesh1.add_vertex(@pk.Vec3::new(10.0, 0.0, 0.0))
+  let _ = mesh1.add_vertex(@pk.Vec3::new(0.0, 10.0, 0.0))
+  let _ = mesh1.add_triangle(0, 1, 2)
+  println(
+    "  mesh1 verts=\{mesh1.vertex_count()} tris=\{mesh1.triangle_count()}",
   )
-  check_tool(
-    "mesh_add_vertex(v1)",
-    client.mesh_add_vertex("mesh1", 10.0, 0.0, 0.0),
+  let sphere_mesh = sphere1.to_mesh()
+  println(
+    "  sphereMesh verts=\{sphere_mesh.vertex_count()} tris=\{sphere_mesh.triangle_count()}",
   )
-  check_tool(
-    "mesh_add_vertex(v2)",
-    client.mesh_add_vertex("mesh1", 0.0, 10.0, 0.0),
+  let sphere_vox2 = @pk.from_mesh(sphere_mesh)
+  println("  sphereVox2 valid=\{sphere_vox2.is_valid()}")
+  let tri = mesh1.get_triangle(0)
+  println("  triangle[0]: a=\{tri.a} b=\{tri.b} c=\{tri.c}")
+  let vert0 = mesh1.get_vertex(0)
+  println("  vertex[0]: (\{vert0.x}, \{vert0.y}, \{vert0.z})")
+  let (v0, v1, v2) = mesh1.get_triangle_vertices(0)
+  println(
+    "  tri verts: (\{v0.x},\{v0.y},\{v0.z}) (\{v1.x},\{v1.y},\{v1.z}) (\{v2.x},\{v2.y},\{v2.z})",
   )
-  check_tool("mesh_add_triangle", client.mesh_add_triangle("mesh1", 0, 1, 2))
-  check_tool(
-    "mesh_add_triangle_vertices",
-    client.mesh_add_triangle_vertices(
-      "mesh1", 0.0, 0.0, 10.0, 10.0, 0.0, 10.0, 0.0, 10.0, 10.0,
-    ),
-  )
-  check_tool(
-    "mesh_add_quad",
-    client.mesh_add_quad(
-      "mesh1",
-      0.0,
-      0.0,
-      20.0,
-      10.0,
-      0.0,
-      20.0,
-      10.0,
-      10.0,
-      20.0,
-      0.0,
-      10.0,
-      20.0,
-      None,
-    ),
-  )
-  check_tool(
-    "voxels_to_mesh",
-    client.voxels_to_mesh("sphere1", Some("sphereMesh")),
-  )
-  check_tool(
-    "mesh_to_voxels",
-    client.mesh_to_voxels("sphereMesh", Some("sphereVox2")),
-  )
-  check_tool(
-    "mesh_transform",
-    client.mesh_transform(
-      "sphereMesh",
-      Some(2.0),
-      Some(50.0),
-      None,
-      None,
-      Some("mesh2x"),
-    ),
-  )
-  check_tool(
-    "mesh_mirror",
-    client.mesh_mirror(
-      "sphereMesh",
-      0.0,
-      0.0,
-      0.0,
-      1.0,
-      0.0,
-      0.0,
-      Some("meshMir"),
-    ),
-  )
-  check_tool("mesh_append", client.mesh_append("mesh1", "mesh2x"))
 
   // --- Query ---
   println("")
   println("--- Query ---")
-  check_tool("get_bounding_box", client.get_bounding_box("sphere1"))
-  check_tool("get_volume", client.get_volume("sphere1"))
-  check_tool("get_mesh_info", client.get_mesh_info("sphereMesh"))
-  check_tool(
-    "point_inside(center)",
-    client.point_inside("sphere1", 0.0, 0.0, 0.0),
+  let bb = sphere1.bounding_box()
+  println(
+    "  bbox min=(\{bb.min.x},\{bb.min.y},\{bb.min.z}) max=(\{bb.max.x},\{bb.max.y},\{bb.max.z})",
   )
-  check_tool(
-    "point_inside(outside)",
-    client.point_inside("sphere1", 100.0, 0.0, 0.0),
-  )
-  check_tool("surface_normal", client.surface_normal("sphere1", 30.0, 0.0, 0.0))
-  check_tool("closest_point", client.closest_point("sphere1", 50.0, 0.0, 0.0))
-  check_tool(
-    "ray_cast",
-    client.ray_cast("sphere1", 100.0, 0.0, 0.0, -1.0, 0.0, 0.0),
-  )
-  check_tool(
-    "measure_thickness",
-    client.measure_thickness("sphere1", 0.0, 0.0, 0.0, 1.0, 0.0, 0.0),
-  )
-  check_tool("get_voxel_dimensions", client.get_voxel_dimensions("sphere1"))
-  check_tool("voxels_is_empty", client.voxels_is_empty("sphere1"))
-  check_tool("voxels_mem_usage", client.voxels_mem_usage("sphere1"))
-  check_tool(
-    "duplicate_object",
-    client.duplicate_object("sphere1", Some("sphereDup")),
-  )
-  check_tool("voxels_is_equal", client.voxels_is_equal("sphere1", "sphereDup"))
-  check_tool("list_objects", client.list_objects())
+  let vol = sphere1.volume()
+  println("  volume=\{vol}")
+  let inside_center = sphere1.is_inside(@pk.Vec3::new(0.0, 0.0, 0.0))
+  println("  point_inside(center)=\{inside_center}")
+  let inside_outside = sphere1.is_inside(@pk.Vec3::new(100.0, 0.0, 0.0))
+  println("  point_inside(outside)=\{inside_outside}")
+  let normal = sphere1.surface_normal(@pk.Vec3::new(30.0, 0.0, 0.0))
+  println("  surface_normal=\{normal.x}, \{normal.y}, \{normal.z}")
+  match sphere1.closest_point(@pk.Vec3::new(50.0, 0.0, 0.0)) {
+    Some(p) => println("  closest_point=(\{p.x}, \{p.y}, \{p.z})")
+    None => println("  closest_point=None")
+  }
+  match
+    sphere1.ray_cast(
+      @pk.Vec3::new(100.0, 0.0, 0.0),
+      @pk.Vec3::new(-1.0, 0.0, 0.0),
+    ) {
+    Some(p) => println("  ray_cast=(\{p.x}, \{p.y}, \{p.z})")
+    None => println("  ray_cast=None")
+  }
+  let (ox, oy, oz, sx, sy, sz) = sphere1.voxel_dimensions()
+  println("  voxel_dims: origin=(\{ox},\{oy},\{oz}) size=(\{sx},\{sy},\{sz})")
+  let sphere_dup = sphere1.copy()
+  let is_equal = sphere1.is_equal(sphere_dup)
+  println("  voxels_is_equal=\{is_equal}")
+  let diag = sphere1.diagnose()
+  let diag_short = if diag.length() > 80 {
+    diag[:80].to_owned() + "..."
+  } else {
+    diag
+  }
+  println("  diagnose: " + diag_short)
+  let mem = sphere1.mem_usage()
+  println("  mem_usage=\{mem}")
+  let vox_size = sphere1.voxel_size()
+  println("  voxel_size=\{vox_size}")
 
   // --- I/O ---
   println("")
   println("--- I/O ---")
-  check_tool(
-    "save_stl",
-    client.save_stl("sphereMesh", outdir + "/sphere.stl", None),
-  )
-  check_tool(
-    "save_vdb",
-    client.save_vdb("sphere1", outdir + "/sphere.vdb", Some("myField")),
-  )
-  check_tool("list_vdb_fields", client.list_vdb_fields(outdir + "/sphere.vdb"))
-  check_tool(
-    "load_vdb",
-    client.load_vdb(outdir + "/sphere.vdb", Some("myField"), Some("loadedVox")),
-  )
-  check_tool(
-    "save_cli",
-    client.save_cli("sphere1", outdir + "/sphere.cli", Some(2.0), None, None),
-  )
-  check_tool(
-    "save_svg",
-    client.save_svg("sphere1", outdir + "/sphere.svg", Some(2.0)),
-  )
+  let stl_path = outdir + "/sphere.stl"
+  if sphere_mesh.save_stl(stl_path) {
+    println("  -> " + stl_path)
+  } else {
+    println("  ERROR: failed to write STL")
+  }
+  let vdb_path = outdir + "/sphere.vdb"
+  let vdb = @pk.new_vdb_file()
+  let _ = vdb.add_voxels("myField", sphere1)
+  if vdb.save_to_file(vdb_path) {
+    println("  -> " + vdb_path)
+  } else {
+    println("  ERROR: failed to save VDB")
+  }
+  let fc = vdb.field_count()
+  println("  VDB field_count=\{fc}")
+  for i in 0..<fc {
+    let name = vdb.get_field_name(i)
+    let ftype = vdb.field_type(i)
+    let type_str = match ftype {
+      0 => "voxels"
+      1 => "scalar"
+      2 => "vector"
+      _ => "unknown"
+    }
+    println("  field[\{i}]: \{name} (type=\{type_str})")
+  }
+  vdb.destroy()
+  let vdb2 = @pk.vdb_file_from_path(vdb_path)
+  if vdb2.is_valid() {
+    let loaded_vox = vdb2.get_voxels(0)
+    println("  loaded volume=\{loaded_vox.volume()}")
+    loaded_vox.destroy()
+  }
+  vdb2.destroy()
 
-  // --- Render ---
+  // --- ScalarField ---
   println("")
-  println("--- Render ---")
-  check_tool(
-    "render_to_image",
-    client.render_to_image(
-      "sphere1",
-      outdir + "/sphere.png",
-      Some(600),
-      Some(400),
-      None,
-      None,
-    ),
+  println("--- ScalarField ---")
+  let sf = @pk.new_scalar_field()
+  let pt = @pk.Vec3::new(1.0, 2.0, 3.0)
+  sf.set_value(pt, 42.0)
+  match sf.get_value(pt) {
+    Some(v) => println("  scalar get=\{v}")
+    None => println("  scalar get=None")
+  }
+  let sf2 = @pk.scalar_field_from_voxels(sphere1)
+  println("  sf2 valid=\{sf2.is_valid()}")
+  sf.destroy()
+  sf2.destroy()
+
+  // --- VectorField ---
+  println("")
+  println("--- VectorField ---")
+  let vf = @pk.new_vector_field()
+  let pt2 = @pk.Vec3::new(1.0, 2.0, 3.0)
+  let val = @pk.Vec3::new(4.0, 5.0, 6.0)
+  vf.set_value(pt2, val)
+  match vf.get_value(pt2) {
+    Some(v) => println("  vector get=(\{v.x},\{v.y},\{v.z})")
+    None => println("  vector get=None")
+  }
+  let vf2 = @pk.vector_field_from_voxels(sphere1)
+  println("  vf2 valid=\{vf2.is_valid()}")
+  vf.destroy()
+  vf2.destroy()
+
+  // --- Metadata ---
+  println("")
+  println("--- Metadata ---")
+  let meta = @pk.metadata_from_voxels(sphere1)
+  println("  meta count=\{meta.count()}")
+  meta.set_string("key1", "hello")
+  meta.set_float("pi", 3.14159)
+  meta.set_vector("vec", @pk.Vec3::new(1.0, 2.0, 3.0))
+  println("  meta count after set=\{meta.count()}")
+  match meta.get_string("key1") {
+    Some(s) => println("  get_string(key1)=\{s}")
+    None => println("  get_string(key1)=None")
+  }
+  match meta.get_float("pi") {
+    Some(f) => println("  get_float(pi)=\{f}")
+    None => println("  get_float(pi)=None")
+  }
+  match meta.get_vector("vec") {
+    Some(v) => println("  get_vector(vec)=(\{v.x},\{v.y},\{v.z})")
+    None => println("  get_vector(vec)=None")
+  }
+  meta.remove("key1")
+  println("  meta count after remove=\{meta.count()}")
+  meta.destroy()
+
+  // --- PolyLine ---
+  println("")
+  println("--- PolyLine ---")
+  let color = @pk.ColorFloat::new(1.0, 0.0, 0.0, 1.0)
+  let pl = @pk.new_polyline(color)
+  let _ = pl.add_vertex(@pk.Vec3::new(0.0, 0.0, 0.0))
+  let _ = pl.add_vertex(@pk.Vec3::new(10.0, 0.0, 0.0))
+  println("  polyline verts=\{pl.vertex_count()}")
+  let got_color = pl.get_color()
+  println(
+    "  polyline color=(\{got_color.r},\{got_color.g},\{got_color.b},\{got_color.a})",
   )
-  check_tool(
-    "render_slice",
-    client.render_slice("sphere1", 0.0, outdir + "/slice_z0.png", None),
-  )
+  pl.destroy()
+
+  // --- Memory stats ---
+  println("")
+  println("--- Memory stats ---")
+  println("  meshes_allocated=\{@pk.meshes_allocated()}")
+  println("  voxels_allocated=\{@pk.voxels_allocated()}")
+  println("  lattices_allocated=\{@pk.lattices_allocated()}")
+  println("  polylines_allocated=\{@pk.polylines_allocated()}")
+  println("  vdb_files_allocated=\{@pk.vdb_files_allocated()}")
+  println("  scalar_fields_allocated=\{@pk.scalar_fields_allocated()}")
+  println("  vector_fields_allocated=\{@pk.vector_fields_allocated()}")
+
+  // --- Coordinate conversion ---
+  println("")
+  println("--- Coordinate conversion ---")
+  let mm_pt = @pk.Vec3::new(10.0, 20.0, 30.0)
+  let vox_pt = @pk.mm_to_voxels(mm_pt)
+  println("  mm_to_voxels(10,20,30)=(\{vox_pt.x},\{vox_pt.y},\{vox_pt.z})")
+  let back = @pk.voxels_to_mm(vox_pt)
+  println("  voxels_to_mm back=(\{back.x},\{back.y},\{back.z})")
 
   // --- Cleanup ---
   println("")
   println("--- Cleanup ---")
-  check_tool("delete_object", client.delete_object("box1"))
-  check_tool(
-    "delete_objects(batch)",
-    client.delete_objects(["cyl1", "cap1", "torus1"], None),
-  )
-  check_tool(
-    "delete_objects(keepOnly)",
-    client.delete_objects(["sphere1"], Some(true)),
-  )
+  vox_empty.destroy()
+  union1.destroy()
+  sub1.destroy()
+  inter1.destroy()
+  combined1.destroy()
+  sub_all1.destroy()
+  offset1.destroy()
+  doff1.destroy()
+  shell1.destroy()
+  proj1.destroy()
+  lat_vox1.destroy()
+  mesh1.destroy()
+  sphere_mesh.destroy()
+  sphere_vox2.destroy()
+  sphere_dup.destroy()
 
   // --- Shutdown ---
   println("")
   println("--- Shutdown ---")
-  let _ = client.picogk_shutdown()
-  client.close()
+  @pk.shutdown()
+  println("  shutdown OK")
 
   println("")
-  println("=== All 62 tools exercised successfully! ===")
-}
-
-///|
-/// check_tool calls a tool, checks for errors, and prints a truncated result.
-fn check_tool(label : String, result : String) -> Unit {
-  let truncated = if result.length() > 80 {
-    result[:80].to_owned() + "..."
-  } else {
-    result
-  }
-  println("  OK: " + label + " -> " + truncated)
+  println("=== FFI API exercise complete! ===")
 }

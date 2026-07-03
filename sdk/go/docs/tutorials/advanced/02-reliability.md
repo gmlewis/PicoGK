@@ -2,106 +2,138 @@
 
 ## Error handling
 
-The Go SDK uses Go's standard error-return pattern. `client.Do(cmd)` returns
-`(label, result string, err error)`. `client.Must(cmd)` wraps this and calls
-`log.Fatal` on error — convenient for examples, but in production code you
-should check the error:
+The FFI SDK uses Go-native error handling. Functions that can fail return
+an `error` (e.g. `picogkffi.Init`). Operations on invalid objects **panic**
+rather than return an error — the idiomatic way to handle that is a
+`recover()` guard (shown below). For one-shot programs, letting the panic
+crash is fine and produces a clear stack trace.
 
 ```go
-    label, result, err := client.Do(picogk.CreateSphere{X: 0, Y: 0, Z: 0, Radius: 10, ID: "ball"})
-    if err != nil {
-        return fmt.Errorf("create sphere: %w", err)
+    // Initialization returns an error:
+    if err := picogkffi.InitWithSize(0.2); err != nil {
+        return fmt.Errorf("picogkffi init: %w", err)
     }
-    fmt.Printf("%s -> %s\n", label, result)
+    defer picogkffi.Shutdown()
 ```
 
 ## The never-abort contract
 
-PicoGK's native runtime is designed to never abort the process on bad input.
-C++/OpenVDB exceptions are caught by the MCP server and returned as JSON-RPC
-error responses. The Go SDK surfaces these as `error` return values — your
-program stays alive.
+PicoGK's native runtime is designed to never abort the process on bad
+input. The PicoGK native runtime never aborts on bad input; errors are
+returned as Go errors or panics that can be recovered. The FFI SDK surfaces
+these as:
+
+- **Go `error`** for operations that report failure gracefully
+  (initialization, file I/O).
+- **Go `panic`** for invalid object handles, NaN/infinite parameters, or
+  operations on a destroyed object. A `recover()` guard turns these into
+  handled errors.
 
 Common error scenarios:
 
-- **Invalid object ID**: referencing an object that doesn't exist (deleted,
-  never created, or invalidated by `Shutdown`).
-- **Empty intersection**: `BooleanIntersect` of non-overlapping volumes
-  produces an empty result. Check with `VoxelsIsEmpty` if needed.
-- **File not found**: `LoadVDB` or `MeshFromSTL` with a non-existent path.
+- **Destroyed object**: calling a method on an object whose `Destroy()` was
+  already called (the handle is zeroed). This panics.
+- **Empty intersection**: `BoolIntersect` of non-overlapping volumes
+  produces an empty result. Check with `vox.IsEmpty()` if needed.
+- **File not found**: `picogkffi.LoadVDB` or mesh loading with a
+  non-existent path returns an error.
 - **Invalid parameters**: NaN or infinite values in coordinates/radii are
-  rejected by the native runtime.
+  rejected by the native runtime (panic).
+
+## Recovering from panics
+
+Wrap risky operations in a deferred `recover()` to convert panics into
+handled errors:
+
+```go
+    func safeSubtract(a, b *picogkffi.Voxels) (result *picogkffi.Voxels, err error) {
+        defer func() {
+            if r := recover(); r != nil {
+                err = fmt.Errorf("boolean subtract failed: %v", r)
+                if result != nil {
+                    result.Destroy()
+                    result = nil
+                }
+            }
+        }()
+        result = a.Sub(b)
+        return result, nil
+    }
+```
 
 ## Object lifetimes
 
-Objects live in the MCP server's memory. They persist until:
-
-1. You delete them (`DeleteObject`, `DeleteObjects`).
-2. You call `Shutdown` (invalidates everything).
-3. You close the client (`client.Close()` kills the subprocess).
-
-There is no explicit "close" per object — deletion is the cleanup mechanism.
+Objects live in native memory until `Destroy()` is called. There is no
+server, no subprocess, and no garbage collector tracking them — you own
+the lifecycle. Use `defer obj.Destroy()` for automatic cleanup:
 
 ```go
     // Create and use:
-    do(picogk.CreateSphere{X: 0, Y: 0, Z: 0, Radius: 5, ID: "temp"})
+    temp := picogkffi.NewSphere(picogkffi.Vec3{0, 0, 0}, 5)
+    defer temp.Destroy()
 
     // Use it...
+    fmt.Println(temp.Volume())
 
-    // Clean up:
-    do(picogk.DeleteObject{ObjectID: "temp"})
-
-    // Referencing it now will return an error:
-    _, _, err := client.Do(picogk.GetVolume{ObjectID: "temp"})
-    // err will be non-nil
+    // After Destroy() (or when defer runs at function return), the handle
+    // is zeroed. Calling methods on it will panic.
 ```
+
+The handle is set to zero (`h == 0`) inside `Destroy()`, and `IsValid()`
+returns false afterwards. Double-`Destroy()` is safe (the second call is a
+no-op because the handle is already zero).
 
 ## Resource cleanup pattern
 
 ```go
-func buildPart(client *picogk.Client) (string, error) {
-    // Create temporary objects.
-    if _, _, err := client.Do(picogk.CreateSphere{X: 0, Y: 0, Z: 0, Radius: 10, ID: "body"}); err != nil {
-        return "", err
-    }
-    if _, _, err := client.Do(picogk.CreateSphere{X: 6, Y: 0, Z: 0, Radius: 6, ID: "hole"}); err != nil {
-        return "", err
-    }
-    if _, _, err := client.Do(picogk.BooleanSubtract{A: "body", B: "hole", ID: "part"}); err != nil {
-        return "", err
+    func buildPart() (*picogkffi.Voxels, error) {
+        // Create temporary objects — defer Destroy cleans them up
+        // automatically when this function returns.
+        body := picogkffi.NewSphere(picogkffi.Vec3{0, 0, 0}, 10)
+        defer body.Destroy()
+
+        hole := picogkffi.NewSphere(picogkffi.Vec3{6, 0, 0}, 6)
+        defer hole.Destroy()
+
+        // The result is a *new* object (Sub copies). The caller owns it
+        // and must Destroy() it when done.
+        part := body.Sub(hole)
+        return part, nil
     }
 
-    // Clean up intermediates, keep only the result.
-    client.Must(picogk.DeleteObjects{ObjectIDs: []string{"body", "hole"}})
+    func main() {
+        picogkffi.InitWithSize(0.2)
+        defer picogkffi.Shutdown()
 
-    return "part", nil
-}
+        part, err := buildPart()
+        if err != nil {
+            log.Fatal(err)
+        }
+        defer part.Destroy() // caller owns the result
+
+        fmt.Println(part.Volume())
+    }
 ```
 
-## Using `KeepOnly` for bulk cleanup
-
-`DeleteObjects` with `KeepOnly: picogk.Ptr(true)` deletes **everything except** the
-listed objects — useful for a final cleanup that preserves only the output:
-
-```go
-    // ... many intermediate objects created ...
-
-    // Keep only the final result:
-    do(picogk.DeleteObjects{ObjectIDs: []string{"finalPart"}, KeepOnly: picogk.Ptr(true)})
-```
+Note the ownership rule: `Sub`, `Add`, `Intersect`, and `Copy` return a
+**new** object. The caller must `Destroy()` the result (and the inputs,
+via their own `defer`). This is the same rule as `os.Create` — the caller
+closes what it receives.
 
 ## Checking for empty results
 
-After a boolean intersect or a subtract that might remove all material, check
-emptiness:
+After a boolean intersect or a subtract that might remove all material,
+check emptiness:
 
 ```go
-    do(picogk.BooleanIntersect{A: "a", B: "b", ID: "result"})
-    _, emptyStr := client.Must(picogk.VoxelsIsEmpty{ObjectID: "result"})
-    if emptyStr == "true" {
+    result := a.Intersect(b)
+    defer result.Destroy()
+    if result.IsEmpty() {
         log.Println("warning: intersection produced no volume")
     }
 ```
+
+`IsEmpty()` returns a plain `bool` — no error to inspect.
 
 ## Next steps
 

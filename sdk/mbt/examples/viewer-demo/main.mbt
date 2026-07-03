@@ -1,64 +1,71 @@
 ///|
-/// Headless render demo: build a hollow shelled part and render it to a PNG.
+/// Viewer demo: build a hollow shelled part, render it to a PNG via the native Viewer,
+/// and also export it as STL.
 ///
 /// This is a MoonBit port of the PicoPie Python example viewer_demo.py.
-/// The MoonBit MCP SDK does not include an interactive OpenGL viewer.
-/// Instead, this example exercises the headless render_to_image tool,
-/// which produces a PNG via an isometric projection with Lambertian shading.
+/// Uses the picogkffi package for direct in-process FFI calls.
+/// The native OpenGL Viewer requires a display (works on macOS with XQuartz).
 ///
-/// Run:  moon run .  (from the sdk/mbt/examples/viewer-demo directory)
-async fn main {
-  let outpath = "/tmp/mbt-picogk-viewer/viewer_demo.png"
+/// Run:  moon run . --target native
+fn main {
+  let outdir = "/tmp/mbt-picogk-viewer"
 
-  println("=== Viewer Demo (MoonBit) ===")
+  println("=== Viewer Demo (MoonBit FFI) ===")
+  println("Output dir: " + outdir)
+  println("")
 
-  let client = @picogk.new_client("")
-
-  check_tool("picogk_init", client.picogk_init(Some(0.2)))
+  match @pk.init_with_size(0.2) {
+    Ok(_) => ()
+    Err(e) => {
+      println("Failed to init PicoGK: " + e)
+      return
+    }
+  }
+  println("  PicoGK version: " + @pk.version())
 
   // A hollow shell with a bite taken out, so the wall is visible.
-  check_tool(
-    "create_sphere(body)",
-    client.create_sphere(0.0, 0.0, 0.0, 12.0, Some("body")),
-  )
-  check_tool(
-    "create_sphere(bite)",
-    client.create_sphere(8.0, 0.0, 0.0, 7.0, Some("bite")),
-  )
-  check_tool(
-    "boolean_subtract",
-    client.boolean_subtract("body", "bite", Some("part")),
-  )
-  check_tool("shell", client.shell("part", 1.5, 0.0, None, Some("shelled")))
+  let body = @pk.new_sphere(@pk.Vec3::new(0.0, 0.0, 0.0), 12.0)
+  let bite = @pk.new_sphere(@pk.Vec3::new(8.0, 0.0, 0.0), 7.0)
+  let part = body.sub(bite)
+  bite.destroy()
+  body.destroy()
+  part.shell(1.5)
 
-  // Headless render to PNG.
-  check_tool(
-    "render_to_image",
-    client.render_to_image(
-      "shelled",
-      outpath,
-      Some(1280),
-      Some(960),
-      Some("#292933"),
-      Some("#5999e6"),
-    ),
-  )
+  let mesh = part.to_mesh()
+  println("  mesh: \{mesh.vertex_count()} verts, \{mesh.triangle_count()} tris")
 
-  println("wrote " + outpath)
-  println("")
-  println("(Interactive OpenGL viewer not available in the MoonBit MCP SDK.)")
-
-  let _ = client.picogk_shutdown()
-  client.close()
-}
-
-///|
-/// check_tool calls a tool, checks for errors, and prints a truncated result.
-fn check_tool(label : String, result : String) -> Unit {
-  let truncated = if result.length() > 80 {
-    result[:80].to_owned() + "..."
+  // Export STL
+  let stl_path = outdir + "/viewer_demo.stl"
+  if mesh.save_stl(stl_path) {
+    println("  -> " + stl_path)
   } else {
-    result
+    println("  ERROR: failed to write STL (is the output directory created?)")
   }
-  println("  OK: " + label + " -> " + truncated)
+
+  // Try to render a PNG via the native ViewerEx (with camera callbacks)
+  let png_path = outdir + "/viewer_demo.png"
+  let v = @pk.new_viewer_ex(
+    "PicoGK Viewer Demo", 1280, 960, 0.16, 0.16, 0.20, 1.0,
+  )
+  if v.is_valid() {
+    println("  Viewer created, rendering...")
+    v.add_voxels(0, part)
+    v.set_group_material(0, @pk.ColorFloat::new(0.35, 0.6, 0.9, 1.0), 0.1, 0.5)
+    if v.screenshot_png(png_path, 15) {
+      println("  -> " + png_path)
+    } else {
+      println("  ERROR: failed to write PNG")
+    }
+    v.request_close()
+    v.destroy()
+  } else {
+    println("  (Viewer not available — no display. STL exported only.)")
+  }
+
+  mesh.destroy()
+  part.destroy()
+
+  println("")
+  println("done.")
+  @pk.shutdown()
 }

@@ -1,23 +1,17 @@
-// hello-picogk: PicoGK MCP SDK for MoonBit
-// DO NOT EDIT — auto-generated
+// hello-picogk: PicoGK FFI example for MoonBit
 
-name = "gmlewis/picogk-hello-example"
+name = "gmlewis/picogk-hello-picogk-example"
 
 version = "0.1.0"
 
 license = "Apache-2.0"
 
-description = "Hello PicoGK example for MoonBit"
+description = "hello-picogk example for MoonBit using FFI"
 
 preferred_target = "native"
 
 supported_targets = "+native"
 
 import {
-  "gmlewis/picogk@0.1.0",
-  "moonbitlang/async@0.19.2",
-}
-
-replace {
-  "gmlewis/picogk@0.1.0" = "../../picogk",
+  "gmlewis/picogkffi@0.1.0",
 }

@@ -1,10 +1,10 @@
 // full-api example package
-// DO NOT EDIT — auto-generated
 
 import {
-  "gmlewis/picogk",
-  "moonbitlang/async",
+  "gmlewis/picogkffi" @pk,
 }
+
+supported_targets = "+native"
 
 options(
   "is-main": true,

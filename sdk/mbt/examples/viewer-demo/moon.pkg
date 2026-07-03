@@ -1,9 +1,10 @@
 // viewer-demo example package
 
 import {
-  "gmlewis/picogk",
-  "moonbitlang/async",
+  "gmlewis/picogkffi" @pk,
 }
+
+supported_targets = "+native"
 
 options(
   "is-main": true,

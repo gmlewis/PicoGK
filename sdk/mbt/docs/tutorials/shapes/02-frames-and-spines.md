@@ -2,65 +2,112 @@
 
 ## Overview
 
-The Python binding's `picogk.shapes` library provides `LocalFrame`,
-`Frames`, `ControlPointSpline`, and spined (swept) shapes that follow a
-curve while carrying a field of local coordinate frames.
+The `@gmlewis/picogkshapes` package provides `LocalFrame`, `Frames`,
+`ControlPointSpline`, and swept shapes that follow a spine curve while
+carrying a field of local coordinate frames.
 
-The MoonBit MCP SDK does not include these high-level constructs. This tutorial
-shows how to approximate swept shapes using the available primitives and
-transforms.
+## LocalFrame
 
-## Positioning without LocalFrame
-
-In the Python binding, shapes are placed via a `LocalFrame(position, local_z,
-local_x)`. In the MoonBit SDK, you set position and orientation directly on the
-primitive or use `transform_voxels`:
+`LocalFrame` defines a position and an orientation (local Z axis, with
+local X and Y computed automatically):
 
 ```moonbit
-  // Python:  Sphere(LocalFrame(position=(10, 0, 0)), radius=10)
-  // MoonBit:
-  let _ = client.create_sphere(10.0, 0.0, 0.0, 10.0, Some("sphere"))
+///|
+import "@gmlewis/picogkshapes" as shapes
 
-  // Python:  Cylinder(LocalFrame((0,0,0), local_z=(0,1,0)), length=30, radius=8)
-  // MoonBit: cylinder along Y axis
-  let _ = client.create_cylinder(0.0, -15.0, 0.0, 8.0, 30.0, Some(0.0), Some(1.0), Some(0.0), Some("cylY"))
+fn main {
+  @pk@pk@pk.init_with_size(0.5).unwrap()
+  defer @pk@pk@pk.shutdown()
+
+  // Frame at origin, Z-up (default):
+  let origin = shapes.new_local_frame(shapes.vec3(0.0, 0.0, 0.0), None)
+
+  // Frame at (10, 0, 0) with Z pointing along Y:
+  let tilted = shapes.new_local_frame(
+    shapes.vec3(10.0, 0.0, 0.0),
+    Some(shapes.vec3(0.0, 1.0, 0.0)),
+  )
+
+  // Point in local coordinates to world:
+  let world_pt = origin.point_to_world(shapes.vec3(5.0, 0.0, 10.0))
+  println("world point: " + world_pt.x.to_string() + ", " + world_pt.y.to_string() + ", " + world_pt.z.to_string())
+
+  // Cylinder along Y axis using a frame:
+  let cyl = (shapes@pk@pk.new_cylinder(
+    Some(tilted),
+    30.0,
+    fn(_phi : Double, _lr : Double) { 8.0 },
+  )).to_voxels()
+
+  cyl.destroy()
+}
 ```
 
-## Swept shapes (approximation)
+## ControlPointSpline
 
-A swept shape follows a spine curve with a varying cross-section. Without
-the `Frames` and `ControlPointSpline` types, you can approximate a sweep by:
-
-1. **Sampling the curve in MoonBit** (e.g. a Catmull-Rom spline).
-2. **Creating cross-sections at each sample point** (spheres + capsules).
-3. **Unioning them together**.
+`ControlPointSpline` creates smooth B-spline curves through control points:
 
 ```moonbit
-  // Approximate a bent pipe by placing spheres along a curve
-  // and connecting them with capsules, then unioning.
-  let _ = client.create_sphere(0.0, 0.0, 0.0, 6.0, Some("p0"))
-  let _ = client.create_sphere(0.0, 20.0, 0.0, 6.0, Some("p1"))
-  let _ = client.create_sphere(0.0, 35.0, 10.0, 6.0, Some("p2"))
-  let _ = client.create_sphere(0.0, 45.0, 25.0, 6.0, Some("p3"))
-
-  let _ = client.create_capsule(0.0, 0.0, 0.0, 0.0, 20.0, 0.0, 6.0, Some("c0"))
-  let _ = client.create_capsule(0.0, 20.0, 0.0, 0.0, 35.0, 10.0, 6.0, Some("c1"))
-  let _ = client.create_capsule(0.0, 35.0, 10.0, 0.0, 45.0, 25.0, 6.0, Some("c2"))
-
-  let _ = client.boolean_add_all(["p0", "p1", "p2", "p3", "c0", "c1", "c2"], Some("bentPipe"))
+  // Define a spine curve:
+  let ctrl = [
+    shapes.vec3(0.0, 0.0, 0.0),
+    shapes.vec3(0.0, 40.0, 0.0),
+    shapes.vec3(0.0, 50.0, 20.0),
+    shapes.vec3(0.0, 60.0, 60.0),
+  ]
+  let spline = shapes.new_control_point_spline(ctrl, 2, false)
+  let pts = spline.points(100)
 ```
 
-## Circular pattern (polar array)
+## Swept shapes with Frames
 
-The `circular_pattern` tool creates rotated copies around an axis — useful
-for bolt-hole patterns, radial struts, etc.:
+`Frames` aligns a local coordinate frame along a spine curve, enabling
+pipes and cylinders that follow a path:
 
 ```moonbit
-  // 6 copies of "strut" around the Z axis, 360° total:
-  let _ = client.circular_pattern("strut", 6, Some(360.0),
-    Some(0.0), Some(0.0), Some(0.0),  // center
-    Some(0.0), Some(0.0), Some(1.0),  // axis (Z)
-    Some("pattern"))
+  // Create frames along a spline:
+  let fs = shapes.frames_aligned_to_x(pts, shapes.vec3(0.0, 0.0, 1.0))
+
+  // Swept pipe along the spine:
+  let pipe = shapes.new_pipe_with_frames(
+    None,
+    60.0,  // total length
+    fn(_phi : Double, _lr : Double) { 3.0 },  // inner radius
+    fn(_phi : Double, _lr : Double) { 6.0 },  // outer radius
+    fs,
+  )
+  let pipe_vox = pipe.to_voxels()
+```
+
+## LatticePipe
+
+`LatticePipe` follows a spine with lattice beams — useful for support
+structures with tear-drop cross-sections:
+
+```moonbit
+  // Lattice pipe along a spine:
+  let lat_pipe = shapes.new_lattice_pipe_with_frames(
+    None,
+    60.0,
+    fn(lr : Double) { 3.0 + 2.0 * lr },
+    fs,
+  )
+  let lat_vox = lat_pipe.to_voxels()
+```
+
+## LatticeManifold
+
+`LatticeManifold` creates lattice pipes with tear-drop tips for
+3D-printable overhang support:
+
+```moonbit
+  let manifold = shapes.new_lattice_manifold(
+    shapes.new_local_frame(shapes.vec3(0.0, 0.0, 0.0), Some(shapes.vec3(0.0, 0.0, 1.0))),
+    20.0,   // length
+    5.0,    // radius
+    45.0,   // max overhang angle (degrees)
+  )
+  let man_vox = manifold.to_voxels()
 ```
 
 ## Next steps

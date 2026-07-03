@@ -1,0 +1,52 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "gmlewis/blender"
+
+import {
+  "moonbitlang/async/process",
+}
+
+// Values
+pub async fn new_client(String) -> Client
+
+// Errors
+
+// Types and methods
+pub struct Client {
+  pid : Int
+  stdin : @process.WriteToProcess
+  stdout : @process.ReadFromProcess
+  mut msg_id : Int
+}
+pub async fn Client::call_tool(Self, String, Map[String, Json]) -> String
+pub fn Client::close(Self) -> Unit
+pub async fn Client::execute_blender_code(Self, String) -> String
+pub async fn Client::execute_blender_code_for_cli(Self, String, String) -> String
+pub async fn Client::get_blendfile_summary_datablocks(Self) -> String
+pub async fn Client::get_blendfile_summary_datablocks_for_cli(Self, String) -> String
+pub async fn Client::get_blendfile_summary_missing_files(Self) -> String
+pub async fn Client::get_blendfile_summary_missing_files_for_cli(Self, String) -> String
+pub async fn Client::get_blendfile_summary_of_linked_libraries(Self) -> String
+pub async fn Client::get_blendfile_summary_of_linked_libraries_for_cli(Self, String) -> String
+pub async fn Client::get_blendfile_summary_path_info(Self) -> String
+pub async fn Client::get_blendfile_summary_path_info_for_cli(Self, String) -> String
+pub async fn Client::get_blendfile_summary_usage_guess(Self) -> String
+pub async fn Client::get_blendfile_summary_usage_guess_for_cli(Self, String) -> String
+pub async fn Client::get_object_detail_summary(Self, String) -> String
+pub async fn Client::get_objects_summary(Self) -> String
+pub async fn Client::get_python_api_docs(Self, String) -> String
+pub async fn Client::get_screenshot_of_area_as_image(Self, String, Int?) -> String
+pub async fn Client::get_screenshot_of_window_as_image(Self, Int?) -> String
+pub async fn Client::get_screenshot_of_window_as_json(Self) -> String
+pub async fn Client::jump_to_tab_by_name(Self, String) -> String
+pub async fn Client::jump_to_tab_by_space_type(Self, String, Bool?) -> String
+pub async fn Client::jump_to_view3d_object_by_name(Self, String, Bool?) -> String
+pub async fn Client::jump_to_view3d_object_data_by_name(Self, String, Bool?) -> String
+pub async fn Client::render_thumbnail_to_path(Self, String) -> String
+pub async fn Client::render_viewport_to_path(Self, String) -> String
+pub async fn Client::search_api_docs(Self, String, Int?, Int?, Int?) -> String
+pub async fn Client::search_manual_docs(Self, String, Int?, Int?, Int?) -> String
+
+// Type aliases
+
+// Traits
+
