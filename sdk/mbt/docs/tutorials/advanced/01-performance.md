@@ -2,17 +2,17 @@
 
 ## Voxel size dominates cost
 
-The voxel size (set at `picogk_init`) is the single biggest performance lever.
+The voxel size (set at `init_with_size`) is the single biggest performance lever.
 Cost scales with the number of voxels, which scales with the **surface
 area** divided by **voxel size squared**. Halving the voxel size roughly
 quadruples the compute time and memory.
 
 ```moonbit
   // Fast (coarse): 0.5mm — good for prototyping
-  let _ = client.picogk_init(Some(0.5))
+  @pk@pk@pk.init_with_size(0.5).unwrap()
 
   // Slow (fine): 0.1mm — use only for final output
-  let _ = client.picogk_init(Some(0.1))
+  @pk@pk@pk.init_with_size(0.1).unwrap()
 ```
 
 | Voxel size | Relative speed | Relative memory | Surface quality |
@@ -21,63 +21,62 @@ quadruples the compute time and memory.
 | 0.2mm | 1× | 1× | Good (default) |
 | 0.1mm | 1/25 | 25× | Very smooth |
 
-## Use primitives + booleans, not per-voxel callbacks
+## FFI: no process-boundary overhead
 
-The Python binding's `render_implicit_(sdf, bbox)` evaluates a Python callable
-once per voxel from native code — inherently slow. The MoonBit MCP SDK does not
-expose per-voxel SDF callbacks at all (the process-boundary overhead would be
-prohibitive).
+Unlike the MCP SDK (which communicates with a subprocess over JSON-RPC), the
+FFI SDK calls the native PicoGK library directly in-process. This means:
 
-Instead, build shapes from primitives and combine with booleans:
+1. **No per-call serialization overhead**: tool calls are native function calls.
+2. **No batching needed**: each operation is fast enough on its own.
+3. **Implicit SDF rendering works**: per-voxel C callbacks run at full native speed.
 
 ```moonbit
   // FAST: built-in primitives + boolean subtract
-  let _ = client.create_sphere(0.0, 0.0, 0.0, 12.0, Some("ball"))
-  let _ = client.create_capsule(-13.0, 0.0, 0.0, 13.0, 0.0, 0.0, 4.0, Some("bore"))
-  let _ = client.boolean_subtract("ball", "bore", Some("part"))
-```
-
-## MCP communication overhead
-
-Each tool call sends a JSON-RPC message to the MCP server subprocess and waits
-for the response. This means:
-
-1. **Batch operations**: prefer multi-object tools (`boolean_add_all`,
-   `boolean_subtract_all`, `delete_objects`) over looping single-object tools.
-2. **Avoid unnecessary queries**: each `get_volume`, `get_bounding_box`, etc.
-   is a round-trip. Cache results when possible.
-
-```moonbit
-  // GOOD: one call for multiple objects
-  let _ = client.boolean_add_all(["a", "b", "c", "d"], Some("all"))
-
-  // SLOWER: N individual calls
-  let _ = client.boolean_add("a", "b", Some("ab"))
-  let _ = client.boolean_add("ab", "c", Some("abc"))
-  let _ = client.boolean_add("abc", "d", Some("all"))
+  let ball = @pk@pk.new_sphere(@pk.Vec3::new(0.0, 0.0, 0.0), 12.0)
+  let bore = @pk@pk.new_capsule(
+    @pk.Vec3::new(-13.0, 0.0, 0.0),
+    @pk.Vec3::new(13.0, 0.0, 0.0),
+    4.0,
+    4.0,
+  )
+  let part = ball.sub(bore)
 ```
 
 ## Memory management
 
-Monitor memory usage with `voxels_mem_usage` and clean up intermediate
-objects with `delete_object` or `delete_objects`:
+The FFI SDK manages native memory. You **must** call `.destroy()` on objects
+when done, or memory will leak. `@pk@pk@pk.shutdown()` releases all remaining
+resources, but explicit cleanup is best practice for long-running programs:
 
 ```moonbit
-  // Check memory:
-  println(client.voxels_mem_usage("bigPart"))
+  // Check memory usage:
+  println("part memory: " + part.mem_usage().to_string() + " bytes")
 
   // Clean up intermediates:
-  let _ = client.delete_object("temp1")
-  let _ = client.delete_objects(["temp2", "temp3"], None)
+  bore.destroy()
+  ball.destroy()
+  // Keep only the final result.
+```
 
-  // Keep only the final result, delete everything else:
-  let _ = client.delete_objects(["finalPart"], Some(true))
+## `init_with_size` vs `init_library`
+
+`init_with_size` is the recommended entry point. It calls `init_library`
+internally and also records the voxel size for later use. `init_library`
+is the lower-level call that only initializes the library.
+
+```moonbit
+  // Recommended:
+  @pk@pk@pk.init_with_size(0.2).unwrap()
+
+  // Lower-level (you'd need to track voxel_size yourself):
+  @pk@pk.init_library(0.2).unwrap()
 ```
 
 ## Shutdown
 
-`picogk_shutdown` releases all native resources. All object references become
-invalid after this call. `client.close()` kills the subprocess.
+`@pk@pk@pk.shutdown()` releases all native resources. All object references become
+invalid after this call. Using `defer @pk@pk@pk.shutdown()` ensures cleanup even
+on errors.
 
 ## Next steps
 

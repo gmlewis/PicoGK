@@ -509,3 +509,6 @@ go.work
 _build
 .moonagent
 .mooncakes
+
+# Dear ImGui
+imgui.ini

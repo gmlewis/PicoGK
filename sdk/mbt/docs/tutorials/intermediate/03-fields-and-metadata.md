@@ -2,85 +2,110 @@
 
 ## Overview
 
-The Python PicoPie binding provides `ScalarField`, `VectorField`, and
-`Metadata` types for attaching per-voxel data and key/value annotations to
-voxel objects, all of which persist in OpenVDB files.
+The FFI SDK provides full access to `ScalarField`, `VectorField`, and `Metadata`
+types — these are **not available** in the MCP SDK. They allow attaching
+per-voxel data and key/value annotations to voxel objects, all of which persist
+in OpenVDB files.
 
-The MoonBit MCP SDK communicates with the PicoGK server over JSON-RPC and does
-not expose these types directly. The MCP tool set focuses on geometry
-(voxels, meshes, lattices) and file I/O (STL, VDB, CLI, SVG).
+## Scalar fields
 
-## What's available
-
-### VDB persistence (voxels only)
-
-The `save_vdb` and `load_vdb` tools persist and restore voxel geometry:
+A `ScalarField` maps voxel coordinates to floating-point values. You can create
+one from a voxel object to capture its SDF values:
 
 ```moonbit
 ///|
-async fn main {
-  let client = @picogk.new_client("")
-  let _ = client.picogk_init(Some(0.3))
 
-  // Build a part.
-  let _ = client.create_sphere(0.0, 0.0, 0.0, 10.0, Some("part"))
-  let _ = client.create_sphere(6.0, 0.0, 0.0, 6.0, Some("hole"))
-  let _ = client.boolean_subtract("part", "hole", Some("body"))
+fn main {
+  @pk@pk@pk.init_with_size(0.3).unwrap()
+  defer @pk@pk@pk.shutdown()
 
-  // Save to VDB.
-  let _ = client.save_vdb("body", "/tmp/body.vdb", Some("body"))
+  let part = @pk@pk.new_sphere(@pk.Vec3::new(0.0, 0.0, 0.0), 10.0)
 
-  // List fields.
-  println(client.list_vdb_fields("/tmp/body.vdb"))
+  // Create a scalar field from the voxel SDF:
+  let sf = @pk@pk.scalar_field_from_voxels(part)
 
-  // Reload.
-  let _ = client.load_vdb("/tmp/body.vdb", Some("body"), Some("loaded"))
+  // Set and get values at specific points:
+  sf.set_value(@pk.Vec3::new(0.0, 0.0, 0.0), 42.0)
+  let val = sf.get_value(@pk.Vec3::new(0.0, 0.0, 0.0))
+  println("scalar value: " + val.unwrap().to_string())
 
-  // Verify.
-  println("original: " + client.get_volume("body"))
-  println("loaded:   " + client.get_volume("loaded"))
+  // Build a scalar field with min/max mapping:
+  let sf2 = @pk@pk.scalar_field_build_from_voxels(part, 0.0, 100.0)
 
-  let _ = client.picogk_shutdown()
-  client.close()
+  // Get voxel dimensions:
+  let dims = sf2.voxel_dimensions()
+  println("dimensions: " + dims.0.to_string() + "x" + dims.3.to_string())
+
+  part.destroy(); sf.destroy(); sf2.destroy()
 }
 ```
 
-### Querying voxel properties
+## Vector fields
 
-While you can't attach arbitrary scalar/vector fields, you can query
-geometric properties:
+A `VectorField` maps voxel coordinates to 3D vectors:
 
 ```moonbit
-  // Volume and bounding box:
-  println(client.get_volume("body"))
+  // Create from voxels (surface normals scaled by a reference direction):
+  let vf = @pk@pk.vector_field_from_voxels(part)
 
-  // Voxel grid dimensions:
-  println(client.get_voxel_dimensions("body"))
+  // Build from voxels with explicit reference vector and scale:
+  let vf2 = @pk.vector_field_build_from_voxels(
+    part,
+    @pk.Vec3::new(0.0, 0.0, 1.0),
+    1.0,
+  )
 
-  // Memory usage:
-  println(client.voxels_mem_usage("body"))
+  // Set and get values:
+  vf.set_value(@pk.Vec3::new(5.0, 0.0, 0.0), @pk.Vec3::new(1.0, 0.0, 0.0))
+  let v = vf.get_value(@pk.Vec3::new(5.0, 0.0, 0.0))
 
-  // Is it empty?
-  println(client.voxels_is_empty("body"))
+  // Remove a value:
+  vf.remove_value(@pk.Vec3::new(5.0, 0.0, 0.0))
 
-  // Compare two objects:
-  println(client.voxels_is_equal("body", "loaded"))
+  vf.destroy(); vf2.destroy()
 ```
 
-## What's not available (vs. Python binding)
+## Metadata
 
-| Python (PicoPie) | MoonBit MCP SDK |
-|---|---|
-| `ScalarField.from_voxels(v)` | Not available |
-| `ScalarField.set((i,j,k), val)` | Not available |
-| `VectorField.from_voxels(v)` | Not available |
-| `Metadata.from_voxels(v)` | Not available |
-| `md["key"] = value` | Not available |
-| `save_vdb(path, body=v, heat=f)` | `save_vdb` saves one voxel field only |
+`Metadata` provides key/value annotations on voxel fields. It supports string,
+float, and vector values:
 
-To work with scalar/vector fields and metadata, use the Python PicoPie
-binding to generate the VDB file, then load the geometry via `load_vdb` in
-your MoonBit program.
+```moonbit
+  // Create metadata from a voxel object:
+  let meta = @pk@pk.metadata_from_voxels(part)
+
+  // Set values:
+  meta.set_string("author", "engineer")
+  meta.set_float("temperature", 250.5)
+  meta.set_vector("offset", @pk.Vec3::new(1.0, 2.0, 3.0))
+
+  // Get values:
+  println("author: " + meta.get_string("author").unwrap_or("(none)"))
+  println("temperature: " + meta.get_float("temperature").unwrap_or(-1.0).to_string())
+
+  // Query metadata:
+  println("count: " + meta.count().to_string())
+  println("type of 'author': " + meta.type_at("author").to_string())
+
+  // Remove a key:
+  meta.remove("offset")
+
+  meta.destroy()
+```
+
+## Saving fields to VDB
+
+You can save multiple fields (voxels, scalar fields, vector fields) in a
+single VDB file:
+
+```moonbit
+  let vdb = @pk@pk.new_vdb_file()
+  vdb.add_voxels("body", part)
+  vdb.add_scalar_field("temperature", sf2)
+  vdb.add_vector_field("flow", vf)
+  vdb.save_to_file("/tmp/multifield.vdb")
+  vdb.destroy()
+```
 
 ## Next steps
 

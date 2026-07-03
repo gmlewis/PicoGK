@@ -95,13 +95,31 @@ fn main {
   let sphere_stl = "sphere.stl"
   let gyroid_stl = "gyroid.stl"
   if box_mesh.save_stl(box_stl) {
-    println("  -> " + box_stl + "  (" + box_mesh.triangle_count().to_string() + " tris)")
+    println(
+      "  -> " +
+      box_stl +
+      "  (" +
+      box_mesh.triangle_count().to_string() +
+      " tris)",
+    )
   }
   if sphere_mesh.save_stl(sphere_stl) {
-    println("  -> " + sphere_stl + "  (" + sphere_mesh.triangle_count().to_string() + " tris)")
+    println(
+      "  -> " +
+      sphere_stl +
+      "  (" +
+      sphere_mesh.triangle_count().to_string() +
+      " tris)",
+    )
   }
   if gyroid_mesh.save_stl(gyroid_stl) {
-    println("  -> " + gyroid_stl + "  (" + gyroid_mesh.triangle_count().to_string() + " tris)")
+    println(
+      "  -> " +
+      gyroid_stl +
+      "  (" +
+      gyroid_mesh.triangle_count().to_string() +
+      " tris)",
+    )
   }
 
   // Generate the self-contained HTML file with inline JSON geometry.
@@ -137,6 +155,7 @@ fn main {
   @pk.shutdown()
 }
 
+///|
 /// generate_html creates a self-contained HTML file with a three.js viewer.
 /// Geometry is embedded as inline JSON (no external STL files needed).
 fn generate_html(
@@ -153,90 +172,84 @@ fn generate_html(
   let triangles_gyroid = mesh_to_json_int_array(gyroid_mesh.triangles())
 
   let geom_json =
-    "[{\"vertices\":" +
-    vertices_box +
-    ",\"triangles\":" +
-    triangles_box +
-    ",\"color\":5872102}," +
-    "{\"vertices\":" +
-    vertices_sphere +
-    ",\"triangles\":" +
-    triangles_sphere +
-    ",\"color\":15101019}," +
-    "{\"vertices\":" +
-    vertices_gyroid +
-    ",\"triangles\":" +
-    triangles_gyroid +
-    ",\"color\":7163499}]"
-
-  "<!DOCTYPE html>\n" +
-  "<html lang=\"en\">\n" +
-  "<head>\n" +
-  "<meta charset=\"utf-8\">\n" +
-  "<title>PicoGK Web Viewer Demo (MoonBit FFI)</title>\n" +
-  "<style>\n" +
-  "  body { margin: 0; background: #292933; overflow: hidden; }\n" +
-  "  #info { position: absolute; top: 10px; left: 10px; color: #ccc;\n" +
-  "          font-family: sans-serif; font-size: 13px; }\n" +
-  "  a { color: #5999e6; }\n" +
-  "</style>\n" +
-  "</head>\n" +
-  "<body>\n" +
-  "<div id=\"info\">PicoGK Web Viewer Demo (MoonBit FFI) — drag to orbit, scroll to zoom</div>\n" +
-  "<script type=\"importmap\">\n" +
-  "{\n" +
-  "  \"imports\": {\n" +
-  "    \"three\": \"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js\",\n" +
-  "    \"three/addons/\": \"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/\"\n" +
-  "  }\n" +
-  "}\n" +
-  "</script>\n" +
-  "<script type=\"module\">\n" +
-  "import * as THREE from 'three';\n" +
-  "import { OrbitControls } from 'three/addons/controls/OrbitControls.js';\n" +
-  "\n" +
-  "const scene = new THREE.Scene();\n" +
-  "scene.background = new THREE.Color(0x292933);\n" +
-  "\n" +
-  "const camera = new THREE.PerspectiveCamera(50, innerWidth/innerHeight, 0.1, 1000);\n" +
-  "camera.position.set(0, 0, 120);\n" +
-  "\n" +
-  "const renderer = new THREE.WebGLRenderer({antialias: true});\n" +
-  "renderer.setSize(innerWidth, innerHeight);\n" +
-  "document.body.appendChild(renderer.domElement);\n" +
-  "\n" +
-  "const controls = new OrbitControls(camera, renderer.domElement);\n" +
-  "\n" +
-  "scene.add(new THREE.AmbientLight(0x404040, 1.5));\n" +
-  "const dl = new THREE.DirectionalLight(0xffffff, 0.8);\n" +
-  "dl.position.set(50, 80, 60);\n" +
-  "scene.add(dl);\n" +
-  "\n" +
-  "const objects = " +
-  geom_json +
-  ";\n" +
-  "objects.forEach(o => {\n" +
-  "  const geo = new THREE.BufferGeometry();\n" +
-  "  geo.setAttribute('position', new THREE.Float32BufferAttribute(o.vertices, 3));\n" +
-  "  geo.setIndex(o.triangles);\n" +
-  "  geo.computeVertexNormals();\n" +
-  "  const mat = new THREE.MeshPhongMaterial({color: o.color, flatShading: false});\n" +
-  "  scene.add(new THREE.Mesh(geo, mat));\n" +
-  "});\n" +
-  "\n" +
-  "addEventListener('resize', () => {\n" +
-  "  camera.aspect = innerWidth / innerHeight;\n" +
-  "  camera.updateProjectionMatrix();\n" +
-  "  renderer.setSize(innerWidth, innerHeight);\n" +
-  "});\n" +
-  "\n" +
-  "function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); }\n" +
-  "animate();\n" +
-  "</script>\n" +
-  "</body>\n" +
-  "</html>"
+    $|[{"vertices":\{vertices_box}
+    $|,"triangles":\{triangles_box}
+    $|,"color":5872102},
+    $|{"vertices":\{vertices_sphere}
+    $|,"triangles":\{triangles_sphere}
+    $|,"color":15101019},
+    $|{"vertices":\{vertices_gyroid}
+    $|,"triangles":\{triangles_gyroid}
+    $|,"color":7163499}]
+  (
+    $|<!DOCTYPE html>
+    $|<html lang="en">
+    $|<head>
+    $|<meta charset="utf-8">
+    $|<title>PicoGK Web Viewer Demo (MoonBit FFI)</title>
+    $|<style>
+    $|  body { margin: 0; background: #292933; overflow: hidden; }
+    $|  #info { position: absolute; top: 10px; left: 10px; color: #ccc;
+    $|          font-family: sans-serif; font-size: 13px; }
+    $|  a { color: #5999e6; }
+    $|</style>
+    $|</head>
+    $|<body>
+    $|<div id="info">PicoGK Web Viewer Demo (MoonBit FFI) — drag to orbit, scroll to zoom</div>
+    $|<script type="importmap">
+    $|{
+    $|  "imports": {
+    $|    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    $|    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    $|  }
+    $|}
+    $|</script>
+    $|<script type="module">
+    $|import * as THREE from 'three';
+    $|import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    $|
+    $|const scene = new THREE.Scene();
+    $|scene.background = new THREE.Color(0x292933);
+    $|
+    $|const camera = new THREE.PerspectiveCamera(50, innerWidth/innerHeight, 0.1, 1000);
+    $|camera.position.set(0, 0, 120);
+    $|
+    $|const renderer = new THREE.WebGLRenderer({antialias: true});
+    $|renderer.setSize(innerWidth, innerHeight);
+    $|document.body.appendChild(renderer.domElement);
+    $|
+    $|const controls = new OrbitControls(camera, renderer.domElement);
+    $|
+    $|scene.add(new THREE.AmbientLight(0x404040, 1.5));
+    $|const dl = new THREE.DirectionalLight(0xffffff, 0.8);
+    $|dl.position.set(50, 80, 60);
+    $|scene.add(dl);
+    $|
+    $|const objects = \{geom_json};
+    $|objects.forEach(o => {
+    $|  const geo = new THREE.BufferGeometry();
+    $|  geo.setAttribute('position', new THREE.Float32BufferAttribute(o.vertices, 3));
+    $|  geo.setIndex(o.triangles);
+    $|  geo.computeVertexNormals();
+    $|  const mat = new THREE.MeshPhongMaterial({color: o.color, flatShading: false});
+    $|  scene.add(new THREE.Mesh(geo, mat));
+    $|});
+    $|
+    $|addEventListener('resize', () => {
+    $|  camera.aspect = innerWidth / innerHeight;
+    $|  camera.updateProjectionMatrix();
+    $|  renderer.setSize(innerWidth, innerHeight);
+    $|});
+    $|
+    $|function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); }
+    $|animate();
+    $|</script>
+    $|</body>
+    $|</html>
+  )
 }
 
+///|
 /// mesh_to_json_array converts a float array to a JSON array string.
 fn mesh_to_json_array(arr : Array[Double]) -> String {
   let mut result = "["
@@ -251,6 +264,7 @@ fn mesh_to_json_array(arr : Array[Double]) -> String {
   result + "]"
 }
 
+///|
 /// mesh_to_json_int_array converts an int array to a JSON array string.
 fn mesh_to_json_int_array(arr : Array[Int]) -> String {
   let mut result = "["

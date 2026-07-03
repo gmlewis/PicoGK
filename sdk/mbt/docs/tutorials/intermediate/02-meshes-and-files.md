@@ -6,66 +6,51 @@ Every voxel object can be converted to a mesh (marching cubes) and vice versa:
 
 ```moonbit
 ///|
-async fn main {
-  let client = @picogk.new_client("")
-  let _ = client.picogk_init(Some(0.3))
+
+fn main {
+  @pk@pk@pk.init_with_size(0.3).unwrap()
+  defer @pk@pk@pk.shutdown()
 
   // Voxels -> Mesh
-  let _ = client.create_sphere(0.0, 0.0, 0.0, 10.0, Some("part"))
-  let _ = client.voxels_to_mesh("part", Some("mesh"))
+  let part = @pk@pk.new_sphere(@pk.Vec3::new(0.0, 0.0, 0.0), 10.0)
+  let mesh = part.to_mesh()
 
-  // Query mesh info (vertices, triangles, bbox):
-  println(client.get_mesh_info("mesh"))
+  // Query mesh info (vertices, triangles, bounding box):
+  println("vertices: " + mesh.vertex_count().to_string())
+  println("triangles: " + mesh.triangle_count().to_string())
+  let bbox = mesh.bounding_box()
+  println("bbox: " + bbox.min.x.to_string() + " to " + bbox.max.x.to_string())
 
   // Mesh -> Voxels (re-voxelize)
-  let _ = client.mesh_to_voxels("mesh", Some("revox"))
+  let revox = @pk@pk.from_mesh(mesh)
+
+  part.destroy(); mesh.destroy(); revox.destroy()
+}
 ```
 
-## STL import / export
+## STL export
 
 ```moonbit
   // Export mesh to STL:
-  let _ = client.save_stl("mesh", "/tmp/part.stl", None)
-
-  // Import STL as a mesh:
-  let _ = client.mesh_from_stl("/tmp/part.stl", Some("imported"))
-
-  // Voxelize the imported mesh:
-  let _ = client.mesh_to_voxels("imported", Some("importedVox"))
+  mesh.save_stl("/tmp/part.stl")
 ```
+
+The FFI SDK includes a built-in binary STL writer (`Mesh::save_stl`).
+STL import is not provided natively — use VDB for round-trips or build
+geometry from primitives.
 
 ## Building a mesh from scratch
 
 ```moonbit
-  // Create an empty mesh:
-  let _ = client.create_mesh(Some("myMesh"))
-
-  // Add vertices:
-  let _ = client.mesh_add_vertex("myMesh", 0.0, 0.0, 0.0)   // index 0
-  let _ = client.mesh_add_vertex("myMesh", 10.0, 0.0, 0.0)  // index 1
-  let _ = client.mesh_add_vertex("myMesh", 0.0, 10.0, 0.0)  // index 2
-
-  // Add a triangle by vertex indices:
-  let _ = client.mesh_add_triangle("myMesh", 0, 1, 2)
-
-  // Add a triangle by positions (vertices added automatically):
-  let _ = client.mesh_add_triangle_vertices("myMesh", 0.0, 0.0, 10.0, 10.0, 0.0, 10.0, 0.0, 10.0, 10.0)
-
-  // Add a quad (two triangles) by positions:
-  let _ = client.mesh_add_quad("myMesh", 0.0, 0.0, 20.0, 10.0, 0.0, 20.0, 10.0, 10.0, 20.0, 0.0, 10.0, 20.0, None)
-```
-
-## Mesh transforms
-
-```moonbit
-  // Scale and translate:
-  let _ = client.mesh_transform("mesh", Some(2.0), Some(50.0), None, None, Some("mesh2x"))
-
-  // Mirror across the YZ plane (normal = +X):
-  let _ = client.mesh_mirror("mesh", 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, Some("mirrored"))
-
-  // Append one mesh into another:
-  let _ = client.mesh_append("myMesh", "mesh2x")
+  let m = @pk@pk.new_mesh()
+  let v0 = m.add_vertex(@pk.Vec3::new(0.0, 0.0, 0.0))   // returns index 0
+  let v1 = m.add_vertex(@pk.Vec3::new(10.0, 0.0, 0.0))   // returns index 1
+  let v2 = m.add_vertex(@pk.Vec3::new(0.0, 10.0, 0.0))   // returns index 2
+  m.add_triangle(v0, v1, v2)
+  // Convert to voxels:
+  let vox = @pk@pk.from_mesh(m)
+  m.destroy()
+  vox.destroy()
 ```
 
 ## Lattices
@@ -73,48 +58,47 @@ async fn main {
 Lattices are beam-and-node structures that rasterize into voxel fields:
 
 ```moonbit
-  let _ = client.create_lattice(Some("lat"))
-
-  // Add sphere nodes:
-  let _ = client.lattice_add_sphere("lat", -10.0, 0.0, 0.0, 2.0)
-  let _ = client.lattice_add_sphere("lat", 10.0, 0.0, 0.0, 2.0)
-
-  // Add a beam (can be tapered — different radius at each end):
-  let _ = client.lattice_add_beam("lat", -10.0, 0.0, 0.0, 1.0, 10.0, 0.0, 0.0, 1.0, None)
-
+  let lat = @pk@pk.new_lattice()
+  lat.add_sphere(@pk.Vec3::new(-10.0, 0.0, 0.0), 2.0)
+  lat.add_sphere(@pk.Vec3::new(10.0, 0.0, 0.0), 2.0)
+  // Beam between nodes (can be tapered — different radius at each end):
+  lat.add_beam(
+    @pk.Vec3::new(-10.0, 0.0, 0.0),
+    @pk.Vec3::new(10.0, 0.0, 0.0),
+    1.0,   // start radius
+    1.0,   // end radius
+    true,  // round_cap
+  )
   // Rasterize the lattice into a voxel field:
-  let _ = client.lattice_to_voxels("lat", Some("beams"))
+  let beams = @pk@pk.from_lattice(lat)
+  lat.destroy()
 ```
 
 ## OpenVDB persistence
 
 ```moonbit
   // Save voxels to a VDB file:
-  let _ = client.save_vdb("part", "/tmp/model.vdb", Some("body"))
+  let vdb = @pk@pk.new_vdb_file()
+  vdb.add_voxels("body", part)
+  vdb.save_to_file("/tmp/model.vdb")
 
-  // List fields in a VDB file:
-  println(client.list_vdb_fields("/tmp/model.vdb"))
+  // List fields:
+  let field_count = vdb.field_count()
+  println("fields: " + field_count.to_string())
+  for i in 0..<field_count {
+    println("  field " + i.to_string() + ": " + vdb.get_field_name(i) +
+      " (type: " + vdb.field_type(i).to_string() + ")")
+  }
 
-  // Load a specific field:
-  let _ = client.load_vdb("/tmp/model.vdb", Some("body"), Some("loaded"))
+  // Load from file:
+  let vdb2 = @pk@pk.vdb_file_from_path("/tmp/model.vdb")
+  let loaded = vdb2.get_voxels(0)
 
   // Verify volume matches:
-  println("original: " + client.get_volume("part"))
-  println("loaded:   " + client.get_volume("loaded"))
-```
+  println("original: " + part.volume().to_string())
+  println("loaded:   " + loaded.volume().to_string())
 
-## CLI and SVG export
-
-```moonbit
-  // CLI (Common Layer Interface) for 3D printing:
-  let _ = client.save_cli("part", "/tmp/part.cli", Some(2.0), None, None)
-
-  // SVG slice contours (one file per layer):
-  let _ = client.save_svg("part", "/tmp/part.svg", Some(2.0))
-
-  let _ = client.picogk_shutdown()
-  client.close()
-}
+  vdb.destroy(); vdb2.destroy(); loaded.destroy()
 ```
 
 ## Next steps

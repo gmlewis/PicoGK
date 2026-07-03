@@ -6,82 +6,79 @@ An implicit surface is defined by a signed-distance function (SDF): `f(x,y,z) �
 means inside the solid. This is a powerful way to define complex shapes —
 gyroids, TPMS lattices, blend operations — from a single mathematical formula.
 
-## Limitations of the MoonBit MCP SDK
+## The MoonBit FFI SDK supports implicit SDF rendering
 
-The Python PicoPie binding provides `Voxels.render_implicit_(sdf, bbox)` which
-evaluates a Python callable once per voxel from native code. The MoonBit MCP SDK
-communicates with the PicoGK server over JSON-RPC stdin/stdout, so a per-voxel
-callback would require crossing the process boundary once per voxel — far too
-slow for practical use.
+Unlike the MCP SDK, the FFI SDK can render implicit SDFs directly — the C-side
+SDF implementations evaluate per-voxel from native code, so there's no
+process-boundary overhead. The following SDFs are available:
 
-**What's available instead:**
+| Method | Description |
+|--------|-------------|
+| `Voxels::render_gyroid_sphere(bbox, radius, wall, k)` | Gyroid TPMS clipped to a sphere |
+| `Voxels::render_gyroid_sphere_offset(bbox, radius, wall, k, ox, oy, oz)` | Same, with offset |
+| `Voxels::render_gyroid_genus(bbox, scale, gap, k)` | Genus-2 surface intersected with gyroid |
+| `Voxels::render_superellipsoid(bbox, a, b, c, e1, e2)` | Superellipsoid SDF |
+| `Voxels::render_gyroid(bbox, wall, k)` | Plain gyroid TPMS shell |
+| `Voxels::intersect_gyroid_sphere(radius, wall, k)` | Clip voxels by gyroid sphere SDF |
 
-1. **Primitive-based approximation**: use spheres, cylinders, tori, and booleans
-   to approximate the desired shape.
-2. **Lattice structures**: the lattice tools (beams + spheres) can build
-   repeating structural patterns.
-3. **VDB round-trip**: generate the SDF volume in a separate process (e.g. a
-   Python script), save to VDB, then load via `client.load_vdb`.
-
-## Approximating a gyroid with a lattice
+## Rendering a gyroid sphere
 
 ```moonbit
 ///|
-async fn main {
-  let client = @picogk.new_client("")
-  let _ = client.picogk_init(Some(0.3))
 
-  // Build a lattice that approximates gyroid infill inside a sphere.
-  let _ = client.create_lattice(Some("lat"))
+fn main {
+  @pk@pk@pk.init_with_size(0.3).unwrap()
+  defer @pk@pk@pk.shutdown()
 
-  // Add nodes in a grid pattern.
-  let period = 6.0
-  let r = 10.0
-  // (In MoonBit, you'd loop over a grid of points and add spheres/beams.)
-  let _ = client.lattice_add_sphere("lat", 0.0, 0.0, 0.0, 1.0)
-  let _ = client.lattice_add_sphere("lat", 6.0, 0.0, 0.0, 1.0)
-  let _ = client.lattice_add_sphere("lat", -6.0, 0.0, 0.0, 1.0)
-  let _ = client.lattice_add_beam("lat", -6.0, 0.0, 0.0, 1.0, 6.0, 0.0, 0.0, 1.0, None)
+  // Create a voxel field and render a gyroid sphere into it.
+  let gyroid = @pk@pk.new_voxels()
+  gyroid.render_gyroid_sphere(
+    @pk.BBox3::new(@pk.Vec3::new(-15.0, -15.0, -15.0), @pk.Vec3::new(15.0, 15.0, 15.0)),
+    15.0,   // sphere radius
+    2.0,    // wall thickness
+    0.5,    // frequency (2π / unit_size)
+  )
 
-  let _ = client.lattice_to_voxels("lat", Some("latticeVox"))
+  // Export.
+  let mesh = gyroid.to_mesh()
+  mesh.save_stl("/tmp/gyroid_sphere.stl")
+  println("wrote /tmp/gyroid_sphere.stl — volume: " + gyroid.volume().to_string())
 
-  // Clip to a sphere using boolean intersect.
-  let _ = client.create_sphere(0.0, 0.0, 0.0, 10.0, Some("clipSphere"))
-  let _ = client.boolean_intersect("latticeVox", "clipSphere", Some("gyroidApprox"))
-
-  let _ = client.voxels_to_mesh("gyroidApprox", Some("mesh"))
-  let _ = client.save_stl("mesh", "/tmp/gyroid_approx.stl", None)
-
-  let _ = client.picogk_shutdown()
-  client.close()
+  mesh.destroy()
+  gyroid.destroy()
 }
 ```
 
-## VDB round-trip approach
-
-For a true gyroid SDF, generate the VDB outside the MCP SDK and load it:
+## Rendering a superellipsoid
 
 ```moonbit
-  // 1. Generate the VDB using a Python script or direct OpenVDB binding.
-  //    e.g. python -c "import picogk; ..." to create the gyroid VDB.
+  let se = @pk@pk.new_voxels()
+  se.render_superellipsoid(
+    @pk.BBox3::new(@pk.Vec3::new(-20.0, -20.0, -20.0), @pk.Vec3::new(20.0, 20.0, 20.0)),
+    16.0, 16.0, 16.0,  // a, b, c
+    3.0, 0.25,          // e1=3 (rounded), e2=0.25 (squarish)
+  )
+```
 
-  // 2. Load it into the MCP session:
-  let _ = client.load_vdb("/tmp/gyroid.vdb", Some("gyroid"), Some("gyroidVox"))
+## Using `intersect_gyroid_sphere` to clip existing geometry
 
-  // 3. Continue processing:
-  let _ = client.voxels_to_mesh("gyroidVox", Some("mesh"))
-  let _ = client.save_stl("mesh", "/tmp/gyroid.stl", None)
+```moonbit
+  // Start with a cylinder.
+  let cyl = @pk@pk.new_cylinder(0.0, 0.0, 0.0, 8.0, 30.0, None, None, None)
+  // Clip it with a gyroid sphere SDF.
+  cyl.intersect_gyroid_sphere(15.0, 2.0, 0.5)
+  // Now cyl has gyroid infill inside the cylinder.
 ```
 
 ## Composing shapes with booleans
 
-Instead of composing inside an SDF callback, use boolean operations:
-
 ```moonbit
   // A sphere with a cylindrical bore:
-  let _ = client.create_sphere(0.0, 0.0, 0.0, 12.0, Some("ball"))
-  let _ = client.create_cylinder(-15.0, 0.0, 0.0, 4.0, 30.0, Some(1.0), Some(0.0), Some(0.0), Some("bore"))
-  let _ = client.boolean_subtract("ball", "bore", Some("boredBall"))
+  let ball = @pk@pk.new_sphere(@pk.Vec3::new(0.0, 0.0, 0.0), 12.0)
+  let bore = @pk@pk.new_cylinder(-15.0, 0.0, 0.0, 4.0, 30.0, Some(1.0), Some(0.0), Some(0.0))
+  let bored = ball.sub(bore)
+  bore.destroy()
+  ball.destroy()
 ```
 
 ## Next steps

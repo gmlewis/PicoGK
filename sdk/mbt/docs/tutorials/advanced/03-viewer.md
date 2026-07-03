@@ -1,85 +1,110 @@
 # Advanced 3 — Rendering
 
-## Headless rendering
+## Headless rendering (Z-slice PNG)
 
-The MoonBit MCP SDK provides two rendering tools, both producing PNG files
-without requiring a display or OpenGL:
-
-### Isometric 3D render
-
-`render_to_image` produces an isometric projection with Lambertian shading:
+The FFI SDK provides a Z-slice cross-section renderer that produces PNG
+images without requiring a display:
 
 ```moonbit
 ///|
-async fn main {
-  let client = @picogk.new_client("")
-  let _ = client.picogk_init(Some(0.2))
+
+fn main {
+  @pk@pk@pk.init_with_size(0.2).unwrap()
+  defer @pk@pk@pk.shutdown()
 
   // Build a hollow part.
-  let _ = client.create_sphere(0.0, 0.0, 0.0, 12.0, Some("body"))
-  let _ = client.create_sphere(8.0, 0.0, 0.0, 7.0, Some("bite"))
-  let _ = client.boolean_subtract("body", "bite", Some("part"))
-  let _ = client.shell("part", 1.5, 0.0, None, Some("shelled"))
+  let body = @pk@pk.new_sphere(@pk.Vec3::new(0.0, 0.0, 0.0), 12.0)
+  let bite = @pk@pk.new_sphere(@pk.Vec3::new(8.0, 0.0, 0.0), 7.0)
+  let part = body.sub(bite)
+  bite.destroy(); body.destroy()
+  part.shell(1.5)
 
-  // Render to PNG.
-  let _ = client.render_to_image("shelled", "/tmp/part.png",
-    Some(1280), Some(960), Some("#292933"), Some("#5999e6"))
+  // Get a Z-slice (array of float SDF values):
+  let slice = part.get_interpolated_z_slice(0.0)
+  println("slice length: " + slice.length().to_string())
 
-  let _ = client.picogk_shutdown()
-  client.close()
+  part.destroy()
 }
 ```
 
-![Viewer example](../images/viewer_example.png)
+## Interactive rendering (ViewerEx)
 
-### Parameters
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `objectId` | `String` | (required) | The voxel or mesh object to render. |
-| `path` | `String` | (required) | Output PNG file path. |
-| `width` | `Int?` | 800 | Image width in pixels. |
-| `height` | `Int?` | 600 | Image height in pixels. |
-| `backgroundColor` | `String?` | white | Hex color (e.g. `"#292933"`). |
-| `objectColor` | `String?` | steel blue | Hex color (e.g. `"#5999e6"`). |
-
-### Z-slice cross-section
-
-`render_slice` renders a 2D cross-section at a specific Z height:
+The FFI SDK provides `ViewerEx` — a native OpenGL viewer with full camera
+control, PBR shading, and screenshot capability. This requires a display and
+OpenGL context.
 
 ```moonbit
-  // Render the cross-section at Z=0:
-  let _ = client.render_slice("shelled", 0.0, "/tmp/slice_z0.png", None)
+///|
+
+fn main {
+  @pk@pk@pk.init_with_size(0.2).unwrap()
+  defer @pk@pk@pk.shutdown()
+
+  let body = @pk@pk.new_sphere(@pk.Vec3::new(0.0, 0.0, 0.0), 12.0)
+  let bite = @pk@pk.new_sphere(@pk.Vec3::new(8.0, 0.0, 0.0), 7.0)
+  let part = body.sub(bite)
+  bite.destroy(); body.destroy()
+  part.shell(1.5)
+
+  // Create viewer with dark background.
+  let v = @pk@pk.new_viewer_ex("Part Viewer", 1280, 960, 0.16, 0.16, 0.20, 1.0)
+  v.add_voxels(0, part)
+  v.set_group_material(0, @pk.ColorFloat::new(0.35, 0.6, 0.9, 1.0), 0.1, 0.5)
+
+  // Take a screenshot (headless — no event loop needed).
+  v.screenshot_png("/tmp/part.png", 12)
+  v.request_close()
+  v.destroy()
+
+  part.destroy()
+}
 ```
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `voxelsId` | `String` | (required) | The voxel object to slice. |
-| `zPosition` | `Double` | (required) | Z height in mm. |
-| `path` | `String` | (required) | Output PNG file path. |
-| `mode` | `String?` | `"Antialiased"` | `"Sdf"`, `"Bw"`, or `"Antialiased"`. |
+### ViewerEx parameters
 
-## No interactive viewer
+| Parameter | Description |
+|-----------|-------------|
+| `title` | Window title |
+| `width`, `height` | Window size in pixels |
+| `bg_r`, `bg_g`, `bg_b`, `bg_a` | Background color (0.0–1.0) |
 
-The Python PicoPie binding includes an interactive GLFW/OpenGL viewer
-(`picogk.show(part)`). The MoonBit MCP SDK does **not** include an interactive
-viewer — it communicates with the PicoGK server over stdin/stdout JSON-RPC,
-and the server runs headless.
+### Group materials
 
-For interactive viewing, export STL and open in any viewer (Blender, MeshLab,
-browser with three.js).
+```moonbit
+  // PBR material: color, metallic (0–1), roughness (0–1):
+  v.set_group_material(0, @pk.ColorFloat::new(0.35, 0.6, 0.9, 1.0), 0.1, 0.5)
+```
+
+### Interactive event loop
+
+For interactive viewing, use the `run` method:
+
+```moonbit
+  v.add_voxels(0, part)
+  v.run()  // blocks until window is closed
+```
 
 ## Combining multiple objects for rendering
 
-`render_to_image` takes a single object ID. To render a scene with multiple
-objects, union them first:
+`add_voxels` takes a single `Voxels` object. To render multiple parts with
+different materials, add them to different groups:
 
 ```moonbit
-  // Union all parts into one scene:
-  let _ = client.boolean_add_all(["body", "holes", "struts"], Some("scene"))
+  v.add_voxels(0, body)
+  v.add_voxels(1, holes)
+  v.add_voxels(2, struts)
 
-  // Render the combined scene:
-  let _ = client.render_to_image("scene", "/tmp/scene.png", Some(1280), Some(960), None, None)
+  v.set_group_material(0, @pk.ColorFloat::new(0.35, 0.6, 0.9, 1.0), 0.1, 0.5)
+  v.set_group_material(1, @pk.ColorFloat::new(0.9, 0.4, 0.3, 1.0), 0.2, 0.6)
+  v.set_group_material(2, @pk.ColorFloat::new(0.6, 0.8, 0.4, 1.0), 0.0, 0.4)
+```
+
+Or union them into one object for a single group:
+
+```moonbit
+  let scene = body.add(holes)
+  scene.bool_add(struts)
+  v.add_voxels(0, scene)
 ```
 
 ## Next steps

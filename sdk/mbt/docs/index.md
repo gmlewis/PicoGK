@@ -5,38 +5,41 @@ modeling engine built on OpenVDB by LEAP 71.
 
 The MoonBit SDK comes in two flavors:
 
+- **`picogkffi`** — FFI SDK (binds directly to the native PicoGK C++ runtime
+  via `extern "C"` declarations, no MCP server needed). **Recommended** — full
+  API coverage, better performance, no subprocess overhead.
 - **`picogk`** — MCP client SDK (talks to the PicoGK MCP server via JSON-RPC
   over stdio, using `moonbitlang/async` for subprocess management)
-- **`picogkffi`** — FFI SDK (binds directly to the native PicoGK C++ runtime
-  via `extern "C"` declarations, no MCP server needed)
 
 The FFI SDK provides the same API surface as the Go `picogkffi` package,
 including: voxel primitives, boolean CSG, transforms, lattice, mesh, queries,
-file I/O, rendering (native OpenGL ViewerEx), and implicit SDF rendering.
+file I/O, rendering (native OpenGL ViewerEx), implicit SDF rendering,
+scalar/vector fields, and metadata.
 
 ## Feature highlights
 
-- **Voxel primitives**: sphere, box, cylinder, capsule, torus
-- **Boolean CSG**: union, subtract, intersect (single and multi-object)
-- **Transforms**: offset, double offset, triple offset, smooth, trim, shell,
-  fillet, project Z-slice, translate/rotate/scale, circular pattern
-- **Implicit SDF rendering**: gyroid sphere, gyroid genus, superellipsoid
-  (via C-side SDF callbacks — same approach as PicoPie/Go FFI)
+- **Voxel primitives**: sphere, box, cylinder, capsule
+- **Boolean CSG**: union, subtract, intersect (operator and in-place methods)
+- **Transforms**: offset, double offset, triple offset (smooth), shell, fillet,
+  project Z-slice
+- **Implicit SDF rendering**: gyroid sphere, gyroid genus, superellipsoid,
+  gyroid shell (via C-side SDF callbacks — same approach as PicoPie/Go FFI)
 - **Lattice**: beam and sphere nodes, rasterize to voxels
-- **Mesh**: vertex/triangle building, voxels↔mesh conversion, STL import,
-  transform, mirror, append
+- **Mesh**: vertex/triangle building, voxels↔mesh conversion, STL export
 - **Queries**: bounding box, volume, mesh info, point-inside, surface normal,
-  closest point, ray cast, thickness, voxel dimensions, emptiness, equality,
-  memory usage
+  closest point, ray cast, voxel dimensions, emptiness, equality, memory usage
 - **File I/O**: STL, OpenVDB, CLI (3D printing), SVG (slice contours)
 - **Rendering**: native OpenGL ViewerEx with camera callbacks (PBR shading),
-  Z-slice cross-section PNG (headless)
+  Z-slice cross-section data
 - **ScalarField / VectorField / Metadata**: full access (FFI-only)
+- **Parametric shapes**: `@gmlewis/picogkshapes` package provides Sphere, Box,
+  Cylinder, Ring, Lens, Pipe, PipeSegment, LatticePipe, LatticeManifold, and more
 
 ## Quick start (FFI SDK)
 
 ```moonbit
 ///|
+
 fn main {
   @pk.init_with_size(0.2).unwrap()
   defer @pk.shutdown()
@@ -79,7 +82,7 @@ async fn main {
 
 ## Learn it
 
-- [Quick Learn](tutorials/QuickLearn.md) — the whole API in one page
+- [Quick Learn](tutorials/QuickLearn.md) — the whole FFI API in one page
 - [Novice tutorials](tutorials/novice/01-setup.md) — setup, first shapes, booleans
 - [Intermediate tutorials](tutorials/intermediate/01-implicit-modeling.md) —
   implicits, meshes, fields
@@ -99,7 +102,7 @@ The `examples/` directory contains runnable MoonBit programs using the FFI SDK:
 | `hello-picogk` | Primitives, booleans, shell, lattice, gyroid SDF, STL export |
 | `fields-and-io` | VDB persistence, scalar field extraction, STL round-trip, offset |
 | `viewer-demo` | Native OpenGL Viewer render of a shelled part |
-| `visualize` | Z-slice PNG + 3D Viewer render |
+| `visualize` | Z-slice data + 3D Viewer render |
 | `web-demo` | Real gyroid-filled sphere via implicit SDF, STL export |
 | `shapekernel-gallery` | 16 parametric shape scenes rendered to PNG |
 | `full-api` | Every FFI function exercised once |
