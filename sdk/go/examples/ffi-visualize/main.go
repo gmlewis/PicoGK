@@ -17,7 +17,7 @@ import (
 	"flag"
 	"fmt"
 	"image"
-	"image/color"
+	_ "image/color"
 	"image/png"
 	"math"
 	"os"
@@ -153,6 +153,3 @@ func writeSlicePNG(path string, sdf []float32, sizeX, sizeY int32, verbose bool)
 	defer f.Close()
 	return png.Encode(f, img)
 }
-
-// Suppress unused import (color is used implicitly via image.Gray).
-var _ = color.Gray{}

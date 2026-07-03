@@ -24,14 +24,13 @@ static PKVIEWER createViewer(const char* title, const PKVector2* size) {
 import "C"
 
 import (
-	"archive/zip"
-	"fmt"
 	"image"
 	"image/color"
 	"image/png"
-	"io"
 	"math"
 	"os"
+	"path/filepath"
+	"runtime"
 	"unsafe"
 )
 
@@ -395,14 +394,19 @@ func (v *ViewerEx) Run() {
 	v.Destroy()
 }
 
-// loadLightSetup loads the IBL lighting from PicoPie's bundled assets.
+// loadLightSetup loads the IBL lighting from the package's bundled assets.
 func loadLightSetup(viewer C.PKVIEWER) {
-	assetPath := "/Users/glenn/src/github.com/Borderliner/PicoPie/src/picogk/_assets/viewer_environment.zip"
-	if _, err := os.Stat(assetPath); err != nil {
+	_, src, _, ok := runtime.Caller(0)
+	if !ok {
 		return
 	}
+	dir := filepath.Dir(src)
 
-	diffuse, specular, err := loadDDSFromZip(assetPath)
+	diffuse, err := os.ReadFile(filepath.Join(dir, "_assets", "Diffuse.dds"))
+	if err != nil {
+		return
+	}
+	specular, err := os.ReadFile(filepath.Join(dir, "_assets", "Specular.dds"))
 	if err != nil {
 		return
 	}
@@ -410,44 +414,6 @@ func loadLightSetup(viewer C.PKVIEWER) {
 	C.Viewer_bLoadLightSetup(viewer,
 		(*C.char)(unsafe.Pointer(&diffuse[0])), C.int32_t(len(diffuse)),
 		(*C.char)(unsafe.Pointer(&specular[0])), C.int32_t(len(specular)))
-}
-
-func loadDDSFromZip(zipPath string) (diffuse, specular []byte, err error) {
-	r, err := zip.OpenReader(zipPath)
-	if err != nil {
-		return nil, nil, err
-	}
-	defer r.Close()
-
-	for _, f := range r.File {
-		if f.Name == "Diffuse.dds" {
-			rc, err := f.Open()
-			if err != nil {
-				return nil, nil, err
-			}
-			defer rc.Close()
-			diffuse, err = io.ReadAll(rc)
-			if err != nil {
-				return nil, nil, err
-			}
-		}
-		if f.Name == "Specular.dds" {
-			rc, err := f.Open()
-			if err != nil {
-				return nil, nil, err
-			}
-			defer rc.Close()
-			specular, err = io.ReadAll(rc)
-			if err != nil {
-				return nil, nil, err
-			}
-		}
-	}
-
-	if len(diffuse) == 0 || len(specular) == 0 {
-		return nil, nil, fmt.Errorf("DDS files not found in zip")
-	}
-	return diffuse, specular, nil
 }
 
 // --- Camera math (ported from PicoPie viewer.py) ---

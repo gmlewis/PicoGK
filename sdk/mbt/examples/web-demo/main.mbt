@@ -1,21 +1,55 @@
 ///|
-/// Web viewer demo: build a scene and export it as STLs.
+/// Web viewer demo: build a scene and export it as a self-contained HTML file
+/// with inline geometry and a three.js viewer.
 ///
-/// This is a MoonBit port of the PicoPie Python example web/demo.py.
+/// This is a MoonBit port of the Go FFI web-demo example.
 /// Uses the picogkffi package for direct in-process FFI calls.
 /// It builds three voxel objects (a box, a sphere, and a real gyroid-filled
-/// sphere via implicit SDF), meshes them, and exports STLs.
+/// sphere via implicit SDF), meshes them, and generates a self-contained HTML
+/// file with an embedded three.js viewer that loads geometry from inline JSON
+/// (no external STL files needed).
 ///
-/// Run:  moon run . --target native
+/// Run:  moon run . --target native [--output FILE] [--no-open]
 fn main {
-  let outdir = "/tmp/mbt-picogk-web"
+  // Parse command-line arguments.
+  let cmd = @argparse.Command(
+    "web-demo",
+    about="PicoGK Web Viewer Demo (MoonBit FFI)",
+    flags=[
+      @argparse.FlagArg(
+        "no-open",
+        long="no-open",
+        about="Do not auto-open the browser",
+      ),
+    ],
+    options=[
+      @argparse.OptionArg(
+        "output",
+        long="output",
+        short='o',
+        about="Output HTML file path",
+        default_values=["web_demo.html"],
+      ),
+    ],
+  )
+  let matches = cmd.parse() catch {
+    _ => {
+      println(cmd.render_help())
+      return
+    }
+  }
+  let out = match matches.values.get("output") {
+    Some(arr) => arr[0]
+    None => "web_demo.html"
+  }
+  let no_open = match matches.flags.get("no-open") {
+    Some(v) => v
+    None => false
+  }
 
   println("=== Web Viewer Demo (MoonBit FFI) ===")
-  println("Output dir: " + outdir)
-  println("")
 
-  // Voxel size fine enough for the gyroid SDF.
-  match @pk.init_with_size(0.2) {
+  match @pk.init_with_size(0.5) {
     Ok(_) => ()
     Err(e) => {
       println("Failed to init PicoGK: " + e)
@@ -24,6 +58,7 @@ fn main {
   }
   println("  PicoGK version: " + @pk.version())
 
+  // Build the scene: a box, a sphere, and a gyroid-filled sphere.
   // Box at (-32, 0, 0), size 22.
   let box = @pk.new_box(-43.0, -11.0, -11.0, -21.0, 11.0, 11.0)
   // Sphere at origin, radius 13.
@@ -46,50 +81,186 @@ fn main {
     0.0,
   )
 
-  println("  box volume:        \{box.volume()}")
-  println("  sphere volume:     \{sphere.volume()}")
-  println("  gyroid sphere vol: \{gyroid.volume()}")
+  println("  box volume:        " + box.volume().to_string())
+  println("  sphere volume:     " + sphere.volume().to_string())
+  println("  gyroid sphere vol: " + gyroid.volume().to_string())
 
-  // Mesh all objects and export STLs.
+  // Mesh all objects.
   let box_mesh = box.to_mesh()
   let sphere_mesh = sphere.to_mesh()
   let gyroid_mesh = gyroid.to_mesh()
 
-  let box_stl = outdir + "/box.stl"
-  let sphere_stl = outdir + "/sphere.stl"
-  let gyroid_stl = outdir + "/gyroid.stl"
-
+  // Export STLs (for reference / download).
+  let box_stl = "box.stl"
+  let sphere_stl = "sphere.stl"
+  let gyroid_stl = "gyroid.stl"
   if box_mesh.save_stl(box_stl) {
-    println("  -> " + box_stl)
-  } else {
-    println("  ERROR: failed to write box.stl")
+    println("  -> " + box_stl + "  (" + box_mesh.triangle_count().to_string() + " tris)")
   }
   if sphere_mesh.save_stl(sphere_stl) {
-    println("  -> " + sphere_stl)
-  } else {
-    println("  ERROR: failed to write sphere.stl")
+    println("  -> " + sphere_stl + "  (" + sphere_mesh.triangle_count().to_string() + " tris)")
   }
   if gyroid_mesh.save_stl(gyroid_stl) {
-    println("  -> " + gyroid_stl)
-  } else {
-    println("  ERROR: failed to write gyroid.stl")
+    println("  -> " + gyroid_stl + "  (" + gyroid_mesh.triangle_count().to_string() + " tris)")
   }
 
-  // Combined scene volume.
-  let scene = box.add(sphere)
-  scene.bool_add(gyroid)
-  println("  combined scene volume: \{scene.volume()}")
+  // Generate the self-contained HTML file with inline JSON geometry.
+  let html = generate_html(box_mesh, sphere_mesh, gyroid_mesh)
+  if @pk.write_file(out, html) {
+    println("wrote " + out)
+  } else {
+    println("ERROR: failed to write " + out)
+    return
+  }
 
+  // Open the browser.
+  if !no_open {
+    // Use file:// URI for local files.
+    let uri = "file://" + out
+    println("open: " + uri)
+    if @pk.open_url(uri) {
+      println("(opened browser)")
+    } else {
+      println("(could not auto-open a browser — open the URL above manually)")
+    }
+  }
+
+  // Clean up.
   box_mesh.destroy()
   sphere_mesh.destroy()
   gyroid_mesh.destroy()
   box.destroy()
   sphere.destroy()
   gyroid.destroy()
-  scene.destroy()
 
-  println("")
-  println("(Use the STLs with a three.js HTML viewer.)")
   println("done.")
   @pk.shutdown()
+}
+
+/// generate_html creates a self-contained HTML file with a three.js viewer.
+/// Geometry is embedded as inline JSON (no external STL files needed).
+fn generate_html(
+  box_mesh : @pk.Mesh,
+  sphere_mesh : @pk.Mesh,
+  gyroid_mesh : @pk.Mesh,
+) -> String {
+  // Build JSON array of geometry objects.
+  let vertices_box = mesh_to_json_array(box_mesh.vertices())
+  let triangles_box = mesh_to_json_int_array(box_mesh.triangles())
+  let vertices_sphere = mesh_to_json_array(sphere_mesh.vertices())
+  let triangles_sphere = mesh_to_json_int_array(sphere_mesh.triangles())
+  let vertices_gyroid = mesh_to_json_array(gyroid_mesh.vertices())
+  let triangles_gyroid = mesh_to_json_int_array(gyroid_mesh.triangles())
+
+  let geom_json =
+    "[{\"vertices\":" +
+    vertices_box +
+    ",\"triangles\":" +
+    triangles_box +
+    ",\"color\":5872102}," +
+    "{\"vertices\":" +
+    vertices_sphere +
+    ",\"triangles\":" +
+    triangles_sphere +
+    ",\"color\":15101019}," +
+    "{\"vertices\":" +
+    vertices_gyroid +
+    ",\"triangles\":" +
+    triangles_gyroid +
+    ",\"color\":7163499}]"
+
+  "<!DOCTYPE html>\n" +
+  "<html lang=\"en\">\n" +
+  "<head>\n" +
+  "<meta charset=\"utf-8\">\n" +
+  "<title>PicoGK Web Viewer Demo (MoonBit FFI)</title>\n" +
+  "<style>\n" +
+  "  body { margin: 0; background: #292933; overflow: hidden; }\n" +
+  "  #info { position: absolute; top: 10px; left: 10px; color: #ccc;\n" +
+  "          font-family: sans-serif; font-size: 13px; }\n" +
+  "  a { color: #5999e6; }\n" +
+  "</style>\n" +
+  "</head>\n" +
+  "<body>\n" +
+  "<div id=\"info\">PicoGK Web Viewer Demo (MoonBit FFI) — drag to orbit, scroll to zoom</div>\n" +
+  "<script type=\"importmap\">\n" +
+  "{\n" +
+  "  \"imports\": {\n" +
+  "    \"three\": \"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js\",\n" +
+  "    \"three/addons/\": \"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/\"\n" +
+  "  }\n" +
+  "}\n" +
+  "</script>\n" +
+  "<script type=\"module\">\n" +
+  "import * as THREE from 'three';\n" +
+  "import { OrbitControls } from 'three/addons/controls/OrbitControls.js';\n" +
+  "\n" +
+  "const scene = new THREE.Scene();\n" +
+  "scene.background = new THREE.Color(0x292933);\n" +
+  "\n" +
+  "const camera = new THREE.PerspectiveCamera(50, innerWidth/innerHeight, 0.1, 1000);\n" +
+  "camera.position.set(0, 0, 120);\n" +
+  "\n" +
+  "const renderer = new THREE.WebGLRenderer({antialias: true});\n" +
+  "renderer.setSize(innerWidth, innerHeight);\n" +
+  "document.body.appendChild(renderer.domElement);\n" +
+  "\n" +
+  "const controls = new OrbitControls(camera, renderer.domElement);\n" +
+  "\n" +
+  "scene.add(new THREE.AmbientLight(0x404040, 1.5));\n" +
+  "const dl = new THREE.DirectionalLight(0xffffff, 0.8);\n" +
+  "dl.position.set(50, 80, 60);\n" +
+  "scene.add(dl);\n" +
+  "\n" +
+  "const objects = " +
+  geom_json +
+  ";\n" +
+  "objects.forEach(o => {\n" +
+  "  const geo = new THREE.BufferGeometry();\n" +
+  "  geo.setAttribute('position', new THREE.Float32BufferAttribute(o.vertices, 3));\n" +
+  "  geo.setIndex(o.triangles);\n" +
+  "  geo.computeVertexNormals();\n" +
+  "  const mat = new THREE.MeshPhongMaterial({color: o.color, flatShading: false});\n" +
+  "  scene.add(new THREE.Mesh(geo, mat));\n" +
+  "});\n" +
+  "\n" +
+  "addEventListener('resize', () => {\n" +
+  "  camera.aspect = innerWidth / innerHeight;\n" +
+  "  camera.updateProjectionMatrix();\n" +
+  "  renderer.setSize(innerWidth, innerHeight);\n" +
+  "});\n" +
+  "\n" +
+  "function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); }\n" +
+  "animate();\n" +
+  "</script>\n" +
+  "</body>\n" +
+  "</html>"
+}
+
+/// mesh_to_json_array converts a float array to a JSON array string.
+fn mesh_to_json_array(arr : Array[Double]) -> String {
+  let mut result = "["
+  let mut i = 0
+  for x in arr {
+    if i > 0 {
+      result = result + ","
+    }
+    result = result + x.to_string()
+    i = i + 1
+  }
+  result + "]"
+}
+
+/// mesh_to_json_int_array converts an int array to a JSON array string.
+fn mesh_to_json_int_array(arr : Array[Int]) -> String {
+  let mut result = "["
+  let mut i = 0
+  for x in arr {
+    if i > 0 {
+      result = result + ","
+    }
+    result = result + x.to_string()
+    i = i + 1
+  }
+  result + "]"
 }

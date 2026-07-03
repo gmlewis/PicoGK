@@ -187,9 +187,18 @@ func generateHTML(objects []geomObject) string {
 </head>
 <body>
 <div id="info">PicoGK Web Viewer Demo (Go FFI) — drag to orbit, scroll to zoom</div>
-<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
-<script>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x292933);
 
@@ -200,7 +209,7 @@ const renderer = new THREE.WebGLRenderer({antialias: true});
 renderer.setSize(innerWidth, innerHeight);
 document.body.appendChild(renderer.domElement);
 
-const controls = new THREE.OrbitControls(camera, renderer.domElement);
+const controls = new OrbitControls(camera, renderer.domElement);
 
 scene.add(new THREE.AmbientLight(0x404040, 1.5));
 const dl = new THREE.DirectionalLight(0xffffff, 0.8);

@@ -1,5 +1,6 @@
 // Binary STL writer for PicoGK meshes.
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
 #include <math.h>
@@ -46,4 +47,30 @@ int picogk_write_stl(const char* path, const float* vertices, int32_t n_verts,
     }
     fclose(f);
     return 0;
+}
+
+// Write raw bytes to a file.
+// Returns 0 on success, -1 on error.
+int picogk_write_file(const char* path, const void* data, int32_t len) {
+    FILE* f = fopen(path, "wb");
+    if (!f) return -1;
+    fwrite(data, 1, len, f);
+    fclose(f);
+    return 0;
+}
+
+// Open a URL in the default browser.
+// Returns 0 on success, -1 on error.
+int picogk_open_url(const char* url) {
+#ifdef __APPLE__
+    char cmd[1024];
+    snprintf(cmd, sizeof(cmd), "open '%s'", url);
+    return system(cmd) == 0 ? 0 : -1;
+#elif defined(__linux__)
+    char cmd[1024];
+    snprintf(cmd, sizeof(cmd), "xdg-open '%s'", url);
+    return system(cmd) == 0 ? 0 : -1;
+#else
+    return -1;
+#endif
 }

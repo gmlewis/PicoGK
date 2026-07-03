@@ -1165,3 +1165,21 @@ extern "C" fn picogk_write_slice_png(
   width : Int,
   height : Int,
 ) -> Int = "picogk_write_slice_png"
+
+// --- Generic file writer ---
+
+///|
+#borrow(path, data)
+extern "C" fn picogk_write_file(
+  path : FixedArray[Byte],
+  data : FixedArray[Byte],
+  len : Int,
+) -> Int = "picogk_write_file"
+
+// --- Browser opener ---
+
+///|
+#borrow(url)
+extern "C" fn picogk_open_url(
+  url : FixedArray[Byte],
+) -> Int = "picogk_open_url"
