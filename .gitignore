@@ -510,5 +510,8 @@ _build
 .moonagent
 .mooncakes
 
+# Gossamer
+target
+
 # Dear ImGui
 imgui.ini

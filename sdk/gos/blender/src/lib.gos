@@ -1,0 +1,325 @@
+// blender: Gossamer SDK for the Blender MCP server.
+//
+// Connects to the Blender MCP server over its streamable-http
+// transport and exposes all 26 Blender MCP tools via typed methods.
+// The server must be launched with `--transport http` separately.
+
+use std::encoding::json
+use std::env
+use std::errors
+use std::http
+use std::strings
+use std::sync
+
+mod tools;
+
+const PROTOCOL_VERSION: String = "2024-11-05"
+
+// Client manages a connection to the Blender MCP server over HTTP.
+// The server must be running with `--transport http` enabled.
+//
+// Usage:
+//   let client = blender.new_client("http://127.0.0.1:8000")?
+//   let res = client.execute_blender_code("import bpy; result = {'count': len(bpy.data.objects)}")?
+//   println(res)
+pub struct Client {
+    base_url: String,
+    msg_id: sync::AtomicI64,
+    initialised: bool,
+}
+
+// new_client returns a Client connected to the Blender MCP server at
+// base_url (e.g. "http://127.0.0.1:8000"). Performs the MCP
+// initialize handshake and returns an error if the server is
+// unreachable or rejects the handshake.
+pub fn new_client(base_url: String) -> Result<Client, errors::Error> {
+    let c = Client {
+        base_url,
+        msg_id: sync::AtomicI64::new(0),
+        initialised: false,
+    }
+    c.initialize()?
+    Ok(c)
+}
+
+impl Client {
+    // close releases client-side state. The HTTP transport is
+    // stateless from the client's perspective, so this is a no-op
+    // kept for API parity with the Go and MoonBit SDKs.
+    pub fn close(&self) { () }
+
+    // next_id returns the next JSON-RPC request id, thread-safe.
+    fn next_id(&self) -> i64 {
+        self.msg_id.fetch_add(1) + 1
+    }
+
+    // initialize performs the MCP initialize handshake.
+    fn initialize(&self) -> Result<(), errors::Error> {
+        let req = build_rpc_request(self.next_id(), "initialize", init_params())
+        let _ = self.call_raw(req)?
+        let notif = json::Value::object([
+            ("jsonrpc", json::Value::String("2.0")),
+            ("method", json::Value::String("notifications/initialized")),
+        ])
+        let _ = self.send_notification(notif)
+        Ok(())
+    }
+
+    // call_raw sends a JSON-RPC request and returns the parsed result.
+    fn call_raw(&self, req: json::Value) -> Result<json::Value, errors::Error> {
+        let body = json::render(req)
+        let resp = self.http_post(body)?
+        let parsed = match parse_sse_response(resp) {
+            Ok(v) => v,
+            Err(e) => return Err(errors::newf("parsing SSE response: {}", e)),
+        }
+        if let Some(err) = json::get(&parsed, "error") {
+            let mut code: i64 = 0
+            if let Some(v) = json::get(err, "code") {
+                if let Some(n) = json::as_i64(v) {
+                    code = n
+                }
+            }
+            let mut msg = "unknown error"
+            if let Some(v) = json::get(err, "message") {
+                if let Some(s) = json::as_str(v) {
+                    msg = s
+                }
+            }
+            return Err(errors::newf("server error [{}]: {}", code, msg))
+        }
+        Ok(parsed)
+    }
+
+    // call_tool invokes an MCP tool by name and returns the text
+    // content from the tool result.
+    pub fn call_tool(
+        &self,
+        tool_name: String,
+        args: json::Value,
+    ) -> Result<String, errors::Error> {
+        let params = json::Value::object([
+            ("name", json::Value::String(tool_name)),
+            ("arguments", args),
+        ])
+        let req = build_rpc_request(self.next_id(), "tools/call", params)
+        let result = self.call_raw(req)?
+        let res_obj = match json::get(&result, "result") {
+            Some(v) => v,
+            None => return Err(errors::new("missing result field")),
+        }
+        let content = match json::get(res_obj, "content") {
+            Some(v) => v,
+            None => return Err(errors::new("missing content field")),
+        }
+        let items = match json::as_array(content) {
+            Some(a) => a,
+            None => return Err(errors::new("content is not an array")),
+        }
+        let mut text = ""
+        for item in items {
+            if let Some(t) = json::get(item, "type") {
+                if json::as_str(t) == Some("text") {
+                    if let Some(txt) = json::get(item, "text") {
+                        if let Some(s) = json::as_str(txt) {
+                            text += s
+                        }
+                    }
+                }
+            }
+        }
+        let mut is_error = false
+        if let Some(v) = json::get(res_obj, "isError") {
+            if let Some(b) = json::as_bool(v) {
+                is_error = b
+            }
+        }
+        if is_error {
+            return Err(errors::newf("tool error: {}", text))
+        }
+        Ok(text)
+    }
+
+    // send_notification sends a JSON-RPC notification (no response).
+    fn send_notification(&self, notif: json::Value) -> Result<(), errors::Error> {
+        let body = json::render(notif)
+        let _ = self.http_post(body)?
+        Ok(())
+    }
+
+    // http_post sends a JSON POST to the MCP server endpoint and
+    // returns the raw response body string.
+    fn http_post(&self, body: String) -> Result<String, errors::Error> {
+        let url = self.base_url + "/"
+        let headers: [(&str, &str)] = [
+            ("Content-Type", "application/json"),
+            ("Accept", "application/json, text/event-stream"),
+        ]
+        match http::request(&"POST", &url, body, headers) {
+            Ok(resp) => {
+                if resp.status != 200 {
+                    return Err(errors::newf("HTTP {}: {}", resp.status, resp.body))
+                }
+                Ok(resp.body)
+            }
+            Err(e) => Err(errors::newf("HTTP request: {}", e)),
+        }
+    }
+}
+
+// build_rpc_request constructs a JSON-RPC request object.
+fn build_rpc_request(id: i64, method: String, params: json::Value) -> json::Value {
+    json::Value::object([
+        ("jsonrpc", json::Value::String("2.0")),
+        ("id", json::Value::Int(id)),
+        ("method", json::Value::String(method)),
+        ("params", params),
+    ])
+}
+
+// init_params builds the MCP initialize handshake params.
+fn init_params() -> json::Value {
+    json::Value::object([
+        ("protocolVersion", json::Value::String(PROTOCOL_VERSION)),
+        ("capabilities", json::Value::object([])),
+        ("clientInfo", json::Value::object([
+            ("name", json::Value::String("blender-gos-sdk")),
+            ("version", json::Value::String("0.1.0")),
+        ])),
+    ])
+}
+
+// parse_sse_response parses an SSE-formatted response body
+// (lines of "event: ..." and "data: {...}") and returns the JSON
+// value from the first "data:" line.
+fn parse_sse_response(body: String) -> Result<json::Value, String> {
+    for line in strings::lines(body) {
+        let line = strings::trim(line)
+        if let Some(json_str) = strings::strip_prefix(line, "data: ") {
+            return json::parse(json_str)
+                .map_err(|e| format!("json parse: {}", e))
+        }
+        if let Some(json_str) = strings::strip_prefix(line, "data:") {
+            return json::parse(json_str)
+                .map_err(|e| format!("json parse: {}", e))
+        }
+    }
+    json::parse(body)
+        .map_err(|e| format!("no data line and json parse failed: {}", e))
+}
+
+// expand_path expands a leading ~ to the user's home directory.
+pub fn expand_path(path: String) -> String {
+    if let Some(rest) = strings::strip_prefix(path, "~") {
+        let home = env::home_dir().unwrap_or("")
+        home + rest
+    } else {
+        path
+    }
+}
+
+// demo exercises the SDK against a live Blender MCP server.
+// Start the server first:
+//   uv --directory ~/Projects/Blender/blender_mcp/mcp/blmcp run \
+//     python -m blmcp --transport http --port 8765
+// Then run:
+//   gos run src/main.gos
+pub fn demo() -> Result<(), errors::Error> {
+    let base_url = env::var("BLENDER_MCP_URL").unwrap_or("http://127.0.0.1:8765".to_string())
+    let client = new_client(base_url)?
+    defer client.close()
+
+    let res = client.execute_blender_code(
+        "import bpy; result = {'count': len(bpy.data.objects)}".to_string()
+    )?
+    println!("execute_blender_code: {}", res)
+
+    let summary = client.get_objects_summary()?
+    let head = if summary.len() > 100 { summary.substring(0, 100) } else { summary }
+    println!("get_objects_summary (first 100 chars): {}", head)
+
+    let dbs = client.get_blendfile_summary_datablocks()?
+    let dbs_head = if dbs.len() > 100 { dbs.substring(0, 100) } else { dbs }
+    println!("get_blendfile_summary_datablocks: {}", dbs_head)
+
+    let docs = client.search_api_docs("how to bake".to_string(), None, None, None)?
+    let docs_head = if docs.len() > 100 { docs.substring(0, 100) } else { docs }
+    println!("search_api_docs (first 100 chars): {}", docs_head)
+
+    let modules = client.get_python_api_docs("*".to_string())?
+    let mods_head = if modules.len() > 100 { modules.substring(0, 100) } else { modules }
+    println!("get_python_api_docs('*'): {}", mods_head)
+
+    println!("All tool calls succeeded!")
+    Ok(())
+}
+
+// === Unit tests ===
+
+#[cfg(test)]
+mod blender_tests {
+    use std::testing
+
+    #[test]
+    fn parse_sse_extracts_data_line() {
+        let body = "event: message\ndata: {\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{}}\n"
+        let parsed = parse_sse_response(body)
+        match parsed {
+            Ok(v) => match json::get(&v, "id") {
+                Some(val) => testing::check_eq(
+                    json::as_i64(val),
+                    Some(1),
+                    "id should be 1",
+                ),
+                None => panic!("missing id field"),
+            },
+            Err(e) => panic!("parse failed: {}", e),
+        }
+    }
+
+    #[test]
+    fn parse_sse_handles_data_no_space() {
+        let body = "data:{\"ok\":true}"
+        let parsed = parse_sse_response(body)
+        match parsed {
+            Ok(v) => match json::get(&v, "ok") {
+                Some(val) => testing::check_eq(json::as_bool(val), Some(true), "ok should be true"),
+                None => panic!("missing ok field"),
+            },
+            Err(e) => panic!("parse failed: {}", e),
+        }
+    }
+
+    #[test]
+    fn parse_sse_falls_back_to_plain_json() {
+        let body = "{\"plain\":42}"
+        let parsed = parse_sse_response(body)
+        match parsed {
+            Ok(v) => match json::get(&v, "plain") {
+                Some(val) => testing::check_eq(
+                    json::as_i64(val),
+                    Some(42),
+                    "plain should be 42",
+                ),
+                None => panic!("missing plain field"),
+            },
+            Err(e) => panic!("parse failed: {}", e),
+        }
+    }
+
+    #[test]
+    fn expand_path_tilde() {
+        let p = expand_path("~/foo".to_string())
+        testing::check(p.contains("foo"), "tilde should expand, got: {}", p)
+    }
+
+    #[test]
+    fn expand_path_no_tilde() {
+        let p = expand_path("/abs/path".to_string())
+        testing::check_eq(p, "/abs/path", "absolute path unchanged")
+    }
+}
+
+// Entry point: run the demo when this file is the entry.
+//   gos run src/lib.gos
+demo()?
