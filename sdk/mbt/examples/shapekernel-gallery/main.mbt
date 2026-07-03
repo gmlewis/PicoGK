@@ -47,7 +47,7 @@ fn main {
     Some(arr) => arr[0]
     None => "0.2"
   }
-  let voxel_size = parse_double(voxel_size_str).or(0.2)
+  let voxel_size = parse_double(voxel_size_str).unwrap_or(0.2)
   let no_viewer = match matches.flags.get("no-viewer") {
     Some(v) => v
     None => false
@@ -221,7 +221,7 @@ fn main {
 
 ///|
 fn parse_double(s : String) -> Double? {
-  Some(@strconv.parse_double(s)) catch {
+  Some(@string.parse_double(s)) catch {
     _ => None
   }
 }
@@ -247,12 +247,12 @@ fn line2(lr : Double) -> Double {
 }
 
 ///|
-fn surf1(phi : Double, lr : Double) -> Double {
+fn surf1(phi : Double, _lr : Double) -> Double {
   12.0 + 3.0 * @math.cos(5.0 * phi)
 }
 
 ///|
-fn surf3(phi : Double, lr : Double) -> Double {
+fn surf3(phi : Double, _lr : Double) -> Double {
   8.0 + 5.0 * @math.cos(5.0 * phi)
 }
 
@@ -293,7 +293,7 @@ fn build_sphere() -> Array[@s.SceneGroup] {
   ).to_voxels()
   let s2 = @s.new_sphere(
     Some(@s.new_local_frame(@s.vec3(0.0, 0.0, 0.0), None)),
-    @s.surf_fn(fn(phi : Double, theta : Double) {
+    @s.surf_fn(fn(_phi : Double, theta : Double) {
       40.0 - 10.0 * @math.cos(6.0 * theta)
     }),
   ).to_voxels()
@@ -372,7 +372,9 @@ fn build_ring() -> Array[@s.SceneGroup] {
 
 ///|
 fn build_lens() -> Array[@s.SceneGroup] {
-  let surf = fn(phi : Double, rr : Double) { 12.0 + 3.0 * @math.cos(5.0 * phi) }
+  let surf = fn(phi : Double, _rr : Double) {
+    12.0 + 3.0 * @math.cos(5.0 * phi)
+  }
   let l1 = @s.new_lens(
     Some(@s.new_local_frame(@s.vec3(-50.0, -50.0, 0.0), None)),
     10.0,

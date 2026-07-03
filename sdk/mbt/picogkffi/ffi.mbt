@@ -829,7 +829,7 @@ extern "C" fn metadata_remove_value(
 
 ///|
 #borrow(p_bbox, p_sdf)
-extern "C" fn voxels_render_implicit(
+pub extern "C" fn voxels_render_implicit(
   h_this : Int64,
   h_vox : Int64,
   p_bbox : FixedArray[Byte],
@@ -838,7 +838,7 @@ extern "C" fn voxels_render_implicit(
 
 ///|
 #borrow(p_sdf)
-extern "C" fn voxels_intersect_implicit(
+pub extern "C" fn voxels_intersect_implicit(
   h_this : Int64,
   h_vox : Int64,
   p_sdf : FixedArray[Byte],
@@ -848,7 +848,7 @@ extern "C" fn voxels_intersect_implicit(
 
 ///|
 #borrow(p_cb)
-extern "C" fn scalar_field_traverse_active(
+pub extern "C" fn scalar_field_traverse_active(
   h_this : Int64,
   h_sf : Int64,
   p_cb : FixedArray[Byte],
@@ -858,7 +858,7 @@ extern "C" fn scalar_field_traverse_active(
 
 ///|
 #borrow(p_cb)
-extern "C" fn vector_field_traverse_active(
+pub extern "C" fn vector_field_traverse_active(
   h_this : Int64,
   h_vf : Int64,
   p_cb : FixedArray[Byte],
@@ -1136,7 +1136,7 @@ extern "C" fn picogk_write_stl(
 
 ///|
 #borrow(path, pixels)
-extern "C" fn picogk_write_png(
+pub extern "C" fn picogk_write_png(
   path : FixedArray[Byte],
   width : Int,
   height : Int,
@@ -1180,6 +1180,4 @@ extern "C" fn picogk_write_file(
 
 ///|
 #borrow(url)
-extern "C" fn picogk_open_url(
-  url : FixedArray[Byte],
-) -> Int = "picogk_open_url"
+extern "C" fn picogk_open_url(url : FixedArray[Byte]) -> Int = "picogk_open_url"

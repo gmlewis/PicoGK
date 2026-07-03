@@ -20,6 +20,10 @@ pub const META_TYPE_VECTOR : Int = 2
 
 pub fn build_info() -> String
 
+pub let default_azimuth : Double
+
+pub let default_elevation : Double
+
 pub fn from_lattice(Lattice) -> Voxels
 
 pub fn from_mesh(Mesh) -> Voxels
@@ -84,7 +88,13 @@ pub fn new_vector_field() -> VectorField
 
 pub fn new_viewer(String, Int, Int) -> Viewer
 
+pub fn new_viewer_ex(String, Int, Int, Double, Double, Double, Double) -> ViewerEx
+
 pub fn new_voxels() -> Voxels
+
+pub fn open_url(String) -> Bool
+
+pub fn picogk_write_png(FixedArray[Byte], Int, Int, Bytes, Int, Int, Int) -> Int
 
 pub fn polyline_from_vertices(Array[Double], ColorFloat) -> PolyLine
 
@@ -95,6 +105,8 @@ pub fn polylines_mem_usage() -> Int64
 pub fn scalar_field_build_from_voxels(Voxels, Double, Double) -> ScalarField
 
 pub fn scalar_field_from_voxels(Voxels) -> ScalarField
+
+pub fn scalar_field_traverse_active(Int64, Int64, FixedArray[Byte]) -> Unit
 
 pub fn scalar_fields_allocated() -> Int64
 
@@ -118,6 +130,8 @@ pub fn vector_field_build_from_voxels(Voxels, Vec3, Double) -> VectorField
 
 pub fn vector_field_from_voxels(Voxels) -> VectorField
 
+pub fn vector_field_traverse_active(Int64, Int64, FixedArray[Byte]) -> Unit
+
 pub fn vector_fields_allocated() -> Int64
 
 pub fn vector_fields_mem_usage() -> Int64
@@ -128,9 +142,17 @@ pub fn voxel_size() -> Double
 
 pub fn voxels_allocated() -> Int64
 
+pub fn voxels_intersect_implicit(Int64, Int64, FixedArray[Byte]) -> Unit
+
 pub fn voxels_mem_usage() -> Int64
 
+pub fn voxels_render_implicit(Int64, Int64, FixedArray[Byte], FixedArray[Byte]) -> Unit
+
 pub fn voxels_to_mm(Vec3) -> Vec3
+
+pub fn write_file(String, String) -> Bool
+
+pub fn write_slice_png(String, Array[Double], Int, Int) -> Bool
 
 // Errors
 
@@ -307,6 +329,23 @@ pub fn Viewer::set_mesh_matrix(Self, Mesh, FixedArray[Byte]) -> Unit
 pub fn Viewer::set_poly_line_matrix(Self, PolyLine, FixedArray[Byte]) -> Unit
 pub fn Viewer::set_voxels_matrix(Self, Voxels, FixedArray[Byte]) -> Unit
 
+pub struct ViewerEx {
+  h : Int64
+}
+pub fn ViewerEx::add_mesh(Self, Int, Mesh) -> Unit
+pub fn ViewerEx::add_voxels(Self, Int, Voxels) -> Unit
+pub fn ViewerEx::bounding_box(Self) -> BBox3
+pub fn ViewerEx::destroy(Self) -> Unit
+pub fn ViewerEx::is_valid(Self) -> Bool
+pub fn ViewerEx::poll(Self) -> Bool
+pub fn ViewerEx::remove_all_objects(Self) -> Unit
+pub fn ViewerEx::request_close(Self) -> Unit
+pub fn ViewerEx::request_update(Self) -> Unit
+pub fn ViewerEx::run(Self) -> Unit
+pub fn ViewerEx::screenshot_png(Self, String, Int) -> Bool
+pub fn ViewerEx::set_group_material(Self, Int, ColorFloat, Double, Double) -> Unit
+pub fn ViewerEx::set_group_visible(Self, Int, Bool) -> Unit
+
 pub struct Voxels {
   h : Int64
 }
@@ -325,6 +364,7 @@ pub fn Voxels::get_x_slice(Self, Int) -> Array[Double]
 pub fn Voxels::get_y_slice(Self, Int) -> Array[Double]
 pub fn Voxels::get_z_slice(Self, Int) -> Array[Double]
 pub fn Voxels::intersect(Self, Self) -> Self
+pub fn Voxels::intersect_gyroid_sphere(Self, Double, Double, Double) -> Unit
 pub fn Voxels::is_empty(Self) -> Bool
 pub fn Voxels::is_equal(Self, Self) -> Bool
 pub fn Voxels::is_inside(Self, Vec3) -> Bool
@@ -333,8 +373,13 @@ pub fn Voxels::mem_usage(Self) -> Int64
 pub fn Voxels::offset(Self, Double) -> Unit
 pub fn Voxels::project_z_slice(Self, Double, Double) -> Unit
 pub fn Voxels::ray_cast(Self, Vec3, Vec3) -> Vec3?
+pub fn Voxels::render_gyroid(Self, BBox3, Double, Double) -> Unit
+pub fn Voxels::render_gyroid_genus(Self, BBox3, Double, Double, Double) -> Unit
+pub fn Voxels::render_gyroid_sphere(Self, BBox3, Double, Double, Double) -> Unit
+pub fn Voxels::render_gyroid_sphere_offset(Self, BBox3, Double, Double, Double, Double, Double, Double) -> Unit
 pub fn Voxels::render_lattice(Self, Lattice) -> Unit
 pub fn Voxels::render_mesh(Self, Mesh) -> Unit
+pub fn Voxels::render_superellipsoid(Self, BBox3, Double, Double, Double, Double, Double) -> Unit
 pub fn Voxels::shell(Self, Double) -> Unit
 pub fn Voxels::sub(Self, Self) -> Self
 pub fn Voxels::surface_normal(Self, Vec3) -> Vec3

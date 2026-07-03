@@ -374,11 +374,11 @@ pub fn new_local_frame_xyz(
 }
 
 ///|
-pub fn LocalFrame::point_to_world(self : LocalFrame, local : Vec3) -> Vec3 {
+pub fn LocalFrame::point_to_world(self : LocalFrame, local_pt : Vec3) -> Vec3 {
   self.pos
-  .add(self.local_x.mul(local.x))
-  .add(self.local_y.mul(local.y))
-  .add(self.local_z.mul(local.z))
+  .add(self.local_x.mul(local_pt.x))
+  .add(self.local_y.mul(local_pt.y))
+  .add(self.local_z.mul(local_pt.z))
 }
 
 ///|
@@ -526,7 +526,7 @@ pub fn new_control_point_spline(
       pts.push(pts[i])
     }
   }
-  let knot = spline_knot_vector(pts.length(), d, not(closed))
+  let knot = spline_knot_vector(pts.length(), d, !closed)
   ControlPointSpline::{ control_points: pts, degree: d, knot }
 }
 
@@ -1534,10 +1534,10 @@ pub fn new_pipe_segment(
   outer_radius : (Double, Double) -> Double,
   start : (Double) -> Double,
   end : (Double) -> Double,
-  method : String,
+  method_name : String,
 ) -> PipeSegment {
   let pipe = new_pipe(frame, length, inner_radius, outer_radius)
-  let (mid, rng) = if method == "start_end" {
+  let (mid, rng) = if method_name == "start_end" {
     (line_mid(start, end), line_sub(end, start))
   } else {
     (start, end)
@@ -1557,11 +1557,11 @@ pub fn new_pipe_segment_with_frames(
   outer_radius : (Double, Double) -> Double,
   start : (Double) -> Double,
   end : (Double) -> Double,
-  method : String,
+  method_name : String,
   fs : Frames,
 ) -> PipeSegment {
   let pipe = new_pipe_with_frames(frame, length, inner_radius, outer_radius, fs)
-  let (mid, rng) = if method == "start_end" {
+  let (mid, rng) = if method_name == "start_end" {
     (line_mid(start, end), line_sub(end, start))
   } else {
     (start, end)
@@ -1933,14 +1933,30 @@ pub fn ColorScale3D::color(self : ColorScale3D, value : Double) -> RGB {
   }
   let ratio = (v - self.min_value) / (self.max_value - self.min_value)
   let idx = (ratio * (self.rgb_arr.length() - 1).to_double()).to_int()
-  let i = if idx < 0 { 0 } else if idx >= self.rgb_arr.length() { self.rgb_arr.length() - 1 } else { idx }
+  let i = if idx < 0 {
+    0
+  } else if idx >= self.rgb_arr.length() {
+    self.rgb_arr.length() - 1
+  } else {
+    idx
+  }
   let c = self.rgb_arr[i]
-  RGB::{ r: clamp_d(c.r, 0.0, 1.0), g: clamp_d(c.g, 0.0, 1.0), b: clamp_d(c.b, 0.0, 1.0) }
+  RGB::{
+    r: clamp_d(c.r, 0.0, 1.0),
+    g: clamp_d(c.g, 0.0, 1.0),
+    b: clamp_d(c.b, 0.0, 1.0),
+  }
 }
 
 ///|
 fn clamp_d(v : Double, lo : Double, hi : Double) -> Double {
-  if v < lo { lo } else if v > hi { hi } else { v }
+  if v < lo {
+    lo
+  } else if v > hi {
+    hi
+  } else {
+    v
+  }
 }
 
 ///|
@@ -1960,14 +1976,22 @@ pub fn split_by_overhang_angle(
     let a = tris[i * 3] * 3
     let b = tris[i * 3 + 1] * 3
     let c = tris[i * 3 + 2] * 3
-    let ax = verts[a]; let ay = verts[a + 1]; let az = verts[a + 2]
-    let bx = verts[b]; let by = verts[b + 1]; let bz = verts[b + 2]
-    let cx = verts[c]; let cy = verts[c + 1]; let cz = verts[c + 2]
+    let ax = verts[a]
+    let ay = verts[a + 1]
+    let az = verts[a + 2]
+    let bx = verts[b]
+    let by = verts[b + 1]
+    let bz = verts[b + 2]
+    let cx = verts[c]
+    let cy = verts[c + 1]
+    let cz = verts[c + 2]
     let nx = (ay - by) * (cz - bz) - (az - bz) * (cy - by)
     let ny = (az - bz) * (cx - bx) - (ax - bx) * (cz - bz)
     let nz = (ax - bx) * (cy - by) - (ay - by) * (cx - bx)
     let nlen = (nx * nx + ny * ny + nz * nz).sqrt()
-    let mut nx = nx; let mut ny = ny; let mut nz = nz
+    let mut nx = nx
+    let mut ny = ny
+    let mut nz = nz
     if nlen > 0.0 {
       nx = nx / nlen
       ny = ny / nlen
@@ -1976,8 +2000,12 @@ pub fn split_by_overhang_angle(
     let dr = (nx * nx + ny * ny).sqrt()
     let dz = nz.abs()
     let mut angle = @math.atan2(dz, dr) * 180.0 / 3.14159265358979
-    if angle > 90.0 { angle = 90.0 }
-    if angle < 0.0 { angle = 0.0 }
+    if angle > 90.0 {
+      angle = 90.0
+    }
+    if angle < 0.0 {
+      angle = 0.0
+    }
     angles[i] = angle
   }
   let lo = scale.min_value
@@ -1985,7 +2013,8 @@ pub fn split_by_overhang_angle(
   let groups : Array[SceneGroup] = []
   for k in 0..<n_classes {
     let lo_k = lo + k.to_double() * (hi - lo) / (n_classes - 1).to_double()
-    let hi_k = lo + (k + 1).to_double() * (hi - lo) / (n_classes - 1).to_double()
+    let hi_k = lo +
+      (k + 1).to_double() * (hi - lo) / (n_classes - 1).to_double()
     let sub_verts : Array[Double] = []
     let sub_tris : Array[Int] = []
     for i in 0..<nt {

@@ -6,23 +6,303 @@ import {
 }
 
 // Values
-pub fn connected_hollow_spheres(@picogkffi.Vec3, @picogkffi.Vec3, Double, Double, Double, Double) -> @picogkffi.Voxels
+pub fn frames_aligned_to_x(Array[Vec3], Vec3) -> Frames
 
-pub fn cylinder_ring(@picogkffi.Vec3, Double, Double, Double, Int) -> @picogkffi.Voxels
+pub fn lerp(Vec3, Vec3, Double) -> Vec3
 
-pub fn flat_cylinder(Double, Double, Double, Double, Double) -> @picogkffi.Voxels
+pub fn line_const(Double) -> (Double) -> Double
 
-pub fn hollow_sphere(@picogkffi.Vec3, Double, Double) -> @picogkffi.Voxels
+pub fn line_fn((Double) -> Double) -> (Double) -> Double
 
-pub fn lattice_cage(Array[@picogkffi.Vec3], Double, Double) -> @picogkffi.Voxels
+pub fn new_box(LocalFrame?, Double, (Double) -> Double, (Double) -> Double) -> Box
 
-pub fn sphere_grid(@picogkffi.Vec3, Double, Double, Double, Int, Int, Int, Double) -> @picogkffi.Voxels
+pub fn new_color_scale_3d(Array[RGB], Double, Double) -> ColorScale3D
 
-pub fn torus(Double, Double, @picogkffi.Vec3) -> @picogkffi.Voxels
+pub fn new_control_point_spline(Array[Vec3], Int, Bool) -> ControlPointSpline
+
+pub fn new_cylinder(LocalFrame?, Double, (Double, Double) -> Double) -> Cylinder
+
+pub fn new_implicit_genus(Double) -> ImplicitGenus
+
+pub fn new_implicit_gyroid(Double, Double) -> ImplicitGyroid
+
+pub fn new_implicit_super_ellipsoid(Vec3, Double, Double, Double, Double, Double) -> ImplicitSuperEllipsoid
+
+pub fn new_lattice_manifold(LocalFrame, Double, Double, Double) -> LatticeManifold
+
+pub fn new_lattice_pipe(LocalFrame?, Double, (Double) -> Double) -> LatticePipe
+
+pub fn new_lattice_pipe_with_frames(LocalFrame?, Double, (Double) -> Double, Frames) -> LatticePipe
+
+pub fn new_lens(LocalFrame?, Double, Double, Double) -> Lens
+
+pub fn new_lens_with_mods(LocalFrame?, Double, Double, Double, (Double, Double) -> Double, (Double, Double) -> Double) -> Lens
+
+pub fn new_local_frame(Vec3, Vec3?) -> LocalFrame
+
+pub fn new_local_frame_xyz(Vec3, Vec3, Vec3) -> LocalFrame
+
+pub fn new_pipe(LocalFrame?, Double, (Double, Double) -> Double, (Double, Double) -> Double) -> Pipe
+
+pub fn new_pipe_segment(LocalFrame?, Double, (Double, Double) -> Double, (Double, Double) -> Double, (Double) -> Double, (Double) -> Double, String) -> PipeSegment
+
+pub fn new_pipe_segment_with_frames(LocalFrame?, Double, (Double, Double) -> Double, (Double, Double) -> Double, (Double) -> Double, (Double) -> Double, String, Frames) -> PipeSegment
+
+pub fn new_pipe_with_frames(LocalFrame?, Double, (Double, Double) -> Double, (Double, Double) -> Double, Frames) -> Pipe
+
+pub fn new_pipe_with_transform(LocalFrame?, Double, (Double, Double) -> Double, (Double, Double) -> Double, (Array[Vec3]) -> Array[Vec3]) -> Pipe
+
+pub fn new_ring(LocalFrame?, Double, (Double, Double) -> Double) -> Ring
+
+pub fn new_sphere(LocalFrame?, (Double, Double) -> Double) -> Sphere
+
+pub fn new_surface_mesh_builder() -> SurfaceMeshBuilder
+
+pub fn orthogonal_dir(Vec3) -> Vec3
+
+pub let palette : Map[String, RGB]
+
+pub fn rainbow_spectrum() -> Array[RGB]
+
+pub fn rotate_around_axis(Vec3, Vec3, Double, Vec3) -> Vec3
+
+pub fn safe_normalized(Vec3, Double) -> Vec3
+
+pub fn scene_group_mesh(@picogkffi.Mesh, RGB) -> SceneGroup
+
+pub fn scene_group_voxels(@picogkffi.Voxels, RGB) -> SceneGroup
+
+pub fn spline_points() -> Array[Vec3]
+
+pub fn split_by_overhang_angle(@picogkffi.Mesh, ColorScale3D, Int) -> Array[SceneGroup]
+
+pub fn surf_const(Double) -> (Double, Double) -> Double
+
+pub fn surf_fn((Double, Double) -> Double) -> (Double, Double) -> Double
+
+pub fn surf_from_line((Double) -> Double, String) -> (Double, Double) -> Double
+
+pub fn to_voxels(@picogkffi.Mesh) -> @picogkffi.Voxels
+
+pub fn vec3(Double, Double, Double) -> Vec3
 
 // Errors
 
 // Types and methods
+pub struct Box {
+  frame : LocalFrame
+  length : Double
+  width : (Double) -> Double
+  depth : (Double) -> Double
+  frames : Frames?
+  w_steps : Int
+  d_steps : Int
+  l_steps : Int
+  transform : ((Array[Vec3]) -> Array[Vec3])?
+}
+pub fn Box::to_mesh(Self) -> @picogkffi.Mesh
+pub fn Box::to_voxels(Self) -> @picogkffi.Voxels
+
+pub struct ColorScale3D {
+  rgb_arr : Array[RGB]
+  min_value : Double
+  max_value : Double
+}
+pub fn ColorScale3D::color(Self, Double) -> RGB
+
+pub struct ControlPointSpline {
+  control_points : Array[Vec3]
+  degree : Int
+  knot : Array[Double]
+}
+pub fn ControlPointSpline::point_at(Self, Double) -> Vec3
+pub fn ControlPointSpline::points(Self, Int) -> Array[Vec3]
+
+pub struct Cylinder {
+  frame : LocalFrame
+  length : Double
+  radius : (Double, Double) -> Double
+  frames : Frames?
+  polar_steps : Int
+  radial_steps : Int
+  length_steps : Int
+}
+pub fn Cylinder::to_mesh(Self) -> @picogkffi.Mesh
+pub fn Cylinder::to_voxels(Self) -> @picogkffi.Voxels
+
+pub struct Frames {
+  spine : Array[Vec3]
+  local_x : Array[Vec3]
+  local_y : Array[Vec3]
+  local_z : Array[Vec3]
+}
+pub fn Frames::frame_at(Self, Double) -> LocalFrame
+
+pub struct ImplicitGenus {
+  gap : Double
+}
+
+pub struct ImplicitGyroid {
+  unit_size : Double
+  thickness_ratio : Double
+  frequency : Double
+}
+
+pub struct ImplicitSuperEllipsoid {
+  center : Vec3
+  ax : Double
+  ay : Double
+  az : Double
+  e1 : Double
+  e2 : Double
+}
+
+pub struct LatticeManifold {
+  frame : LocalFrame
+  length : Double
+  radius : (Double) -> Double
+  frames : Frames?
+  l_steps : Int
+  max_overhang_angle : Double
+  extend_both_sides : Bool
+  min_printable_radius : Double
+}
+pub fn LatticeManifold::set_extend_both_sides(Self, Bool) -> Self
+pub fn LatticeManifold::to_voxels(Self) -> @picogkffi.Voxels
+
+pub struct LatticePipe {
+  frame : LocalFrame
+  length : Double
+  radius : (Double) -> Double
+  frames : Frames?
+  l_steps : Int
+}
+pub fn LatticePipe::to_voxels(Self) -> @picogkffi.Voxels
+
+pub struct Lens {
+  frame : LocalFrame
+  height : Double
+  inner_radius : Double
+  outer_radius : Double
+  lower : (Double, Double) -> Double
+  upper : (Double, Double) -> Double
+  radial_steps : Int
+  polar_steps : Int
+  height_steps : Int
+}
+pub fn Lens::to_mesh(Self) -> @picogkffi.Mesh
+pub fn Lens::to_voxels(Self) -> @picogkffi.Voxels
+
+pub struct LineModulation {
+  fn_ : (Double) -> Double
+}
+pub fn LineModulation::add(Self, Self) -> Self
+pub fn LineModulation::call(Self, Double) -> Double
+pub fn LineModulation::const_val(Double) -> Self
+pub fn LineModulation::from_fn((Double) -> Double) -> Self
+pub fn LineModulation::mul(Self, Double) -> Self
+pub fn LineModulation::new((Double) -> Double) -> Self
+pub fn LineModulation::sub(Self, Self) -> Self
+
+pub struct LocalFrame {
+  pos : Vec3
+  local_x : Vec3
+  local_y : Vec3
+  local_z : Vec3
+}
+pub fn LocalFrame::point_to_world(Self, Vec3) -> Vec3
+pub fn LocalFrame::rotated(Self, Double, Vec3) -> Self
+pub fn LocalFrame::translated(Self, Vec3) -> Self
+
+pub struct Pipe {
+  frame : LocalFrame
+  length : Double
+  inner : (Double, Double) -> Double
+  outer : (Double, Double) -> Double
+  frames : Frames?
+  polar_steps : Int
+  radial_steps : Int
+  length_steps : Int
+  transform : ((Array[Vec3]) -> Array[Vec3])?
+  mut phi_angle_func : (Double, Double) -> Double
+}
+pub fn Pipe::to_mesh(Self) -> @picogkffi.Mesh
+pub fn Pipe::to_voxels(Self) -> @picogkffi.Voxels
+
+pub struct PipeSegment {
+  pipe : Pipe
+  mid : (Double) -> Double
+  rng : (Double) -> Double
+}
+pub fn PipeSegment::to_mesh(Self) -> @picogkffi.Mesh
+pub fn PipeSegment::to_voxels(Self) -> @picogkffi.Voxels
+
+pub struct RGB {
+  r : Double
+  g : Double
+  b : Double
+}
+pub fn RGB::new(Double, Double, Double) -> Self
+pub fn RGB::to_ffi(Self) -> @picogkffi.ColorFloat
+
+pub struct Ring {
+  frame : LocalFrame
+  ring_radius : Double
+  radius : (Double, Double) -> Double
+  radial_steps : Int
+  polar_steps : Int
+}
+pub fn Ring::to_mesh(Self) -> @picogkffi.Mesh
+pub fn Ring::to_voxels(Self) -> @picogkffi.Voxels
+
+pub struct SceneGroup {
+  voxels : @picogkffi.Voxels?
+  mesh : @picogkffi.Mesh?
+  color : RGB
+}
+
+pub struct Sphere {
+  frame : LocalFrame
+  radius : (Double, Double) -> Double
+  azim_steps : Int
+  polar_steps : Int
+  transform : ((Array[Vec3]) -> Array[Vec3])?
+}
+pub fn Sphere::to_mesh(Self) -> @picogkffi.Mesh
+pub fn Sphere::to_voxels(Self) -> @picogkffi.Voxels
+
+pub struct SurfaceMeshBuilder {
+  verts : Array[Double]
+  tris : Array[Int]
+}
+pub fn SurfaceMeshBuilder::add(Self, Array[Array[Vec3]], Bool) -> Self
+pub fn SurfaceMeshBuilder::build(Self) -> @picogkffi.Mesh
+
+pub struct SurfaceModulation {
+  fn_ : (Double, Double) -> Double
+}
+pub fn SurfaceModulation::add(Self, Self) -> Self
+pub fn SurfaceModulation::call(Self, Double, Double) -> Double
+pub fn SurfaceModulation::const_val(Double) -> Self
+pub fn SurfaceModulation::from_fn((Double, Double) -> Double) -> Self
+pub fn SurfaceModulation::from_line(LineModulation, String) -> Self
+pub fn SurfaceModulation::mul(Self, Double) -> Self
+pub fn SurfaceModulation::new((Double, Double) -> Double) -> Self
+pub fn SurfaceModulation::sub(Self, Self) -> Self
+
+pub struct Vec3 {
+  x : Double
+  y : Double
+  z : Double
+}
+pub fn Vec3::add(Self, Self) -> Self
+pub fn Vec3::cross(Self, Self) -> Self
+pub fn Vec3::dot(Self, Self) -> Double
+pub fn Vec3::len(Self) -> Double
+pub fn Vec3::mul(Self, Double) -> Self
+pub fn Vec3::new(Double, Double, Double) -> Self
+pub fn Vec3::normalized(Self) -> Self
+pub fn Vec3::sub(Self, Self) -> Self
 
 // Type aliases
 
