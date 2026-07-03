@@ -740,7 +740,11 @@ pub fn SurfaceMeshBuilder::build(self : SurfaceMeshBuilder) -> @picogkffi.Mesh {
 
 ///|
 fn make_grid(a : Int, b : Int) -> Array[Array[Vec3]] {
-  Array::make(a, Array::make(b, vec3(0.0, 0.0, 0.0)))
+  let grid : Array[Array[Vec3]] = []
+  for _ in 0..<a {
+    grid.push(Array::make(b, vec3(0.0, 0.0, 0.0)))
+  }
+  grid
 }
 
 ///|
@@ -908,12 +912,12 @@ pub fn Box::to_mesh(self : Box) -> @picogkffi.Mesh {
     lr[i] = i.to_double() / (nl - 1).to_double()
   }
   let smb = new_surface_mesh_builder()
-  let _ = smb.add(self.box_surface_grid(w, d, [lr[nl - 1]]), true)
-  let _ = smb.add(self.box_surface_grid(w, d, [lr[0]]), false)
-  let _ = smb.add(self.box_surface_grid([w[0]], d, lr), true)
-  let _ = smb.add(self.box_surface_grid([w[nw - 1]], d, lr), false)
-  let _ = smb.add(self.box_surface_grid(w, [d[nd - 1]], lr), true)
-  let _ = smb.add(self.box_surface_grid(w, [d[0]], lr), false)
+  let smb = smb.add(self.box_surface_grid(w, d, [lr[nl - 1]]), true)
+  let smb = smb.add(self.box_surface_grid(w, d, [lr[0]]), false)
+  let smb = smb.add(self.box_surface_grid([w[0]], d, lr), true)
+  let smb = smb.add(self.box_surface_grid([w[nw - 1]], d, lr), false)
+  let smb = smb.add(self.box_surface_grid(w, [d[nd - 1]], lr), true)
+  let smb = smb.add(self.box_surface_grid(w, [d[0]], lr), false)
   smb.build()
 }
 
@@ -1059,7 +1063,7 @@ pub fn Cylinder::to_mesh(self : Cylinder) -> @picogkffi.Mesh {
         .add(ly.mul(r * @math.sin(phi)))
     }
   }
-  let _ = smb.add(grid, false)
+  let smb = smb.add(grid, false)
   grid = make_grid(self.polar_steps, self.radial_steps + 1)
   for i in 0..<self.polar_steps {
     let phi = 2.0 *
@@ -1074,7 +1078,7 @@ pub fn Cylinder::to_mesh(self : Cylinder) -> @picogkffi.Mesh {
         .add(ly.mul(r * @math.sin(phi)))
     }
   }
-  let _ = smb.add(grid, true)
+  let smb = smb.add(grid, true)
   grid = make_grid(self.polar_steps, nl + 1)
   for i in 0..<self.polar_steps {
     let phi = 2.0 *
@@ -1089,7 +1093,7 @@ pub fn Cylinder::to_mesh(self : Cylinder) -> @picogkffi.Mesh {
         .add(ly.mul(r * @math.sin(phi)))
     }
   }
-  let _ = smb.add(grid, true)
+  let smb = smb.add(grid, true)
   smb.build()
 }
 
@@ -1149,7 +1153,7 @@ pub fn Ring::to_mesh(self : Ring) -> @picogkffi.Mesh {
     }
   }
   let smb = new_surface_mesh_builder()
-  let _ = smb.add(grid, true)
+  let smb = smb.add(grid, true)
   smb.build()
 }
 
@@ -1229,10 +1233,10 @@ pub fn Lens::to_mesh(self : Lens) -> @picogkffi.Mesh {
   let p = arange(self.polar_steps)
   let rr = arange(self.radial_steps)
   let hr = arange(self.height_steps)
-  let _ = smb.add(self.lens_surface(1.0, p, rr), false)
-  let _ = smb.add(self.lens_surface(0.0, p, rr), true)
-  let _ = smb.add(self.lens_mantle_surface(hr, p, 0.0), false)
-  let _ = smb.add(self.lens_mantle_surface(hr, p, 1.0), true)
+  let smb = smb.add(self.lens_surface(1.0, p, rr), false)
+  let smb = smb.add(self.lens_surface(0.0, p, rr), true)
+  let smb = smb.add(self.lens_mantle_surface(hr, p, 0.0), false)
+  let smb = smb.add(self.lens_mantle_surface(hr, p, 1.0), true)
   smb.build()
 }
 
@@ -1402,10 +1406,10 @@ pub fn Pipe::to_mesh(self : Pipe) -> @picogkffi.Mesh {
   let pr = arange(self.polar_steps)
   let rr = arange(self.radial_steps)
   let lr = arange(self.length_steps)
-  let _ = smb.add(self.pipe_surface([lr[lr.length() - 1]], pr, rr), false)
-  let _ = smb.add(self.pipe_surface([lr[0]], pr, rr), true)
-  let _ = smb.add(self.pipe_surface(lr, pr, [0.0]), false)
-  let _ = smb.add(self.pipe_surface(lr, pr, [1.0]), true)
+  let smb = smb.add(self.pipe_surface([lr[lr.length() - 1]], pr, rr), false)
+  let smb = smb.add(self.pipe_surface([lr[0]], pr, rr), true)
+  let smb = smb.add(self.pipe_surface(lr, pr, [0.0]), false)
+  let smb = smb.add(self.pipe_surface(lr, pr, [1.0]), true)
   smb.build()
 }
 
@@ -1586,12 +1590,12 @@ pub fn PipeSegment::to_mesh(self : PipeSegment) -> @picogkffi.Mesh {
   let pr = arange(self.pipe.polar_steps)
   let rr = arange(self.pipe.radial_steps)
   let lr = arange(self.pipe.length_steps)
-  let _ = smb.add(self.pipe.pipe_surface([lr[lr.length() - 1]], pr, rr), false)
-  let _ = smb.add(self.pipe.pipe_surface([lr[0]], pr, rr), true)
-  let _ = smb.add(self.pipe.pipe_surface(lr, pr, [0.0]), false)
-  let _ = smb.add(self.pipe.pipe_surface(lr, pr, [1.0]), true)
-  let _ = smb.add(self.pipe.pipe_surface(lr, [0.0], rr), false)
-  let _ = smb.add(self.pipe.pipe_surface(lr, [1.0], rr), true)
+  let smb = smb.add(self.pipe.pipe_surface([lr[lr.length() - 1]], pr, rr), false)
+  let smb = smb.add(self.pipe.pipe_surface([lr[0]], pr, rr), true)
+  let smb = smb.add(self.pipe.pipe_surface(lr, pr, [0.0]), false)
+  let smb = smb.add(self.pipe.pipe_surface(lr, pr, [1.0]), true)
+  let smb = smb.add(self.pipe.pipe_surface(lr, [0.0], rr), false)
+  let smb = smb.add(self.pipe.pipe_surface(lr, [1.0], rr), true)
   smb.build()
 }
 

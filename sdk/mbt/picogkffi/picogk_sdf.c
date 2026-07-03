@@ -129,16 +129,16 @@ static float sdf_gyroid_genus(const PKVector3* p) {
 
 // Superellipsoid: pow(pow(|x|/a, 2/e2) + pow(|y|/a, 2/e2), e2/e1) + pow(|z|/c, 2/e1) - 1
 static float sdf_superellipsoid(const PKVector3* p) {
-    float a = g_sdf_param1, b = g_sdf_param2, c = g_sdf_param3;
-    float e1 = g_sdf_param4, e2 = g_sdf_param5;
-    float dx = fabsf(p->X) / a;
-    float dy = fabsf(p->Y) / a;  // Go uses Ax for both x and y (Ay is unused)
-    float dz = fabsf(p->Z) / c;
-    float n2 = 2.0f / e2;
-    float n1 = 2.0f / e1;
-    float xy = powf(dx, n2) + powf(dy, n2);
-    float val = powf(xy, e2 / e1) + powf(dz, n1);
-    return val - 1.0f;
+    double a = (double)g_sdf_param1, b = (double)g_sdf_param2, c = (double)g_sdf_param3;
+    double e1 = (double)g_sdf_param4, e2 = (double)g_sdf_param5;
+    double dx = fabs((double)p->X) / a;
+    double dy = fabs((double)p->Y) / a;  // Go uses Ax for both x and y (Ay is unused)
+    double dz = fabs((double)p->Z) / c;
+    double n2 = 2.0 / e2;
+    double n1 = 2.0 / e1;
+    double xy = pow(dx, n2) + pow(dy, n2);
+    double val = pow(xy, e2 / e1) + pow(dz, n1);
+    return (float)(val - 1.0);
 }
 
 // Plain gyroid: abs(gyroid) - wall
