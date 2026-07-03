@@ -2,60 +2,24 @@
 
 `blender` is a Gossamer SDK for the [Blender MCP](https://github.com/ahujasid/blender-mcp) server. It provides a fully typed, idiomatic Gossamer interface to all 26 Blender MCP tools — from executing Python code to querying scene objects, capturing screenshots, rendering, and inspecting blend files.
 
-Unlike the Go and MoonBit SDKs (which launch the MCP server as a subprocess and communicate via JSON-RPC over stdio), the Gossamer SDK connects to the Blender MCP server over its **streamable-http** transport. This fits Gossamer's stdlib naturally: `std::http` provides the client, and no subprocess pipe management is needed.
+## Prerequisites (same as the Go and MoonBit SDKs)
+
+- Blender running with the MCP addon enabled and server started
+- The blender-mcp server installed: `pip install blender-mcp`
+
+The SDK auto-starts the blender-mcp HTTP server on first connect, so `gos run .` just works — no manual server launch needed.
 
 ## Quick Start
 
-Start the Blender MCP server with HTTP transport:
-
-```bash
-uv --directory ~/Projects/Blender/blender_mcp/mcp/blmcp run \
-  python -m blmcp --transport http --port 8765
-```
-
-Blender must be running with the MCP add-on enabled and connected.
-
-Run the demo (exercises 5 tools against the live server):
-
-```bash
-gos run src/lib.gos
-```
-
-Run the unit tests (SSE parser, path expansion — no server needed):
-
-```bash
-gos test src/lib.gos
-```
-
-## Usage
-
 ```gossamer
-use std::errors
-use blender
+let client = blender::new_client()?
+defer client.close()
 
-fn main() -> Result<(), errors::Error> {
-    let client = blender::new_client("http://127.0.0.1:8765")?
-    defer client.close()
-
-    // Execute Python code in Blender
-    let res = client.execute_blender_code(
-        "import bpy; result = {'count': len(bpy.data.objects)}".to_string()
-    )?
-    println!("{}", res)
-
-    // Get scene objects summary
-    let summary = client.get_objects_summary()?
-    println!("{}", summary)
-
-    // Search the Blender Python API docs
-    let docs = client.search_api_docs("how to bake", None, None, None)?
-    println!("{}", docs)
-
-    Ok(())
-}
+let res = client.execute_blender_code(
+    "import bpy; result = {'count': len(bpy.data.objects)}".to_string()
+)?
+println(res)
 ```
-
-The base URL defaults to `http://127.0.0.1:8765` via the `BLENDER_MCP_URL` environment variable.
 
 ## API Overview
 
@@ -82,11 +46,11 @@ The low-level `client.call_tool(tool_name, args)` method is also public for dire
 
 ## Architecture
 
-The SDK communicates with the Blender MCP server over HTTP using the MCP streamable-http transport:
+The SDK communicates with the Blender MCP server over HTTP using the MCP streamable-http transport. Gossamer's `process::spawn` connects child stdio to `/dev/null` (no pipe access), so stdio-based JSON-RPC isn't possible. Instead, the SDK:
 
-1. **`new_client(base_url)`** — performs the MCP `initialize` handshake over HTTP POST.
+1. **`new_client()`** — tries connecting to an existing server on port 8765. If that fails, launches the blender-mcp HTTP server via `process::spawn`, polls until ready, then performs the MCP `initialize` handshake.
 2. **Each tool call** — sends a JSON-RPC `tools/call` request via HTTP POST, receives an SSE-formatted response (`event: message\ndata: {...}`), parses the `data:` line as JSON, and extracts the text content from the tool result.
-3. **No persistent connection** — each call is an independent HTTP request, so the client is naturally thread-safe (the request id counter uses `AtomicI64`).
+3. **`close()`** — kills the server process if the SDK launched it.
 
 Request headers include `Accept: application/json, text/event-stream` as required by the MCP streamable-http protocol.
 
@@ -96,7 +60,6 @@ Request headers include `Accept: application/json, text/event-stream` as require
 sdk/gos/blender/
 ├── project.toml       # manifest
 ├── README.md          # this file
-└── src/
-    ├── lib.gos         # Client struct, JSON-RPC transport, demo entry, unit tests
-    └── tools.gos        # all 26 tool methods (impl Client)
+├── blender.gos         # Client struct, JSON-RPC transport, auto-server-start, unit tests
+└── tools.gos           # all 26 tool methods (impl Client)
 ```

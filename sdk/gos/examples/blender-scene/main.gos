@@ -9,21 +9,20 @@
 //   - Search the Blender Python API docs
 //   - Inspect the blend file metadata
 //
-// Prerequisites:
+// Prerequisites (same as the Go and MoonBit SDKs):
 //   - Blender running with the MCP addon enabled and server started
-//   - The blender-mcp server running with HTTP transport:
-//       uv --directory ~/Projects/Blender/blender_mcp/mcp/blmcp run \
-//         python -m blmcp --transport http --port 8765
+//   - The blender-mcp server installed: pip install blender-mcp
 //
-// Run:  gos run . [-v] [-url <base-url>]
+// The SDK auto-starts the blender-mcp HTTP server, so `gos run .`
+// just works — no manual server launch needed.
+//
+// Run:  gos run . [--v]
 
 use std::encoding::json
 use std::env
 use std::flag
 use std::os
 use std::strings
-
-mod blender;
 
 fn truncate(s: String, n: i64) -> String {
     let s = strings::trim(s)
@@ -34,10 +33,9 @@ fn truncate(s: String, n: i64) -> String {
     }
 }
 
-fn main() -> Result<(), errors::Error> {
+fn main() -> Result<(), flag::Error> {
     let mut fs = flag::Set::new("blender-scene")
     let verbose = fs.bool("v", false, "Verbose output")
-    let url = fs.string("url", "http://127.0.0.1:8765", "Blender MCP server base URL")
     let _positional = fs.parse(env::args())?
 
     let outdir = "/tmp/gos-blender-scene"
@@ -47,19 +45,26 @@ fn main() -> Result<(), errors::Error> {
     println!("Output dir: {}\n", outdir)
 
     // --- Connect ---
+    // The SDK auto-starts the blender-mcp HTTP server if needed.
     println!("--- Connect ---")
-    let client = blender::new_client(*url)?
+    let client = match blender::new_client() {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("connect failed: {}", e)
+            return Ok(())
+        }
+    }
     defer client.close()
-    println!("  Connected to Blender MCP server at {}", *url)
+    println!("  Connected to Blender MCP server")
 
     // Helper closures for calling tools with varying verbosity.
-    let do_print = |result: Result<String, errors::Error>, label: String| {
+    let do_print = |result: Result<String, blender::Error>, label: String| {
         match result {
             Ok(text) => println!("  OK: {} -> {}", label, truncate(text, 120)),
             Err(e) => println!("  FAIL: {} -> {}", label, e)
         }
     }
-    let do = |result: Result<String, errors::Error>, label: String| {
+    let do = |result: Result<String, blender::Error>, label: String| {
         if *verbose {
             do_print(result, label)
         } else {
@@ -72,8 +77,7 @@ fn main() -> Result<(), errors::Error> {
 
     // --- Execute: Set up a demonstration scene ---
     println!("\n--- Execute: Create Scene ---")
-    let setup_code = SETUP_CODE
-    do(client.execute_blender_code(setup_code), "ExecuteBlenderCode")
+    do(client.execute_blender_code(SETUP_CODE), "ExecuteBlenderCode")
 
     // --- Query: Get scene objects ---
     println!("\n--- Query: Scene Objects ---")
@@ -124,7 +128,7 @@ fn main() -> Result<(), errors::Error> {
                     Err(_) => println!("    {}", truncate(result, 100)),
                 }
             }
-            Err(e) => println!("    GetObjectDetailSummary({}): {}", name, e)
+            Err(e) => println!("    GetObjectDetailSummary({}): {}", name, e),
         }
     }
 
@@ -161,8 +165,7 @@ fn main() -> Result<(), errors::Error> {
 
     // --- Execute: Modify the scene ---
     println!("\n--- Execute: Modify Scene ---")
-    let modify_code = MODIFY_CODE
-    do(client.execute_blender_code(modify_code), "ExecuteBlenderCode")
+    do(client.execute_blender_code(MODIFY_CODE), "ExecuteBlenderCode")
 
     // --- Blend File Info ---
     println!("\n--- Blend File Info ---")
@@ -180,8 +183,7 @@ fn main() -> Result<(), errors::Error> {
 
     // --- Execute: Final summary ---
     println!("\n--- Execute: Final Summary ---")
-    let summary_code = SUMMARY_CODE
-    do(client.execute_blender_code(summary_code), "ExecuteBlenderCode")
+    do(client.execute_blender_code(SUMMARY_CODE), "ExecuteBlenderCode")
 
     println!("\n=== Blender scene inspection complete! ===")
     Ok(())

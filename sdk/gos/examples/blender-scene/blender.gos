@@ -2,51 +2,90 @@
 //
 // Connects to the Blender MCP server over its streamable-http
 // transport and exposes all 26 Blender MCP tools via typed methods.
-// The server must be launched with `--transport http` separately.
+//
+// Prerequisites (same as the Go and MoonBit SDKs):
+//   - Blender running with the MCP addon enabled and server started
+//   - The blender-mcp server installed: pip install blender-mcp
+//
+// The SDK auto-starts the blender-mcp HTTP server on first connect
+// if it isn't already running, so `gos run .` just works.
 
 use std::encoding::json
 use std::env
 use std::errors
 use std::http
+use std::process
+use std::strconv
 use std::strings
 use std::sync
-
-mod tools;
+use std::time
 
 const PROTOCOL_VERSION: String = "2024-11-05"
+const DEFAULT_PORT: i64 = 8765
+const DEFAULT_HOST: String = "127.0.0.1"
+const SERVER_READY_TIMEOUT_MS: i64 = 15000
+const POLL_INTERVAL_MS: i64 = 500
+
+// Default command and args to launch the Blender MCP server.
+const DEFAULT_SERVER_BIN: String = "uv"
+const DEFAULT_SERVER_DIR: String = "~/Projects/Blender/blender_mcp/mcp/blmcp"
 
 // Client manages a connection to the Blender MCP server over HTTP.
-// The server must be running with `--transport http` enabled.
+// On close, it kills the server process it launched (if any).
 //
 // Usage:
-//   let client = blender.new_client("http://127.0.0.1:8000")?
+//   let client = blender::new_client()?
 //   let res = client.execute_blender_code("import bpy; result = {'count': len(bpy.data.objects)}")?
 //   println(res)
+//   client.close()
 pub struct Client {
     base_url: String,
     msg_id: sync::AtomicI64,
-    initialised: bool,
+    server_pid: i64,
 }
 
-// new_client returns a Client connected to the Blender MCP server at
-// base_url (e.g. "http://127.0.0.1:8000"). Performs the MCP
-// initialize handshake and returns an error if the server is
-// unreachable or rejects the handshake.
-pub fn new_client(base_url: String) -> Result<Client, errors::Error> {
+// new_client returns a Client connected to the Blender MCP server.
+// If the server isn't already running on the configured port, it
+// launches one automatically. Performs the MCP initialize handshake
+// and returns an error if the server is unreachable or rejects the
+// handshake.
+//
+// Pass an empty string to use the default server directory, or a
+// custom path to the blmcp directory. The port defaults to 8765
+// (override via the second argument, pass 0 for default).
+pub fn new_client() -> Result<Client, errors::Error> {
+    new_client_with("", 0)
+}
+
+// new_client_with lets the caller specify a custom server directory
+// and port. Pass "" for the default directory, 0 for the default
+// port.
+pub fn new_client_with(server_dir: String, port: i64) -> Result<Client, errors::Error> {
+    let p = if port == 0 { DEFAULT_PORT } else { port }
+    let base_url = "http://" + DEFAULT_HOST + ":" + strconv::format_i64(p)
+    // Try connecting to an existing server first.
+    let pid = if try_connect_existing(base_url) {
+        0
+    } else {
+        start_server(server_dir, p)?
+    }
     let c = Client {
         base_url,
         msg_id: sync::AtomicI64::new(0),
-        initialised: false,
+        server_pid: pid,
     }
     c.initialize()?
     Ok(c)
 }
 
 impl Client {
-    // close releases client-side state. The HTTP transport is
-    // stateless from the client's perspective, so this is a no-op
-    // kept for API parity with the Go and MoonBit SDKs.
-    pub fn close(&self) { () }
+    // close shuts down the client. If the SDK launched the server,
+    // it kills the server process.
+    pub fn close(&self) {
+        if self.server_pid > 0 {
+            let _ = process::kill(self.server_pid)
+        }
+    }
 
     // next_id returns the next JSON-RPC request id, thread-safe.
     fn next_id(&self) -> i64 {
@@ -167,6 +206,70 @@ impl Client {
     }
 }
 
+// try_connect_existing returns true if a server is already
+// listening at base_url and responds to an initialize request.
+fn try_connect_existing(base_url: String) -> bool {
+    let body = json::render(build_rpc_request(1, "initialize", init_params()))
+    let headers: [(&str, &str)] = [
+        ("Content-Type", "application/json"),
+        ("Accept", "application/json, text/event-stream"),
+    ]
+    let url = base_url + "/"
+    match http::request(&"POST", &url, body, headers) {
+        Ok(resp) => resp.status == 200,
+        Err(_) => false,
+    }
+}
+
+// start_server launches the blender-mcp HTTP server on the given
+// port, polls until it's ready, and returns the PID.
+fn start_server(server_dir: String, port: i64) -> Result<i64, errors::Error> {
+    let _resolved_dir = if server_dir == "" {
+        expand_path(DEFAULT_SERVER_DIR)
+    } else {
+        expand_path(server_dir)
+    }
+    let args: [String] = [
+        "--directory".to_string(),
+        _resolved_dir,
+        "run".to_string(),
+        "python".to_string(),
+        "-m".to_string(),
+        "blmcp".to_string(),
+        "--transport".to_string(),
+        "http".to_string(),
+        "--port".to_string(),
+        strconv::format_i64(port),
+    ].to_vec()
+    match process::spawn(&DEFAULT_SERVER_BIN, &args) {
+        Ok(pid) => {
+            if pid <= 0 {
+                return Err(errors::newf("spawn returned invalid pid: {}", pid))
+            }
+            // Poll until the server responds.
+            let base_url = "http://" + DEFAULT_HOST + ":" + strconv::format_i64(port)
+            let mut elapsed: i64 = 0
+            while elapsed < SERVER_READY_TIMEOUT_MS {
+                time::sleep(POLL_INTERVAL_MS)
+                elapsed += POLL_INTERVAL_MS
+                if try_connect_existing(base_url) {
+                    return Ok(pid)
+                }
+            }
+            // Timeout: kill the orphan and report.
+            let _ = process::kill(pid)
+            Err(errors::newf(
+                "server did not become ready within {}ms (is Blender running with the MCP addon enabled?)",
+                SERVER_READY_TIMEOUT_MS,
+            ))
+        }
+        Err(e) => Err(errors::newf(
+            "failed to start blender-mcp server (is uv installed?): {}",
+            e,
+        )),
+    }
+}
+
 // build_rpc_request constructs a JSON-RPC request object.
 fn build_rpc_request(id: i64, method: String, params: json::Value) -> json::Value {
     json::Value::object([
@@ -184,7 +287,7 @@ fn init_params() -> json::Value {
         ("capabilities", json::Value::object([])),
         ("clientInfo", json::Value::object([
             ("name", json::Value::String("blender-gos-sdk")),
-            ("version", json::Value::String("0.1.0")),
+            ("version", json::Value::String("1.0.0")),
         ])),
     ])
 }
@@ -218,42 +321,6 @@ pub fn expand_path(path: String) -> String {
     }
 }
 
-// demo exercises the SDK against a live Blender MCP server.
-// Start the server first:
-//   uv --directory ~/Projects/Blender/blender_mcp/mcp/blmcp run \
-//     python -m blmcp --transport http --port 8765
-// Then run:
-//   gos run src/main.gos
-pub fn demo() -> Result<(), errors::Error> {
-    let base_url = env::var("BLENDER_MCP_URL").unwrap_or("http://127.0.0.1:8765".to_string())
-    let client = new_client(base_url)?
-    defer client.close()
-
-    let res = client.execute_blender_code(
-        "import bpy; result = {'count': len(bpy.data.objects)}".to_string()
-    )?
-    println!("execute_blender_code: {}", res)
-
-    let summary = client.get_objects_summary()?
-    let head = if summary.len() > 100 { summary.substring(0, 100) } else { summary }
-    println!("get_objects_summary (first 100 chars): {}", head)
-
-    let dbs = client.get_blendfile_summary_datablocks()?
-    let dbs_head = if dbs.len() > 100 { dbs.substring(0, 100) } else { dbs }
-    println!("get_blendfile_summary_datablocks: {}", dbs_head)
-
-    let docs = client.search_api_docs("how to bake".to_string(), None, None, None)?
-    let docs_head = if docs.len() > 100 { docs.substring(0, 100) } else { docs }
-    println!("search_api_docs (first 100 chars): {}", docs_head)
-
-    let modules = client.get_python_api_docs("*".to_string())?
-    let mods_head = if modules.len() > 100 { modules.substring(0, 100) } else { modules }
-    println!("get_python_api_docs('*'): {}", mods_head)
-
-    println!("All tool calls succeeded!")
-    Ok(())
-}
-
 // === Unit tests ===
 
 #[cfg(test)]
@@ -263,8 +330,7 @@ mod blender_tests {
     #[test]
     fn parse_sse_extracts_data_line() {
         let body = "event: message\ndata: {\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{}}\n"
-        let parsed = parse_sse_response(body)
-        match parsed {
+        match parse_sse_response(body) {
             Ok(v) => match json::get(&v, "id") {
                 Some(val) => testing::check_eq(
                     json::as_i64(val),
@@ -280,8 +346,7 @@ mod blender_tests {
     #[test]
     fn parse_sse_handles_data_no_space() {
         let body = "data:{\"ok\":true}"
-        let parsed = parse_sse_response(body)
-        match parsed {
+        match parse_sse_response(body) {
             Ok(v) => match json::get(&v, "ok") {
                 Some(val) => testing::check_eq(json::as_bool(val), Some(true), "ok should be true"),
                 None => panic!("missing ok field"),
@@ -293,8 +358,7 @@ mod blender_tests {
     #[test]
     fn parse_sse_falls_back_to_plain_json() {
         let body = "{\"plain\":42}"
-        let parsed = parse_sse_response(body)
-        match parsed {
+        match parse_sse_response(body) {
             Ok(v) => match json::get(&v, "plain") {
                 Some(val) => testing::check_eq(
                     json::as_i64(val),
