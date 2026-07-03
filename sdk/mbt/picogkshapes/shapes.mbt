@@ -21,7 +21,7 @@ pub fn Vec3::new(x : Double, y : Double, z : Double) -> Vec3 {
 }
 
 ///|
-pub fn V(x : Double, y : Double, z : Double) -> Vec3 {
+pub fn vec3(x : Double, y : Double, z : Double) -> Vec3 {
   Vec3::{ x, y, z }
 }
 
@@ -56,13 +56,15 @@ pub fn Vec3::cross(self : Vec3, o : Vec3) -> Vec3 {
 
 ///|
 pub fn Vec3::len(self : Vec3) -> Double {
-  @math.sqrt(self.x * self.x + self.y * self.y + self.z * self.z)
+  @math.sqrt(self.x * self.x + self.y * self.y + self.z * self.z)(
+    self.x * self.x + self.y * self.y + self.z * self.z,
+  )
 }
 
 ///|
 pub fn Vec3::normalized(self : Vec3) -> Vec3 {
   let l = self.len()
-  if l < 1e-12 {
+  if l < 0.000000000001 {
     return Vec3::{ x: 0.0, y: 0.0, z: 0.0 }
   }
   Vec3::{ x: self.x / l, y: self.y / l, z: self.z / l }
@@ -87,10 +89,15 @@ pub fn lerp(p1 : Vec3, p2 : Vec3, t : Double) -> Vec3 {
 }
 
 ///|
-pub fn rotate_around_axis(pt : Vec3, axis : Vec3, angle : Double, origin : Vec3) -> Vec3 {
+pub fn rotate_around_axis(
+  pt : Vec3,
+  axis : Vec3,
+  angle : Double,
+  origin : Vec3,
+) -> Vec3 {
   let pt = pt.sub(origin)
   let axis = axis.normalized()
-  if axis.len() < 1e-12 {
+  if axis.len() < 0.000000000001 {
     return pt.add(origin)
   }
   let half = angle / 2.0
@@ -177,17 +184,26 @@ pub fn LineModulation::call(self : LineModulation, ratio : Double) -> Double {
 }
 
 ///|
-pub fn LineModulation::mul(self : LineModulation, factor : Double) -> LineModulation {
+pub fn LineModulation::mul(
+  self : LineModulation,
+  factor : Double,
+) -> LineModulation {
   fn(r : Double) { self(r) * factor }
 }
 
 ///|
-pub fn LineModulation::add(self : LineModulation, other : LineModulation) -> LineModulation {
+pub fn LineModulation::add(
+  self : LineModulation,
+  other : LineModulation,
+) -> LineModulation {
   fn(r : Double) { self(r) + other(r) }
 }
 
 ///|
-pub fn LineModulation::sub(self : LineModulation, other : LineModulation) -> LineModulation {
+pub fn LineModulation::sub(
+  self : LineModulation,
+  other : LineModulation,
+) -> LineModulation {
   fn(r : Double) { self(r) - other(r) }
 }
 
@@ -206,7 +222,10 @@ pub fn surf_fn(f : (Double, Double) -> Double) -> SurfaceModulation {
 }
 
 ///|
-pub fn surf_from_line(line : LineModulation, line_arg : String) -> SurfaceModulation {
+pub fn surf_from_line(
+  line : LineModulation,
+  line_arg : String,
+) -> SurfaceModulation {
   if line_arg == "first" {
     fn(phi : Double, _ : Double) { line(phi) }
   } else {
@@ -215,7 +234,11 @@ pub fn surf_from_line(line : LineModulation, line_arg : String) -> SurfaceModula
 }
 
 ///|
-pub fn SurfaceModulation::call(self : SurfaceModulation, phi : Double, lr : Double) -> Double {
+pub fn SurfaceModulation::call(
+  self : SurfaceModulation,
+  phi : Double,
+  lr : Double,
+) -> Double {
   self(phi, lr)
 }
 
@@ -232,14 +255,13 @@ pub struct LocalFrame {
 ///|
 pub fn new_local_frame(position : Vec3, local_z : Vec3?) -> LocalFrame {
   match local_z {
-    None => {
+    None =>
       LocalFrame::{
         pos: position,
         local_x: V(1.0, 0.0, 0.0),
         local_y: V(0.0, 1.0, 0.0),
         local_z: V(0.0, 0.0, 1.0),
       }
-    }
     Some(z) => {
       let zn = z.normalized()
       let x = orthogonal_dir(zn)
@@ -250,7 +272,11 @@ pub fn new_local_frame(position : Vec3, local_z : Vec3?) -> LocalFrame {
 }
 
 ///|
-pub fn new_local_frame_xyz(position : Vec3, local_z : Vec3, local_x : Vec3) -> LocalFrame {
+pub fn new_local_frame_xyz(
+  position : Vec3,
+  local_z : Vec3,
+  local_x : Vec3,
+) -> LocalFrame {
   let zn = local_z.normalized()
   let xn = local_x.normalized()
   let yn = zn.cross(xn).normalized()
@@ -259,9 +285,10 @@ pub fn new_local_frame_xyz(position : Vec3, local_z : Vec3, local_x : Vec3) -> L
 
 ///|
 pub fn LocalFrame::point_to_world(self : LocalFrame, local : Vec3) -> Vec3 {
-  self.pos.add(self.local_x.mul(local.x)).add(self.local_y.mul(local.y)).add(
-    self.local_z.mul(local.z),
-  )
+  self.pos
+  .add(self.local_x.mul(local.x))
+  .add(self.local_y.mul(local.y))
+  .add(self.local_z.mul(local.z))
 }
 
 // --- Frames (spine frames) ---
@@ -277,9 +304,9 @@ pub struct Frames {
 ///|
 pub fn frames_aligned_to_x(points : Array[Vec3], target_x : Vec3) -> Frames {
   let n = points.length()
-  let lx = Array::make(n, V(0.0, 0.0, 0.0))
-  let ly = Array::make(n, V(0.0, 0.0, 0.0))
-  let lz = Array::make(n, V(0.0, 0.0, 0.0))
+  let lx = Array::make(n, vec3(0.0, 0.0, 0.0))
+  let ly = Array::make(n, vec3(0.0, 0.0, 0.0))
+  let lz = Array::make(n, vec3(0.0, 0.0, 0.0))
   for i in 0..<n {
     let tangent = if i == 0 {
       points[1].sub(points[0])
@@ -306,9 +333,12 @@ fn align_with_target_x(local_z : Vec3, target_x : Vec3) -> Vec3 {
   let mut deg = 0.0
   while deg < 180.0 {
     let angle = deg * 3.14159265358979 / 180.0
-    let dir = rotate_around_axis(orthogonal_dir(local_z), local_z, angle, V(
-      0.0, 0.0, 0.0,
-    ))
+    let dir = rotate_around_axis(
+      orthogonal_dir(local_z),
+      local_z,
+      angle,
+      vec3(0.0, 0.0, 0.0),
+    )
     let d = dir.dot(target_x)
     if d > best_dot {
       best_dot = d
@@ -365,16 +395,16 @@ pub fn new_control_point_spline(
   closed : Bool,
 ) -> ControlPointSpline {
   let d = if degree < 1 { 2 } else { degree }
-  let mut pts = Array::make(control_points.length(), V(0.0, 0.0, 0.0))
+  let mut pts = Array::make(control_points.length(), vec3(0.0, 0.0, 0.0))
   for i in 0..<control_points.length() {
     pts[i] = control_points[i]
   }
   if closed {
-    if pts[0].sub(pts[pts.length() - 1]).len() < 1e-7 {
-      pts = pts[0 : pts.length() - 1].to_owned()
+    if pts[0].sub(pts[pts.length() - 1]).len() < 0.0000001 {
+      pts = pts[0:pts.length() - 1].to_owned()
     }
     let n_before = pts.length()
-    for i in 0..<n_before - 1 {
+    for i in (0..<n_before) - 1 {
       pts.push(pts[i])
     }
   }
@@ -383,8 +413,11 @@ pub fn new_control_point_spline(
 }
 
 ///|
-pub fn ControlPointSpline::point_at(self : ControlPointSpline, t : Double) -> Vec3 {
-  let mut pt = V(0.0, 0.0, 0.0)
+pub fn ControlPointSpline::point_at(
+  self : ControlPointSpline,
+  t : Double,
+) -> Vec3 {
+  let mut pt = vec3(0.0, 0.0, 0.0)
   for i in 0..<self.control_points.length() {
     let b = spline_basis(self.knot, t, i, self.degree)
     pt = pt.add(self.control_points[i].mul(b))
@@ -393,8 +426,11 @@ pub fn ControlPointSpline::point_at(self : ControlPointSpline, t : Double) -> Ve
 }
 
 ///|
-pub fn ControlPointSpline::points(self : ControlPointSpline, n : Int) -> Array[Vec3] {
-  let result = Array::make(n, V(0.0, 0.0, 0.0))
+pub fn ControlPointSpline::points(
+  self : ControlPointSpline,
+  n : Int,
+) -> Array[Vec3] {
+  let result = Array::make(n, vec3(0.0, 0.0, 0.0))
   for i in 0..<n {
     result[i] = self.point_at(i.to_double() / (n - 1).to_double())
   }
@@ -403,22 +439,22 @@ pub fn ControlPointSpline::points(self : ControlPointSpline, n : Int) -> Array[V
 
 ///|
 fn spline_basis(knot : Array[Double], t : Double, i : Int, degree : Int) -> Double {
-  let eps = 1e-7
+  let eps = 0.0000001
   if degree == 0 {
     if (knot[i] <= t && t < knot[i + 1]) ||
-      (@math.abs(t - knot[i + 1]) < eps &&
-       @math.abs(t - knot[knot.length() - 1]) < eps) {
+      (((t - knot[i + 1]) < eps &&
+       ((t - knot[knot.length() - 1]) < eps) {
       return 1.0
     }
     return 0.0
   }
   let mut value = 0.0
-  if @math.abs(knot[i + degree] - knot[i]) > eps {
+  if abs(knot[i + degree] - knot[i]) > eps {
     value = value +
       (t - knot[i]) / (knot[i + degree] - knot[i]) *
       spline_basis(knot, t, i, degree - 1)
   }
-  if @math.abs(knot[i + degree + 1] - knot[i + 1]) > eps {
+  if abs(knot[i + degree + 1] - knot[i + 1]) > eps {
     value = value +
       (knot[i + degree + 1] - t) / (knot[i + degree + 1] - knot[i + 1]) *
       spline_basis(knot, t, i + 1, degree - 1)
@@ -427,7 +463,11 @@ fn spline_basis(knot : Array[Double], t : Double, i : Int, degree : Int) -> Doub
 }
 
 ///|
-fn spline_knot_vector(n_control : Int, degree : Int, clamp : Bool) -> Array[Double] {
+fn spline_knot_vector(
+  n_control : Int,
+  degree : Int,
+  clamp : Bool,
+) -> Array[Double] {
   let n_knots = n_control + degree + 1
   let valid_range = if n_control - degree < 1 { 1 } else { n_control - degree }
   let d = 1.0 / valid_range.to_double()
@@ -467,8 +507,8 @@ fn quad_grid_to_mesh(grid : Array[Array[Vec3]]) -> @picogkffi.Mesh {
   if b < 2 {
     return @picogkffi.mesh_from_arrays([], [])
   }
-  for i in 0..<a - 1 {
-    for j in 0..<b - 1 {
+  for i in (0..<a) - 1 {
+    for j in (0..<b) - 1 {
       let p0 = grid[i][j]
       let p1 = grid[i + 1][j]
       let p2 = grid[i + 1][j + 1]
@@ -524,8 +564,8 @@ pub fn SurfaceMeshBuilder::add(
   if b < 2 {
     return self
   }
-  for i in 0..<a - 1 {
-    for j in 0..<b - 1 {
+  for i in (0..<a) - 1 {
+    for j in (0..<b) - 1 {
       let p0 = grid[i][j]
       let p1 = grid[i][j + 1]
       let p2 = grid[i + 1][j + 1]
@@ -573,7 +613,7 @@ pub fn SurfaceMeshBuilder::build(self : SurfaceMeshBuilder) -> @picogkffi.Mesh {
 
 ///|
 fn make_grid(a : Int, b : Int) -> Array[Array[Vec3]] {
-  Array::make(a, Array::make(b, V(0.0, 0.0, 0.0)))
+  Array::make(a, Array::make(b, vec3(0.0, 0.0, 0.0)))
 }
 
 ///|
@@ -602,7 +642,13 @@ pub fn new_sphere(frame : LocalFrame?, radius : SurfaceModulation) -> Sphere {
     Some(fr) => fr
     None => new_local_frame(V(0.0, 0.0, 0.0), None)
   }
-  Sphere::{ frame: f, radius, azim_steps: 360, polar_steps: 180, transform: None }
+  Sphere::{
+    frame: f,
+    radius,
+    azim_steps: 360,
+    polar_steps: 180,
+    transform: None,
+  }
 }
 
 ///|
@@ -614,7 +660,10 @@ pub fn Sphere::to_mesh(self : Sphere) -> @picogkffi.Mesh {
   for i in 0..<a {
     let theta = 3.14159265358979 * i.to_double() / (a - 1).to_double()
     for j in 0..<p {
-      let phi = 2.0 * 3.14159265358979 * (j.to_double() - 1.0) / (self.polar_steps - 1).to_double()
+      let phi = 2.0 *
+        3.14159265358979 *
+        (j.to_double() - 1.0) /
+        (self.polar_steps - 1).to_double()
       let r = self.radius.call(phi, theta)
       let x = r * @math.cos(phi) * @math.sin(theta)
       let y = r * @math.sin(phi) * @math.sin(theta)
@@ -646,12 +695,27 @@ pub struct Box {
 }
 
 ///|
-pub fn new_box(frame : LocalFrame?, length : Double, width : LineModulation, depth : LineModulation) -> Box {
+pub fn new_box(
+  frame : LocalFrame?,
+  length : Double,
+  width : LineModulation,
+  depth : LineModulation,
+) -> Box {
   let f = match frame {
     Some(fr) => fr
     None => new_local_frame(V(0.0, 0.0, 0.0), None)
   }
-  Box::{ frame: f, length, width, depth, frames: None, w_steps: 5, d_steps: 5, l_steps: 5, transform: None }
+  Box::{
+    frame: f,
+    length,
+    width,
+    depth,
+    frames: None,
+    w_steps: 5,
+    d_steps: 5,
+    l_steps: 5,
+    transform: None,
+  }
 }
 
 ///|
@@ -701,7 +765,12 @@ fn Box::box_spine(self : Box, lr : Double) -> (Vec3, Vec3, Vec3) {
 }
 
 ///|
-fn Box::box_surface_grid(self : Box, w_r : Array[Double], d_r : Array[Double], l_r : Array[Double]) -> Array[Array[Vec3]] {
+fn Box::box_surface_grid(
+  self : Box,
+  w_r : Array[Double],
+  d_r : Array[Double],
+  l_r : Array[Double],
+) -> Array[Array[Vec3]] {
   let nr_w = w_r.length()
   let nr_d = d_r.length()
   let nr_l = l_r.length()
@@ -766,12 +835,24 @@ pub struct Cylinder {
 }
 
 ///|
-pub fn new_cylinder(frame : LocalFrame?, length : Double, radius : SurfaceModulation) -> Cylinder {
+pub fn new_cylinder(
+  frame : LocalFrame?,
+  length : Double,
+  radius : SurfaceModulation,
+) -> Cylinder {
   let f = match frame {
     Some(fr) => fr
     None => new_local_frame(V(0.0, 0.0, 0.0), None)
   }
-  Cylinder::{ frame: f, length, radius, frames: None, polar_steps: 360, radial_steps: 5, length_steps: 5 }
+  Cylinder::{
+    frame: f,
+    length,
+    radius,
+    frames: None,
+    polar_steps: 360,
+    radial_steps: 5,
+    length_steps: 5,
+  }
 }
 
 ///|
@@ -794,31 +875,46 @@ pub fn Cylinder::to_mesh(self : Cylinder) -> @picogkffi.Mesh {
   }
   let mut grid = make_grid(self.polar_steps, self.radial_steps + 1)
   for i in 0..<self.polar_steps {
-    let phi = 2.0 * 3.14159265358979 * i.to_double() / (self.polar_steps - 1).to_double()
-    for j in 0..<self.radial_steps + 1 {
+    let phi = 2.0 *
+      3.14159265358979 *
+      i.to_double() /
+      (self.polar_steps - 1).to_double()
+    for j in (0..<self.radial_steps) + 1 {
       let rr = j.to_double() / self.radial_steps.to_double()
       let r = rr * self.radius.call(phi, 1.0)
-      grid[i][j] = spine(1.0).add(lx.mul(r * @math.cos(phi))).add(ly.mul(r * @math.sin(phi)))
+      grid[i][j] = spine(1.0)
+        .add(lx.mul(r * @math.cos(phi)))
+        .add(ly.mul(r * @math.sin(phi)))
     }
   }
   smb.add(grid, false)
   grid = make_grid(self.polar_steps, self.radial_steps + 1)
   for i in 0..<self.polar_steps {
-    let phi = 2.0 * 3.14159265358979 * i.to_double() / (self.polar_steps - 1).to_double()
-    for j in 0..<self.radial_steps + 1 {
+    let phi = 2.0 *
+      3.14159265358979 *
+      i.to_double() /
+      (self.polar_steps - 1).to_double()
+    for j in (0..<self.radial_steps) + 1 {
       let rr = j.to_double() / self.radial_steps.to_double()
       let r = rr * self.radius.call(phi, 0.0)
-      grid[i][j] = spine(0.0).add(lx.mul(r * @math.cos(phi))).add(ly.mul(r * @math.sin(phi)))
+      grid[i][j] = spine(0.0)
+        .add(lx.mul(r * @math.cos(phi)))
+        .add(ly.mul(r * @math.sin(phi)))
     }
   }
   smb.add(grid, true)
   grid = make_grid(self.polar_steps, nl + 1)
   for i in 0..<self.polar_steps {
-    let phi = 2.0 * 3.14159265358979 * i.to_double() / (self.polar_steps - 1).to_double()
-    for j in 0..<nl + 1 {
+    let phi = 2.0 *
+      3.14159265358979 *
+      i.to_double() /
+      (self.polar_steps - 1).to_double()
+    for j in (0..<nl) + 1 {
       let lr = l_ratios[j]
       let r = self.radius.call(phi, lr)
-      grid[i][j] = spine(lr).add(lx.mul(r * @math.cos(phi))).add(ly.mul(r * @math.sin(phi)))
+      grid[i][j] = spine(lr)
+        .add(lx.mul(r * @math.cos(phi)))
+        .add(ly.mul(r * @math.sin(phi)))
     }
   }
   smb.add(grid, true)
@@ -842,7 +938,11 @@ pub struct Ring {
 }
 
 ///|
-pub fn new_ring(frame : LocalFrame?, ring_radius : Double, radius : SurfaceModulation) -> Ring {
+pub fn new_ring(
+  frame : LocalFrame?,
+  ring_radius : Double,
+  radius : SurfaceModulation,
+) -> Ring {
   let f = match frame {
     Some(fr) => fr
     None => new_local_frame(V(0.0, 0.0, 0.0), None)
@@ -857,15 +957,23 @@ pub fn Ring::to_mesh(self : Ring) -> @picogkffi.Mesh {
   let grid = make_grid(n_a, n_p)
   let f = self.frame
   for i in 0..<n_a {
-    let a = if i == 0 { 1.0 } else { i.to_double() / (self.radial_steps - 1).to_double() }
+    let a = if i == 0 {
+      1.0
+    } else {
+      i.to_double() / (self.radial_steps - 1).to_double()
+    }
     let alpha = 2.0 * 3.14159265358979 * a
-    let spine = f.pos.add(f.local_x.mul(self.ring_radius * @math.cos(alpha))).add(f.local_y.mul(self.ring_radius * @math.sin(alpha)))
-    let local_x = safe_normalized(spine.sub(f.pos), 1e-12)
+    let spine = f.pos
+      .add(f.local_x.mul(self.ring_radius * @math.cos(alpha)))
+      .add(f.local_y.mul(self.ring_radius * @math.sin(alpha)))
+    let local_x = safe_normalized(spine.sub(f.pos), 0.000000000001)
     let local_y = f.local_z
     for j in 0..<n_p {
       let phi = 2.0 * 3.14159265358979 * j.to_double() / (n_p - 1).to_double()
       let mod_val = self.radius.call(phi, alpha)
-      grid[i][j] = spine.add(local_x.mul(mod_val * @math.cos(phi))).add(local_y.mul(mod_val * @math.sin(phi)))
+      grid[i][j] = spine
+        .add(local_x.mul(mod_val * @math.cos(phi)))
+        .add(local_y.mul(mod_val * @math.sin(phi)))
     }
   }
   let smb = new_surface_mesh_builder()
@@ -894,21 +1002,53 @@ pub struct Lens {
 }
 
 ///|
-pub fn new_lens(frame : LocalFrame?, height : Double, inner_radius : Double, outer_radius : Double) -> Lens {
+pub fn new_lens(
+  frame : LocalFrame?,
+  height : Double,
+  inner_radius : Double,
+  outer_radius : Double,
+) -> Lens {
   let f = match frame {
     Some(fr) => fr
     None => new_local_frame(V(0.0, 0.0, 0.0), None)
   }
-  Lens::{ frame: f, height, inner_radius, outer_radius, lower: surf_const(0.0), upper: surf_const(height), radial_steps: 5, polar_steps: 360, height_steps: 5 }
+  Lens::{
+    frame: f,
+    height,
+    inner_radius,
+    outer_radius,
+    lower: surf_const(0.0),
+    upper: surf_const(height),
+    radial_steps: 5,
+    polar_steps: 360,
+    height_steps: 5,
+  }
 }
 
 ///|
-pub fn new_lens_with_mods(frame : LocalFrame?, height : Double, inner_radius : Double, outer_radius : Double, lower : SurfaceModulation, upper : SurfaceModulation) -> Lens {
+pub fn new_lens_with_mods(
+  frame : LocalFrame?,
+  height : Double,
+  inner_radius : Double,
+  outer_radius : Double,
+  lower : SurfaceModulation,
+  upper : SurfaceModulation,
+) -> Lens {
   let f = match frame {
     Some(fr) => fr
     None => new_local_frame(V(0.0, 0.0, 0.0), None)
   }
-  Lens::{ frame: f, height, inner_radius, outer_radius, lower, upper, radial_steps: 500, polar_steps: 360, height_steps: 5 }
+  Lens::{
+    frame: f,
+    height,
+    inner_radius,
+    outer_radius,
+    lower,
+    upper,
+    radial_steps: 500,
+    polar_steps: 360,
+    height_steps: 5,
+  }
 }
 
 ///|
@@ -930,7 +1070,12 @@ pub fn Lens::to_voxels(self : Lens) -> @picogkffi.Voxels {
 }
 
 ///|
-fn Lens::lens_surface(self : Lens, h : Double, phi_r : Array[Double], rad_r : Array[Double]) -> Array[Array[Vec3]] {
+fn Lens::lens_surface(
+  self : Lens,
+  h : Double,
+  phi_r : Array[Double],
+  rad_r : Array[Double],
+) -> Array[Array[Vec3]] {
   let nphi = phi_r.length()
   let nrad = rad_r.length()
   let grid = make_grid(nphi, nrad)
@@ -938,18 +1083,27 @@ fn Lens::lens_surface(self : Lens, h : Double, phi_r : Array[Double], rad_r : Ar
   for i in 0..<nphi {
     let phi = 2.0 * 3.14159265358979 * phi_r[i]
     for j in 0..<nrad {
-      let radius = (self.outer_radius - self.inner_radius) * rad_r[j] + self.inner_radius
+      let radius = (self.outer_radius - self.inner_radius) * rad_r[j] +
+        self.inner_radius
       let lower = self.lower.call(phi, rad_r[j])
       let upper = self.upper.call(phi, rad_r[j])
       let z = lower + h * (upper - lower)
-      grid[i][j] = f.pos.add(f.local_x.mul(radius * @math.cos(phi))).add(f.local_y.mul(radius * @math.sin(phi))).add(f.local_z.mul(z))
+      grid[i][j] = f.pos
+        .add(f.local_x.mul(radius * @math.cos(phi)))
+        .add(f.local_y.mul(radius * @math.sin(phi)))
+        .add(f.local_z.mul(z))
     }
   }
   grid
 }
 
 ///|
-fn Lens::lens_mantle_surface(self : Lens, hr : Array[Double], p : Array[Double], rad_r : Double) -> Array[Array[Vec3]] {
+fn Lens::lens_mantle_surface(
+  self : Lens,
+  hr : Array[Double],
+  p : Array[Double],
+  rad_r : Double,
+) -> Array[Array[Vec3]] {
   let nh = hr.length()
   let np = p.length()
   let grid = make_grid(nh, np)
@@ -957,11 +1111,15 @@ fn Lens::lens_mantle_surface(self : Lens, hr : Array[Double], p : Array[Double],
   for i in 0..<nh {
     for j in 0..<np {
       let phi = 2.0 * 3.14159265358979 * p[j]
-      let radius = (self.outer_radius - self.inner_radius) * rad_r + self.inner_radius
+      let radius = (self.outer_radius - self.inner_radius) * rad_r +
+        self.inner_radius
       let lower = self.lower.call(phi, rad_r)
       let upper = self.upper.call(phi, rad_r)
       let z = lower + hr[i] * (upper - lower)
-      grid[i][j] = f.pos.add(f.local_x.mul(radius * @math.cos(phi))).add(f.local_y.mul(radius * @math.sin(phi))).add(f.local_z.mul(z))
+      grid[i][j] = f.pos
+        .add(f.local_x.mul(radius * @math.cos(phi)))
+        .add(f.local_y.mul(radius * @math.sin(phi)))
+        .add(f.local_z.mul(z))
     }
   }
   grid
@@ -984,30 +1142,86 @@ pub struct Pipe {
 }
 
 ///|
-pub fn new_pipe(frame : LocalFrame?, length : Double, inner_radius : SurfaceModulation, outer_radius : SurfaceModulation) -> Pipe {
+pub fn new_pipe(
+  frame : LocalFrame?,
+  length : Double,
+  inner_radius : SurfaceModulation,
+  outer_radius : SurfaceModulation,
+) -> Pipe {
   let f = match frame {
     Some(fr) => fr
     None => new_local_frame(V(0.0, 0.0, 0.0), None)
   }
-  Pipe::{ frame: f, length, inner: inner_radius, outer: outer_radius, frames: None, polar_steps: 360, radial_steps: 5, length_steps: 5, transform: None, phi_angle_func: fn(phi_ratio : Double, _ : Double) { 2.0 * 3.14159265358979 * phi_ratio } }
+  Pipe::{
+    frame: f,
+    length,
+    inner: inner_radius,
+    outer: outer_radius,
+    frames: None,
+    polar_steps: 360,
+    radial_steps: 5,
+    length_steps: 5,
+    transform: None,
+    phi_angle_func: fn(phi_ratio : Double, _ : Double) {
+      2.0 * 3.14159265358979 * phi_ratio
+    },
+  }
 }
 
 ///|
-pub fn new_pipe_with_transform(frame : LocalFrame?, length : Double, inner_radius : SurfaceModulation, outer_radius : SurfaceModulation, trafo : (Array[Vec3]) -> Array[Vec3]) -> Pipe {
+pub fn new_pipe_with_transform(
+  frame : LocalFrame?,
+  length : Double,
+  inner_radius : SurfaceModulation,
+  outer_radius : SurfaceModulation,
+  trafo : (Array[Vec3]) -> Array[Vec3],
+) -> Pipe {
   let f = match frame {
     Some(fr) => fr
     None => new_local_frame(V(0.0, 0.0, 0.0), None)
   }
-  Pipe::{ frame: f, length, inner: inner_radius, outer: outer_radius, frames: None, polar_steps: 360, radial_steps: 5, length_steps: 500, transform: Some(trafo), phi_angle_func: fn(phi_ratio : Double, _ : Double) { 2.0 * 3.14159265358979 * phi_ratio } }
+  Pipe::{
+    frame: f,
+    length,
+    inner: inner_radius,
+    outer: outer_radius,
+    frames: None,
+    polar_steps: 360,
+    radial_steps: 5,
+    length_steps: 500,
+    transform: Some(trafo),
+    phi_angle_func: fn(phi_ratio : Double, _ : Double) {
+      2.0 * 3.14159265358979 * phi_ratio
+    },
+  }
 }
 
 ///|
-pub fn new_pipe_with_frames(frame : LocalFrame?, length : Double, inner_radius : SurfaceModulation, outer_radius : SurfaceModulation, fs : Frames) -> Pipe {
+pub fn new_pipe_with_frames(
+  frame : LocalFrame?,
+  length : Double,
+  inner_radius : SurfaceModulation,
+  outer_radius : SurfaceModulation,
+  fs : Frames,
+) -> Pipe {
   let f = match frame {
     Some(fr) => fr
     None => new_local_frame(V(0.0, 0.0, 0.0), None)
   }
-  Pipe::{ frame: f, length, inner: inner_radius, outer: outer_radius, frames: Some(fs), polar_steps: 360, radial_steps: 5, length_steps: 500, transform: None, phi_angle_func: fn(phi_ratio : Double, _ : Double) { 2.0 * 3.14159265358979 * phi_ratio } }
+  Pipe::{
+    frame: f,
+    length,
+    inner: inner_radius,
+    outer: outer_radius,
+    frames: Some(fs),
+    polar_steps: 360,
+    radial_steps: 5,
+    length_steps: 500,
+    transform: None,
+    phi_angle_func: fn(phi_ratio : Double, _ : Double) {
+      2.0 * 3.14159265358979 * phi_ratio
+    },
+  }
 }
 
 ///|
@@ -1043,7 +1257,12 @@ fn Pipe::pipe_spine(self : Pipe, lr : Double) -> (Vec3, Vec3, Vec3) {
 }
 
 ///|
-fn Pipe::pipe_surface(self : Pipe, lrs : Array[Double], phi_rs : Array[Double], rad_rs : Array[Double]) -> Array[Array[Vec3]] {
+fn Pipe::pipe_surface(
+  self : Pipe,
+  lrs : Array[Double],
+  phi_rs : Array[Double],
+  rad_rs : Array[Double],
+) -> Array[Array[Vec3]] {
   let nl = lrs.length()
   let np = phi_rs.length()
   let nr = rad_rs.length()
@@ -1106,7 +1325,9 @@ fn Pipe::pipe_surface(self : Pipe, lrs : Array[Double], phi_rs : Array[Double], 
       let outer = self.outer.call(phi, lr_val)
       let inner = self.inner.call(phi, lr_val)
       let radius = rad_val * (outer - inner) + inner
-      grid[i][j] = sp.add(lx.mul(radius * @math.cos(phi))).add(ly.mul(radius * @math.sin(phi)))
+      grid[i][j] = sp
+        .add(lx.mul(radius * @math.cos(phi)))
+        .add(ly.mul(radius * @math.sin(phi)))
     }
   }
   match self.transform {
@@ -1118,7 +1339,14 @@ fn Pipe::pipe_surface(self : Pipe, lrs : Array[Double], phi_rs : Array[Double], 
         }
       }
       let transformed = t(pts)
-      let result = make_grid(grid.length(), if grid.length() > 0 { grid[0].length() } else { 0 })
+      let result = make_grid(
+        grid.length(),
+        if grid.length() > 0 {
+          grid[0].length()
+        } else {
+          0
+        },
+      )
       let mut idx = 0
       for i in 0..<grid.length() {
         for j in 0..<grid[i].length() {
@@ -1142,7 +1370,15 @@ pub struct PipeSegment {
 }
 
 ///|
-pub fn new_pipe_segment(frame : LocalFrame?, length : Double, inner_radius : SurfaceModulation, outer_radius : SurfaceModulation, start : LineModulation, end : LineModulation, method : String) -> PipeSegment {
+pub fn new_pipe_segment(
+  frame : LocalFrame?,
+  length : Double,
+  inner_radius : SurfaceModulation,
+  outer_radius : SurfaceModulation,
+  start : LineModulation,
+  end : LineModulation,
+  method : String,
+) -> PipeSegment {
   let pipe = new_pipe(frame, length, inner_radius, outer_radius)
   let (mid, rng) = if method == "start_end" {
     (start.add(end).mul(0.5), end.sub(start))
@@ -1157,7 +1393,16 @@ pub fn new_pipe_segment(frame : LocalFrame?, length : Double, inner_radius : Sur
 }
 
 ///|
-pub fn new_pipe_segment_with_frames(frame : LocalFrame?, length : Double, inner_radius : SurfaceModulation, outer_radius : SurfaceModulation, start : LineModulation, end : LineModulation, method : String, fs : Frames) -> PipeSegment {
+pub fn new_pipe_segment_with_frames(
+  frame : LocalFrame?,
+  length : Double,
+  inner_radius : SurfaceModulation,
+  outer_radius : SurfaceModulation,
+  start : LineModulation,
+  end : LineModulation,
+  method : String,
+  fs : Frames,
+) -> PipeSegment {
   let pipe = new_pipe_with_frames(frame, length, inner_radius, outer_radius, fs)
   let (mid, rng) = if method == "start_end" {
     (start.add(end).mul(0.5), end.sub(start))
@@ -1201,8 +1446,15 @@ pub struct ImplicitGyroid {
 }
 
 ///|
-pub fn new_implicit_gyroid(unit_size : Double, thickness_ratio : Double) -> ImplicitGyroid {
-  ImplicitGyroid::{ unit_size, thickness_ratio, frequency: 2.0 * 3.14159265358979 / unit_size }
+pub fn new_implicit_gyroid(
+  unit_size : Double,
+  thickness_ratio : Double,
+) -> ImplicitGyroid {
+  ImplicitGyroid::{
+    unit_size,
+    thickness_ratio,
+    frequency: 2.0 * 3.14159265358979 / unit_size,
+  }
 }
 
 ///|
@@ -1212,7 +1464,7 @@ pub struct ImplicitGenus {
 
 ///|
 pub fn new_implicit_genus(gap : Double) -> ImplicitGenus {
-  ImplicitGenus::{ gap }
+  ImplicitGenus::{ gap, }
 }
 
 ///|
@@ -1226,7 +1478,14 @@ pub struct ImplicitSuperEllipsoid {
 }
 
 ///|
-pub fn new_implicit_super_ellipsoid(center : Vec3, ax : Double, ay : Double, az : Double, e1 : Double, e2 : Double) -> ImplicitSuperEllipsoid {
+pub fn new_implicit_super_ellipsoid(
+  center : Vec3,
+  ax : Double,
+  ay : Double,
+  az : Double,
+  e1 : Double,
+  e2 : Double,
+) -> ImplicitSuperEllipsoid {
   ImplicitSuperEllipsoid::{ center, ax, ay, az, e1, e2 }
 }
 
@@ -1242,7 +1501,11 @@ pub struct LatticePipe {
 }
 
 ///|
-pub fn new_lattice_pipe(frame : LocalFrame?, length : Double, radius : LineModulation) -> LatticePipe {
+pub fn new_lattice_pipe(
+  frame : LocalFrame?,
+  length : Double,
+  radius : LineModulation,
+) -> LatticePipe {
   let f = match frame {
     Some(fr) => fr
     None => new_local_frame(V(0.0, 0.0, 0.0), None)
@@ -1251,7 +1514,12 @@ pub fn new_lattice_pipe(frame : LocalFrame?, length : Double, radius : LineModul
 }
 
 ///|
-pub fn new_lattice_pipe_with_frames(frame : LocalFrame?, length : Double, radius : LineModulation, fs : Frames) -> LatticePipe {
+pub fn new_lattice_pipe_with_frames(
+  frame : LocalFrame?,
+  length : Double,
+  radius : LineModulation,
+  fs : Frames,
+) -> LatticePipe {
   let f = match frame {
     Some(fr) => fr
     None => new_local_frame(V(0.0, 0.0, 0.0), None)
@@ -1294,7 +1562,12 @@ pub struct LatticeManifold {
 }
 
 ///|
-pub fn new_lattice_manifold(frame : LocalFrame, length : Double, radius : Double, twist : Double) -> LatticeManifold {
+pub fn new_lattice_manifold(
+  frame : LocalFrame,
+  length : Double,
+  radius : Double,
+  twist : Double,
+) -> LatticeManifold {
   LatticeManifold::{ frame, length, radius, twist, extend_both_sides: false }
 }
 
@@ -1308,7 +1581,12 @@ pub fn LatticeManifold::to_voxels(self : LatticeManifold) -> @picogkffi.Voxels {
     let z = self.length * (lr - 0.5) * half.to_double()
     let angle = self.twist * lr
     let pos = self.frame.pos.add(self.frame.local_z.mul(z))
-    let beam_dir = rotate_around_axis(self.frame.local_x, self.frame.local_z, angle, V(0.0, 0.0, 0.0))
+    let beam_dir = rotate_around_axis(
+      self.frame.local_x,
+      self.frame.local_z,
+      angle,
+      vec3(0.0, 0.0, 0.0),
+    )
     let end = pos.add(beam_dir.mul(self.radius))
     lat.add_beam(pos, end, 1.0, 1.0, true)
   }

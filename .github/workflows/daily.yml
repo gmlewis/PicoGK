@@ -49,6 +49,9 @@ jobs:
       - name: Moon version
         run: moon version
 
+      - name: Moon update
+        run: moon update
+
       - name: Type check all MoonBit packages
         working-directory: sdk/mbt
         run: moon check --target native
