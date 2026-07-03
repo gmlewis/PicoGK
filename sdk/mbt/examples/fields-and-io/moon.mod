@@ -1,23 +1,17 @@
-// fields-and-io: PicoGK MCP SDK for MoonBit
-// DO NOT EDIT — auto-generated
+// fields-and-io: PicoGK FFI example for MoonBit
 
-name = "gmlewis/picogk-fields-example"
+name = "gmlewis/picogk-fields-and-io-example"
 
 version = "0.1.0"
 
 license = "Apache-2.0"
 
-description = "Fields and I/O example for MoonBit"
+description = "fields-and-io example for MoonBit using FFI"
 
 preferred_target = "native"
 
 supported_targets = "+native"
 
 import {
-  "gmlewis/picogk@0.1.0",
-  "moonbitlang/async@0.19.2",
-}
-
-replace {
-  "gmlewis/picogk@0.1.0" = "../../picogk",
+  "gmlewis/picogkffi@0.1.0",
 }

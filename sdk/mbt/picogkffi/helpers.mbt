@@ -4,7 +4,7 @@
 ///|
 /// Write a 32-bit float in little-endian format.
 fn write_float_le(buf : FixedArray[Byte], offset : Int, val : Float) -> Unit {
-  let bits = val.to_int()
+  let bits = picogk_float_to_bits(val)
   buf[offset] = (bits & 0xFF).to_byte()
   buf[offset + 1] = ((bits >> 8) & 0xFF).to_byte()
   buf[offset + 2] = ((bits >> 16) & 0xFF).to_byte()
@@ -19,7 +19,7 @@ fn read_float_le(buf : FixedArray[Byte], offset : Int) -> Float {
   let b2 = buf[offset + 2].to_int()
   let b3 = buf[offset + 3].to_int()
   let bits = b0 | (b1 << 8) | (b2 << 16) | (b3 << 24)
-  Float::from_int(bits)
+  picogk_float_from_bits(bits)
 }
 
 ///|

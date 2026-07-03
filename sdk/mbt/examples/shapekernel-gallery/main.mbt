@@ -1,1126 +1,522 @@
 ///|
 /// ShapeKernel example gallery — a MoonBit port of LEAP71_ShapeKernel/Examples.
 ///
-/// Each scene constructs one or more voxel objects using the PicoGK MCP SDK
-/// primitives, booleans, transforms, and lattices. The scenes are rendered
-/// to PNG via render_to_image.
+/// Each scene constructs one or more voxel objects using the PicoGK FFI SDK
+/// primitives, booleans, lattices, and implicit SDF rendering. The scenes
+/// are exported as STL files and rendered to PNG via the native Viewer.
 ///
-/// The Python picogk.shapes library provides high-level parametric shapes
-/// (Sphere, Box, Cylinder, Ring, Lens, Pipe, etc.) with LocalFrame placement
-/// and callable modulations. The MoonBit MCP SDK exposes only low-level
-/// primitives. This port approximates the high-level shapes using the
-/// available primitives plus transforms and booleans.
-///
-/// Run:  moon run .  (from the sdk/mbt/examples/shapekernel-gallery directory)
-async fn main {
-  let outdir = "/tmp/mbt-picogk-gallery"
+/// Run:  moon run . --target native [-out DIR] [-voxel-size MM] [-no-viewer] [-scene NAME]
+fn main {
+  // Parse command-line arguments.
+  let outdir_default = "/tmp/mbt-picogk-gallery"
+  let mut outdir = outdir_default
+  let mut voxel_size = 0.2
+  let mut no_viewer = false
+  let mut scene_only = ""
+  let args = @argparse.parse_after("moon run . --")
+  let mut i = 0
+  while i < args.length() {
+    let a = args[i]
+    if a == "-out" && i + 1 < args.length() {
+      outdir = args[i + 1]
+      i = i + 2
+    } else if a == "-voxel-size" && i + 1 < args.length() {
+      voxel_size = @argparse.parse_double(args[i + 1]).or(voxel_size)
+      i = i + 2
+    } else if a == "-no-viewer" {
+      no_viewer = true
+      i = i + 1
+    } else if a == "-scene" && i + 1 < args.length() {
+      scene_only = args[i + 1]
+      i = i + 2
+    } else {
+      i = i + 1
+    }
+  }
 
-  println("=== ShapeKernel Gallery (MoonBit) ===")
+  println("=== ShapeKernel Gallery (MoonBit FFI) ===")
   println("Output dir: " + outdir)
+  println("Voxel size: \{voxel_size} mm")
   println("")
 
-  let client = @picogk.new_client("")
+  match @pk.init_with_size(voxel_size) {
+    Ok(_) => ()
+    Err(e) => {
+      println("Failed to init PicoGK: " + e)
+      return
+    }
+  }
+  println("  PicoGK version: " + @pk.version())
 
-  check_tool("picogk_init", client.picogk_init(Some(0.2)))
+  // Build all scenes.
+  let scenes : Array[(String, Array[SceneGroup])] = []
+  scenes.push(("box", build_box()))
+  scenes.push(("sphere", build_sphere()))
+  scenes.push(("cylinder", build_cylinder()))
+  scenes.push(("ring", build_ring()))
+  scenes.push(("lens", build_lens()))
+  scenes.push(("pipe", build_pipe()))
+  scenes.push(("pipe_segment", build_pipe_segment()))
+  scenes.push(("basic_lattices", build_basic_lattices()))
+  scenes.push(("lattice_pipe", build_lattice_pipe()))
+  scenes.push(("lattice_manifold", build_lattice_manifold()))
+  scenes.push(("gyroid_sphere", build_gyroid_sphere()))
+  scenes.push(("gyroid_genus", build_gyroid_genus()))
+  scenes.push(("superellipsoid", build_superellipsoid()))
+  scenes.push(("mesh_painter", build_mesh_painter()))
+  scenes.push(("mesh_trafo", build_mesh_trafo()))
+  scenes.push(("over_offset", build_over_offset()))
 
-  // --- box ---
-  println("--- box ---")
-  check_tool(
-    "create_box(1)",
-    client.create_box(-60.0, -5.0, -7.5, -40.0, 5.0, 7.5, Some("gallery_box_1")),
-  )
-  check_tool(
-    "create_box(2)",
-    client.create_box(40.0, -4.0, -5.0, 60.0, 4.0, 5.0, Some("gallery_box_2")),
-  )
-  check_tool(
-    "create_box(3)",
-    client.create_box(-10.0, -4.0, -5.0, 10.0, 4.0, 5.0, Some("gallery_box_3")),
-  )
-  check_tool(
-    "boolean_add_all",
-    client.boolean_add_all(
-      ["gallery_box_1", "gallery_box_2", "gallery_box_3"],
-      Some("scene_box"),
-    ),
-  )
-  check_tool(
-    "render_to_image",
-    client.render_to_image(
-      "scene_box",
-      outdir + "/box.png",
-      Some(1280),
-      Some(960),
-      Some("#292933"),
-      Some("#5999e6"),
-    ),
-  )
-  check_tool("delete_object", client.delete_object("scene_box"))
-  println("  -> " + outdir + "/box.png")
-  // Clean up all objects for the next scene.
-  let _ = client.delete_objects([], Some(true))
+  for scene in scenes {
+    let name = scene.0
+    let groups = scene.1
+    if scene_only != "" && scene_only != name {
+      for g in groups {
+        if g.voxels.is_valid() {
+          g.voxels.destroy()
+        }
+      }
+      continue
+    }
+    println("--- " + name + " ---")
+    if groups.is_empty() {
+      println("  (empty)")
+      continue
+    }
 
-  // --- sphere ---
-  println("--- sphere ---")
-  check_tool(
-    "create_sphere(1)",
-    client.create_sphere(-100.0, 0.0, 0.0, 40.0, Some("gallery_sphere_1")),
-  )
-  check_tool(
-    "create_sphere(2)",
-    client.create_sphere(0.0, 0.0, 0.0, 37.0, Some("gallery_sphere_2")),
-  )
-  check_tool(
-    "create_sphere(3)",
-    client.create_sphere(150.0, 0.0, 0.0, 42.0, Some("gallery_sphere_3")),
-  )
-  check_tool(
-    "boolean_add_all",
-    client.boolean_add_all(
-      ["gallery_sphere_1", "gallery_sphere_2", "gallery_sphere_3"],
-      Some("scene_sphere"),
-    ),
-  )
-  check_tool(
-    "render_to_image",
-    client.render_to_image(
-      "scene_sphere",
-      outdir + "/sphere.png",
-      Some(1280),
-      Some(960),
-      Some("#292933"),
-      Some("#7ec8e3"),
-    ),
-  )
-  check_tool("delete_object", client.delete_object("scene_sphere"))
-  println("  -> " + outdir + "/sphere.png")
-  // Clean up all objects for the next scene.
-  let _ = client.delete_objects([], Some(true))
+    if no_viewer {
+      // Save STLs only.
+      for idx, g in groups {
+        if g.voxels.is_valid() {
+          let mesh = g.voxels.to_mesh()
+          let stl_path = outdir + "/" + name + "_" + idx.to_string() + ".stl"
+          if mesh.save_stl(stl_path) {
+            println("  -> " + stl_path)
+          }
+          mesh.destroy()
+        }
+      }
+    } else {
+      // Render via the native Viewer.
+      let v = @pk.new_viewer("PicoGK Gallery — " + name, 1280, 960)
+      if v.is_valid() {
+        for idx, g in groups {
+          if g.voxels.is_valid() {
+            v.add_voxels(idx, g.voxels)
+            v.set_group_material(idx, g.color, 0.1, 0.5)
+          }
+        }
+        let png_path = outdir + "/" + name + ".png"
+        if v.screenshot_png(png_path, 12) {
+          println("  -> " + png_path)
+        } else {
+          println("  ERROR: failed to write PNG")
+        }
+        v.request_close()
+        v.destroy()
+      } else {
+        // No display — fall back to STL.
+        println("  (Viewer not available — saving STLs only)")
+        for idx, g in groups {
+          if g.voxels.is_valid() {
+            let mesh = g.voxels.to_mesh()
+            let stl_path = outdir + "/" + name + "_" + idx.to_string() + ".stl"
+            if mesh.save_stl(stl_path) {
+              println("  -> " + stl_path)
+            }
+            mesh.destroy()
+          }
+        }
+      }
+    }
 
-  // --- cylinder ---
-  println("--- cylinder ---")
-  check_tool(
-    "create_cylinder(1)",
-    client.create_cylinder(
-      -50.0,
-      0.0,
-      -30.0,
-      40.0,
-      60.0,
-      None,
-      None,
-      None,
-      Some("gallery_cyl_1"),
-    ),
-  )
-  check_tool(
-    "create_cylinder(2)",
-    client.create_cylinder(
-      50.0,
-      0.0,
-      -30.0,
-      10.0,
-      60.0,
-      None,
-      None,
-      None,
-      Some("gallery_cyl_2"),
-    ),
-  )
-  check_tool(
-    "create_cylinder(3)",
-    client.create_cylinder(
-      0.0,
-      0.0,
-      -30.0,
-      12.0,
-      60.0,
-      None,
-      None,
-      None,
-      Some("gallery_cyl_3"),
-    ),
-  )
-  check_tool(
-    "boolean_add_all",
-    client.boolean_add_all(
-      ["gallery_cyl_1", "gallery_cyl_2", "gallery_cyl_3"],
-      Some("scene_cylinder"),
-    ),
-  )
-  check_tool(
-    "render_to_image",
-    client.render_to_image(
-      "scene_cylinder",
-      outdir + "/cylinder.png",
-      Some(1280),
-      Some(960),
-      Some("#292933"),
-      Some("#5999e6"),
-    ),
-  )
-  check_tool("delete_object", client.delete_object("scene_cylinder"))
-  println("  -> " + outdir + "/cylinder.png")
-  // Clean up all objects for the next scene.
-  let _ = client.delete_objects([], Some(true))
-
-  // --- ring ---
-  println("--- ring ---")
-  check_tool(
-    "create_torus(1)",
-    client.create_torus(
-      30.0,
-      8.0,
-      Some(-50.0),
-      Some(-50.0),
-      Some(0.0),
-      Some("gallery_ring_1"),
-    ),
-  )
-  check_tool(
-    "create_torus(2)",
-    client.create_torus(
-      30.0,
-      8.0,
-      Some(-50.0),
-      Some(50.0),
-      Some(0.0),
-      Some("gallery_ring_2"),
-    ),
-  )
-  check_tool(
-    "create_torus(3)",
-    client.create_torus(
-      30.0,
-      11.0,
-      Some(50.0),
-      Some(50.0),
-      Some(0.0),
-      Some("gallery_ring_3"),
-    ),
-  )
-  check_tool(
-    "create_torus(4)",
-    client.create_torus(
-      30.0,
-      10.0,
-      Some(50.0),
-      Some(-50.0),
-      Some(0.0),
-      Some("gallery_ring_4"),
-    ),
-  )
-  check_tool(
-    "boolean_add_all",
-    client.boolean_add_all(
-      ["gallery_ring_1", "gallery_ring_2", "gallery_ring_3", "gallery_ring_4"],
-      Some("scene_ring"),
-    ),
-  )
-  check_tool(
-    "render_to_image",
-    client.render_to_image(
-      "scene_ring",
-      outdir + "/ring.png",
-      Some(1280),
-      Some(960),
-      Some("#292933"),
-      Some("#7ec8e3"),
-    ),
-  )
-  check_tool("delete_object", client.delete_object("scene_ring"))
-  println("  -> " + outdir + "/ring.png")
-  // Clean up all objects for the next scene.
-  let _ = client.delete_objects([], Some(true))
-
-  // --- lens ---
-  println("--- lens ---")
-  check_tool(
-    "create_sphere(1)",
-    client.create_sphere(-50.0, -50.0, 0.0, 20.0, Some("gallery_lens_1")),
-  )
-  check_tool(
-    "create_sphere(2)",
-    client.create_sphere(50.0, 50.0, 0.0, 18.0, Some("gallery_lens_2")),
-  )
-  check_tool(
-    "create_sphere(3)",
-    client.create_sphere(-50.0, 50.0, 0.0, 22.0, Some("gallery_lens_3")),
-  )
-  check_tool(
-    "boolean_add_all",
-    client.boolean_add_all(
-      ["gallery_lens_1", "gallery_lens_2", "gallery_lens_3"],
-      Some("scene_lens"),
-    ),
-  )
-  check_tool(
-    "render_to_image",
-    client.render_to_image(
-      "scene_lens",
-      outdir + "/lens.png",
-      Some(1280),
-      Some(960),
-      Some("#292933"),
-      Some("#7ec8e3"),
-    ),
-  )
-  check_tool("delete_object", client.delete_object("scene_lens"))
-  println("  -> " + outdir + "/lens.png")
-  // Clean up all objects for the next scene.
-  let _ = client.delete_objects([], Some(true))
-
-  // --- pipe ---
-  println("--- pipe ---")
-  // Static pipe at (-50, 0, 0), inner 10, outer 20.
-  check_tool(
-    "create_cylinder(outer1)",
-    client.create_cylinder(
-      -50.0,
-      0.0,
-      -30.0,
-      20.0,
-      60.0,
-      None,
-      None,
-      None,
-      Some("gallery_pipe_1_outer"),
-    ),
-  )
-  check_tool(
-    "create_cylinder(inner1)",
-    client.create_cylinder(
-      -50.0,
-      0.0,
-      -30.0,
-      10.0,
-      60.0,
-      None,
-      None,
-      None,
-      Some("gallery_pipe_1_inner"),
-    ),
-  )
-  check_tool(
-    "boolean_subtract(1)",
-    client.boolean_subtract(
-      "gallery_pipe_1_outer",
-      "gallery_pipe_1_inner",
-      Some("gallery_pipe_1"),
-    ),
-  )
-  // Transformed pipe at (0, 0, 0).
-  check_tool(
-    "create_cylinder(outer2)",
-    client.create_cylinder(
-      0.0,
-      0.0,
-      -30.0,
-      20.0,
-      60.0,
-      None,
-      None,
-      None,
-      Some("gallery_pipe_2_outer"),
-    ),
-  )
-  check_tool(
-    "create_cylinder(inner2)",
-    client.create_cylinder(
-      0.0,
-      0.0,
-      -30.0,
-      10.0,
-      60.0,
-      None,
-      None,
-      None,
-      Some("gallery_pipe_2_inner"),
-    ),
-  )
-  check_tool(
-    "boolean_subtract(2)",
-    client.boolean_subtract(
-      "gallery_pipe_2_outer",
-      "gallery_pipe_2_inner",
-      Some("gallery_pipe_2"),
-    ),
-  )
-  // Pipe with inner radius 6 at (50, -50, 0).
-  check_tool(
-    "create_cylinder(outer3)",
-    client.create_cylinder(
-      50.0,
-      -50.0,
-      -30.0,
-      10.0,
-      60.0,
-      None,
-      None,
-      None,
-      Some("gallery_pipe_3_outer"),
-    ),
-  )
-  check_tool(
-    "create_cylinder(inner3)",
-    client.create_cylinder(
-      50.0,
-      -50.0,
-      -30.0,
-      6.0,
-      60.0,
-      None,
-      None,
-      None,
-      Some("gallery_pipe_3_inner"),
-    ),
-  )
-  check_tool(
-    "boolean_subtract(3)",
-    client.boolean_subtract(
-      "gallery_pipe_3_outer",
-      "gallery_pipe_3_inner",
-      Some("gallery_pipe_3"),
-    ),
-  )
-  // Swept pipe at origin.
-  check_tool(
-    "create_cylinder(outer4)",
-    client.create_cylinder(
-      0.0,
-      0.0,
-      0.0,
-      12.0,
-      60.0,
-      None,
-      None,
-      None,
-      Some("gallery_pipe_4_outer"),
-    ),
-  )
-  check_tool(
-    "create_cylinder(inner4)",
-    client.create_cylinder(
-      0.0,
-      0.0,
-      0.0,
-      8.0,
-      60.0,
-      None,
-      None,
-      None,
-      Some("gallery_pipe_4_inner"),
-    ),
-  )
-  check_tool(
-    "boolean_subtract(4)",
-    client.boolean_subtract(
-      "gallery_pipe_4_outer",
-      "gallery_pipe_4_inner",
-      Some("gallery_pipe_4"),
-    ),
-  )
-  check_tool(
-    "boolean_add_all",
-    client.boolean_add_all(
-      ["gallery_pipe_1", "gallery_pipe_2", "gallery_pipe_3", "gallery_pipe_4"],
-      Some("scene_pipe"),
-    ),
-  )
-  check_tool(
-    "render_to_image",
-    client.render_to_image(
-      "scene_pipe",
-      outdir + "/pipe.png",
-      Some(1280),
-      Some(960),
-      Some("#292933"),
-      Some("#5999e6"),
-    ),
-  )
-  check_tool("delete_object", client.delete_object("scene_pipe"))
-  println("  -> " + outdir + "/pipe.png")
-  // Clean up all objects for the next scene.
-  let _ = client.delete_objects([], Some(true))
-
-  // --- pipe_segment ---
-  println("--- pipe_segment ---")
-  check_tool(
-    "create_cylinder(pseg1o)",
-    client.create_cylinder(
-      -50.0,
-      0.0,
-      -30.0,
-      40.0,
-      60.0,
-      None,
-      None,
-      None,
-      Some("gallery_pseg_1_outer"),
-    ),
-  )
-  check_tool(
-    "create_cylinder(pseg1i)",
-    client.create_cylinder(
-      -50.0,
-      0.0,
-      -30.0,
-      20.0,
-      60.0,
-      None,
-      None,
-      None,
-      Some("gallery_pseg_1_inner"),
-    ),
-  )
-  check_tool(
-    "boolean_subtract(pseg1)",
-    client.boolean_subtract(
-      "gallery_pseg_1_outer",
-      "gallery_pseg_1_inner",
-      Some("gallery_pseg_1"),
-    ),
-  )
-  check_tool(
-    "create_cylinder(pseg2o)",
-    client.create_cylinder(
-      50.0,
-      0.0,
-      -30.0,
-      12.0,
-      60.0,
-      None,
-      None,
-      None,
-      Some("gallery_pseg_2_outer"),
-    ),
-  )
-  check_tool(
-    "create_cylinder(pseg2i)",
-    client.create_cylinder(
-      50.0,
-      0.0,
-      -30.0,
-      8.0,
-      60.0,
-      None,
-      None,
-      None,
-      Some("gallery_pseg_2_inner"),
-    ),
-  )
-  check_tool(
-    "boolean_subtract(pseg2)",
-    client.boolean_subtract(
-      "gallery_pseg_2_outer",
-      "gallery_pseg_2_inner",
-      Some("gallery_pseg_2"),
-    ),
-  )
-  check_tool(
-    "create_cylinder(pseg3o)",
-    client.create_cylinder(
-      0.0,
-      0.0,
-      0.0,
-      12.0,
-      60.0,
-      None,
-      None,
-      None,
-      Some("gallery_pseg_3_outer"),
-    ),
-  )
-  check_tool(
-    "create_cylinder(pseg3i)",
-    client.create_cylinder(
-      0.0,
-      0.0,
-      0.0,
-      8.0,
-      60.0,
-      None,
-      None,
-      None,
-      Some("gallery_pseg_3_inner"),
-    ),
-  )
-  check_tool(
-    "boolean_subtract(pseg3)",
-    client.boolean_subtract(
-      "gallery_pseg_3_outer",
-      "gallery_pseg_3_inner",
-      Some("gallery_pseg_3"),
-    ),
-  )
-  check_tool(
-    "boolean_add_all",
-    client.boolean_add_all(
-      ["gallery_pseg_1", "gallery_pseg_2", "gallery_pseg_3"],
-      Some("scene_pipe_segment"),
-    ),
-  )
-  check_tool(
-    "render_to_image",
-    client.render_to_image(
-      "scene_pipe_segment",
-      outdir + "/pipe_segment.png",
-      Some(1280),
-      Some(960),
-      Some("#292933"),
-      Some("#5999e6"),
-    ),
-  )
-  check_tool("delete_object", client.delete_object("scene_pipe_segment"))
-  println("  -> " + outdir + "/pipe_segment.png")
-  // Clean up all objects for the next scene.
-  let _ = client.delete_objects([], Some(true))
-
-  // --- basic_lattices ---
-  println("--- basic_lattices ---")
-  check_tool("create_lattice", client.create_lattice(Some("gallery_blat")))
-  check_tool(
-    "lattice_add_sphere",
-    client.lattice_add_sphere("gallery_blat", 1.0, 5.0, -10.0, 5.0),
-  )
-  check_tool(
-    "lattice_add_beam",
-    client.lattice_add_beam(
-      "gallery_blat",
-      5.0,
-      3.0,
-      0.0,
-      1.0,
-      -3.0,
-      0.0,
-      7.0,
-      3.0,
-      Some(true),
-    ),
-  )
-  check_tool(
-    "lattice_to_voxels",
-    client.lattice_to_voxels("gallery_blat", Some("gallery_blat_vox")),
-  )
-  check_tool(
-    "render_to_image",
-    client.render_to_image(
-      "gallery_blat_vox",
-      outdir + "/basic_lattices.png",
-      Some(1280),
-      Some(960),
-      Some("#292933"),
-      Some("#4f6be6"),
-    ),
-  )
-  println("  -> " + outdir + "/basic_lattices.png")
-  // Clean up all objects for the next scene.
-  let _ = client.delete_objects([], Some(true))
-
-  // --- lattice_pipe ---
-  println("--- lattice_pipe ---")
-  check_tool(
-    "create_cylinder(lpipe1)",
-    client.create_cylinder(
-      -50.0,
-      0.0,
-      -30.0,
-      10.0,
-      60.0,
-      None,
-      None,
-      None,
-      Some("gallery_lpipe_1"),
-    ),
-  )
-  check_tool(
-    "create_cylinder(lpipe2)",
-    client.create_cylinder(
-      50.0,
-      -50.0,
-      -30.0,
-      10.0,
-      60.0,
-      None,
-      None,
-      None,
-      Some("gallery_lpipe_2"),
-    ),
-  )
-  check_tool(
-    "create_cylinder(lpipe3)",
-    client.create_cylinder(
-      0.0,
-      0.0,
-      0.0,
-      10.0,
-      60.0,
-      None,
-      None,
-      None,
-      Some("gallery_lpipe_3"),
-    ),
-  )
-  check_tool(
-    "boolean_add_all",
-    client.boolean_add_all(
-      ["gallery_lpipe_1", "gallery_lpipe_2", "gallery_lpipe_3"],
-      Some("scene_lattice_pipe"),
-    ),
-  )
-  check_tool(
-    "render_to_image",
-    client.render_to_image(
-      "scene_lattice_pipe",
-      outdir + "/lattice_pipe.png",
-      Some(1280),
-      Some(960),
-      Some("#292933"),
-      Some("#e6dc4f"),
-    ),
-  )
-  check_tool("delete_object", client.delete_object("scene_lattice_pipe"))
-  println("  -> " + outdir + "/lattice_pipe.png")
-  // Clean up all objects for the next scene.
-  let _ = client.delete_objects([], Some(true))
-
-  // --- lattice_manifold ---
-  println("--- lattice_manifold ---")
-  check_tool(
-    "create_cylinder(lman1)",
-    client.create_cylinder(
-      -50.0,
-      -25.0,
-      0.0,
-      5.0,
-      50.0,
-      Some(0.0),
-      Some(1.0),
-      Some(0.0),
-      Some("gallery_lman_1"),
-    ),
-  )
-  check_tool(
-    "create_cylinder(lman2)",
-    client.create_cylinder(
-      0.0,
-      -25.0,
-      0.0,
-      10.0,
-      50.0,
-      Some(0.0),
-      Some(1.0),
-      Some(0.0),
-      Some("gallery_lman_2"),
-    ),
-  )
-  check_tool(
-    "create_cylinder(lman3)",
-    client.create_cylinder(
-      50.0,
-      -25.0,
-      0.0,
-      5.0,
-      50.0,
-      Some(0.0),
-      Some(1.0),
-      Some(0.0),
-      Some("gallery_lman_3"),
-    ),
-  )
-  check_tool(
-    "boolean_add_all",
-    client.boolean_add_all(
-      ["gallery_lman_1", "gallery_lman_2", "gallery_lman_3"],
-      Some("scene_lattice_manifold"),
-    ),
-  )
-  check_tool(
-    "render_to_image",
-    client.render_to_image(
-      "scene_lattice_manifold",
-      outdir + "/lattice_manifold.png",
-      Some(1280),
-      Some(960),
-      Some("#292933"),
-      Some("#e6dc4f"),
-    ),
-  )
-  check_tool("delete_object", client.delete_object("scene_lattice_manifold"))
-  println("  -> " + outdir + "/lattice_manifold.png")
-  // Clean up all objects for the next scene.
-  let _ = client.delete_objects([], Some(true))
-
-  // --- gyroid_sphere ---
-  println("--- gyroid_sphere ---")
-  check_tool(
-    "create_sphere",
-    client.create_sphere(0.0, 0.0, 0.0, 10.0, Some("gallery_gyroid_sphere")),
-  )
-  // Approximate gyroid infill with a lattice inside the sphere.
-  check_tool(
-    "create_lattice",
-    client.create_lattice(Some("gallery_gyroid_lat")),
-  )
-  check_tool(
-    "lattice_add_sphere",
-    client.lattice_add_sphere("gallery_gyroid_lat", 0.0, 0.0, 0.0, 2.0),
-  )
-  check_tool(
-    "lattice_add_beam(0)",
-    client.lattice_add_beam(
-      "gallery_gyroid_lat",
-      0.0,
-      0.0,
-      0.0,
-      1.0,
-      6.0,
-      0.0,
-      0.0,
-      1.0,
-      None,
-    ),
-  )
-  check_tool(
-    "lattice_add_beam(1)",
-    client.lattice_add_beam(
-      "gallery_gyroid_lat",
-      0.0,
-      0.0,
-      0.0,
-      1.0,
-      3.0,
-      5.196,
-      0.0,
-      1.0,
-      None,
-    ),
-  )
-  check_tool(
-    "lattice_add_beam(2)",
-    client.lattice_add_beam(
-      "gallery_gyroid_lat",
-      0.0,
-      0.0,
-      0.0,
-      1.0,
-      -3.0,
-      5.196,
-      0.0,
-      1.0,
-      None,
-    ),
-  )
-  check_tool(
-    "lattice_add_beam(3)",
-    client.lattice_add_beam(
-      "gallery_gyroid_lat",
-      0.0,
-      0.0,
-      0.0,
-      1.0,
-      -6.0,
-      0.0,
-      0.0,
-      1.0,
-      None,
-    ),
-  )
-  check_tool(
-    "lattice_add_beam(4)",
-    client.lattice_add_beam(
-      "gallery_gyroid_lat",
-      0.0,
-      0.0,
-      0.0,
-      1.0,
-      -3.0,
-      -5.196,
-      0.0,
-      1.0,
-      None,
-    ),
-  )
-  check_tool(
-    "lattice_add_beam(5)",
-    client.lattice_add_beam(
-      "gallery_gyroid_lat",
-      0.0,
-      0.0,
-      0.0,
-      1.0,
-      3.0,
-      -5.196,
-      0.0,
-      1.0,
-      None,
-    ),
-  )
-  check_tool(
-    "lattice_to_voxels",
-    client.lattice_to_voxels(
-      "gallery_gyroid_lat",
-      Some("gallery_gyroid_lat_vox"),
-    ),
-  )
-  check_tool(
-    "boolean_intersect",
-    client.boolean_intersect(
-      "gallery_gyroid_sphere",
-      "gallery_gyroid_lat_vox",
-      Some("gallery_gyroid_result"),
-    ),
-  )
-  check_tool(
-    "render_to_image",
-    client.render_to_image(
-      "gallery_gyroid_result",
-      outdir + "/gyroid_sphere.png",
-      Some(1280),
-      Some(960),
-      Some("#292933"),
-      Some("#4fb6e6"),
-    ),
-  )
-  println("  -> " + outdir + "/gyroid_sphere.png")
-  // Clean up all objects for the next scene.
-  let _ = client.delete_objects([], Some(true))
-
-  // --- gyroid_genus ---
-  println("--- gyroid_genus ---")
-  // Approximate the genus surface with a torus (genus-1 surface).
-  check_tool(
-    "create_torus",
-    client.create_torus(
-      24.0,
-      8.0,
-      Some(0.0),
-      Some(0.0),
-      Some(0.0),
-      Some("gallery_gyroid_genus"),
-    ),
-  )
-  check_tool(
-    "render_to_image",
-    client.render_to_image(
-      "gallery_gyroid_genus",
-      outdir + "/gyroid_genus.png",
-      Some(1280),
-      Some(960),
-      Some("#292933"),
-      Some("#b09be6"),
-    ),
-  )
-  println("  -> " + outdir + "/gyroid_genus.png")
-  // Clean up all objects for the next scene.
-  let _ = client.delete_objects([], Some(true))
-
-  // --- superellipsoid ---
-  println("--- superellipsoid ---")
-  // e1=3, e2=0.25: approximated by a filleted box.
-  check_tool(
-    "create_box(se1)",
-    client.create_box(
-      -61.0,
-      -16.0,
-      -16.0,
-      -29.0,
-      16.0,
-      16.0,
-      Some("gallery_se_1_box"),
-    ),
-  )
-  check_tool(
-    "fillet(se1)",
-    client.fillet("gallery_se_1_box", 8.0, Some("gallery_se_1")),
-  )
-  // e1=1.5, e2=1.5: close to sphere.
-  check_tool(
-    "create_sphere(se2)",
-    client.create_sphere(0.0, 0.0, 0.0, 16.0, Some("gallery_se_2")),
-  )
-  // e1=0.25, e2=0.25: approximated by a box.
-  check_tool(
-    "create_box(se3)",
-    client.create_box(
-      29.0,
-      -16.0,
-      -16.0,
-      61.0,
-      16.0,
-      16.0,
-      Some("gallery_se_3"),
-    ),
-  )
-  check_tool(
-    "boolean_add_all",
-    client.boolean_add_all(
-      ["gallery_se_1", "gallery_se_2", "gallery_se_3"],
-      Some("scene_superellipsoid"),
-    ),
-  )
-  check_tool(
-    "render_to_image",
-    client.render_to_image(
-      "scene_superellipsoid",
-      outdir + "/superellipsoid.png",
-      Some(1280),
-      Some(960),
-      Some("#292933"),
-      Some("#e64f6b"),
-    ),
-  )
-  check_tool("delete_object", client.delete_object("scene_superellipsoid"))
-  println("  -> " + outdir + "/superellipsoid.png")
-  // Clean up all objects for the next scene.
-  let _ = client.delete_objects([], Some(true))
-
-  // --- mesh_painter ---
-  println("--- mesh_painter ---")
-  check_tool(
-    "create_sphere",
-    client.create_sphere(0.0, 0.0, 0.0, 40.0, Some("gallery_painter_sphere")),
-  )
-  check_tool(
-    "render_to_image",
-    client.render_to_image(
-      "gallery_painter_sphere",
-      outdir + "/mesh_painter.png",
-      Some(1280),
-      Some(960),
-      Some("#292933"),
-      Some("#4fb6e6"),
-    ),
-  )
-  println("  -> " + outdir + "/mesh_painter.png")
-  // Clean up all objects for the next scene.
-  let _ = client.delete_objects([], Some(true))
-
-  // --- mesh_trafo ---
-  println("--- mesh_trafo ---")
-  check_tool(
-    "create_box",
-    client.create_box(
-      -20.0,
-      -15.0,
-      -10.0,
-      20.0,
-      15.0,
-      10.0,
-      Some("gallery_trafo_box"),
-    ),
-  )
-  // Rotate 45 degrees around Z and translate.
-  check_tool(
-    "transform_voxels",
-    client.transform_voxels(
-      "gallery_trafo_box",
-      None,
-      None,
-      None,
-      Some(60.0),
-      None,
-      None,
-      Some(45.0),
-      Some("gallery_trafo_rotated"),
-    ),
-  )
-  check_tool(
-    "boolean_add_all",
-    client.boolean_add_all(
-      ["gallery_trafo_box", "gallery_trafo_rotated"],
-      Some("scene_mesh_trafo"),
-    ),
-  )
-  check_tool(
-    "render_to_image",
-    client.render_to_image(
-      "scene_mesh_trafo",
-      outdir + "/mesh_trafo.png",
-      Some(1280),
-      Some(960),
-      Some("#292933"),
-      Some("#888888"),
-    ),
-  )
-  check_tool("delete_object", client.delete_object("scene_mesh_trafo"))
-  println("  -> " + outdir + "/mesh_trafo.png")
-  // Clean up all objects for the next scene.
-  let _ = client.delete_objects([], Some(true))
-
-  // --- over_offset ---
-  println("--- over_offset ---")
-  check_tool(
-    "create_box(1)",
-    client.create_box(
-      -30.0,
-      -15.0,
-      -15.0,
-      0.0,
-      15.0,
-      15.0,
-      Some("gallery_oo_box1"),
-    ),
-  )
-  check_tool(
-    "create_box(2)",
-    client.create_box(
-      0.0,
-      -15.0,
-      -15.0,
-      30.0,
-      15.0,
-      15.0,
-      Some("gallery_oo_box2"),
-    ),
-  )
-  check_tool(
-    "boolean_add",
-    client.boolean_add(
-      "gallery_oo_box1",
-      "gallery_oo_box2",
-      Some("gallery_oo_union"),
-    ),
-  )
-  // Double offset: open by 4mm, then close by 4mm (morphological open).
-  check_tool(
-    "double_offset",
-    client.double_offset(
-      "gallery_oo_union",
-      4.0,
-      -4.0,
-      Some("gallery_oo_result"),
-    ),
-  )
-  check_tool(
-    "render_to_image",
-    client.render_to_image(
-      "gallery_oo_result",
-      outdir + "/over_offset.png",
-      Some(1280),
-      Some(960),
-      Some("#292933"),
-      Some("#e67bb0"),
-    ),
-  )
-  println("  -> " + outdir + "/over_offset.png")
-  // Clean up all objects for the next scene.
-  let _ = client.delete_objects([], Some(true))
+    // Cleanup.
+    for g in groups {
+      if g.voxels.is_valid() {
+        g.voxels.destroy()
+      }
+    }
+  }
 
   println("")
   println("done.")
-
-  let _ = client.picogk_shutdown()
-  client.close()
+  @pk.shutdown()
 }
 
 ///|
-/// check_tool calls a tool, checks for errors, and prints a truncated result.
-fn check_tool(label : String, result : String) -> Unit {
-  let truncated = if result.length() > 80 {
-    result[:80].to_owned() + "..."
-  } else {
-    result
+struct SceneGroup {
+  voxels : @pk.Voxels
+  color : @pk.ColorFloat
+}
+
+///|
+/// Create a SceneGroup from voxels with a color.
+fn group(vox : @pk.Voxels, color : @pk.ColorFloat) -> SceneGroup {
+  SceneGroup::{ voxels: vox, color }
+}
+
+// --- Color palette (matching PicoPie/Go palette) ---
+
+///|
+let col_frozen : @pk.ColorFloat = @pk.ColorFloat::new(0.6, 0.8, 1.0, 1.0)
+
+///|
+let col_pitaya : @pk.ColorFloat = @pk.ColorFloat::new(0.95, 0.45, 0.55, 1.0)
+
+///|
+let col_warning : @pk.ColorFloat = @pk.ColorFloat::new(0.95, 0.7, 0.25, 1.0)
+
+///|
+let col_blue : @pk.ColorFloat = @pk.ColorFloat::new(0.35, 0.6, 0.9, 1.0)
+
+///|
+let col_green : @pk.ColorFloat = @pk.ColorFloat::new(0.3, 0.7, 0.4, 1.0)
+
+///|
+let col_yellow : @pk.ColorFloat = @pk.ColorFloat::new(0.9, 0.85, 0.3, 1.0)
+
+///|
+let col_blueberry : @pk.ColorFloat = @pk.ColorFloat::new(0.3, 0.35, 0.6, 1.0)
+
+///|
+let col_ruby : @pk.ColorFloat = @pk.ColorFloat::new(0.8, 0.2, 0.3, 1.0)
+
+///|
+let col_bubblegum : @pk.ColorFloat = @pk.ColorFloat::new(0.9, 0.5, 0.8, 1.0)
+
+///|
+let col_orchid : @pk.ColorFloat = @pk.ColorFloat::new(0.6, 0.4, 0.8, 1.0)
+
+///|
+let col_gray : @pk.ColorFloat = @pk.ColorFloat::new(0.5, 0.5, 0.5, 1.0)
+
+///|
+let col_lemongrass : @pk.ColorFloat = @pk.ColorFloat::new(0.7, 0.8, 0.3, 1.0)
+
+///|
+let col_racing_green : @pk.ColorFloat = @pk.ColorFloat::new(0.1, 0.4, 0.2, 1.0)
+
+///|
+let col_crystal : @pk.ColorFloat = @pk.ColorFloat::new(0.5, 0.8, 0.9, 1.0)
+
+///|
+let col_billie : @pk.ColorFloat = @pk.ColorFloat::new(0.4, 0.3, 0.6, 1.0)
+
+///|
+let col_lavender : @pk.ColorFloat = @pk.ColorFloat::new(0.7, 0.6, 0.9, 1.0)
+
+// --- Shared modulation functions (matching the Go/Python gallery) ---
+
+///|
+fn line1(lr : Double) -> Double {
+  10.0 - 3.0 * @math.cos(8.0 * lr)
+}
+
+///|
+fn line2(lr : Double) -> Double {
+  8.0 - @math.cos(40.0 * lr)
+}
+
+///|
+fn surf1(phi : Double, lr : Double) -> Double {
+  12.0 + 3.0 * @math.cos(5.0 * phi)
+}
+
+///|
+fn surf3(phi : Double, lr : Double) -> Double {
+  8.0 + 5.0 * @math.cos(5.0 * phi)
+}
+
+// --- Scenes ---
+
+///|
+fn build_box() -> Array[SceneGroup] {
+  // Box at (-50,0,0): 20x10x15
+  let b1 = @pk.new_box(-60.0, -5.0, -7.5, -40.0, 5.0, 7.5)
+  // Box at (50,0,0): modulated width/depth (approximated with constant)
+  let b2 = @pk.new_box(40.0, -4.0, -5.0, 60.0, 4.0, 5.0)
+  // Box at (0,0,0): modulated width/depth (approximated)
+  let b3 = @pk.new_box(-10.0, -4.0, -5.0, 10.0, 4.0, 5.0)
+  [
+    group(b1, col_blue),
+    group(b2, col_green),
+    group(b3, col_yellow),
+  ]
+}
+
+///|
+fn build_sphere() -> Array[SceneGroup] {
+  let s1 = @pk.new_sphere(@pk.Vec3::new(-100.0, 0.0, 0.0), 40.0)
+  let s2 = @pk.new_sphere(@pk.Vec3::new(0.0, 0.0, 0.0), 37.0)
+  let s3 = @pk.new_sphere(@pk.Vec3::new(150.0, 0.0, 0.0), 42.0)
+  [
+    group(s1, col_frozen),
+    group(s2, col_pitaya),
+    group(s3, col_warning),
+  ]
+}
+
+///|
+fn build_cylinder() -> Array[SceneGroup] {
+  let c1 = @pk.new_cylinder(-50.0, 0.0, -30.0, 40.0, 60.0, None, None, None)
+  let c2 = @pk.new_cylinder(50.0, 0.0, -30.0, 10.0, 60.0, None, None, None)
+  let c3 = @pk.new_cylinder(0.0, 0.0, -30.0, 12.0, 60.0, None, None, None)
+  [
+    group(c1, col_blue),
+    group(c2, col_green),
+    group(c3, col_yellow),
+  ]
+}
+
+///|
+fn build_ring() -> Array[SceneGroup] {
+  let r1 = torus(30.0, 8.0, @pk.Vec3::new(-50.0, -50.0, 0.0))
+  let r2 = torus(30.0, 8.0, @pk.Vec3::new(-50.0, 50.0, 0.0))
+  let r3 = torus(30.0, 11.0, @pk.Vec3::new(50.0, 50.0, 0.0))
+  let r4 = torus(30.0, 10.0, @pk.Vec3::new(50.0, -50.0, 0.0))
+  [
+    group(r1, col_frozen),
+    group(r2, col_pitaya),
+    group(r3, col_warning),
+    group(r4, col_blueberry),
+  ]
+}
+
+///|
+fn build_lens() -> Array[SceneGroup] {
+  // Approximated lens with spheres (no parametric lens shape in FFI primitives).
+  let l1 = @pk.new_sphere(@pk.Vec3::new(-50.0, -50.0, 0.0), 20.0)
+  let l2 = @pk.new_sphere(@pk.Vec3::new(50.0, 50.0, 0.0), 18.0)
+  let l3 = @pk.new_sphere(@pk.Vec3::new(-50.0, 50.0, 0.0), 22.0)
+  [
+    group(l1, col_frozen),
+    group(l2, col_pitaya),
+    group(l3, col_warning),
+  ]
+}
+
+///|
+fn build_pipe() -> Array[SceneGroup] {
+  // Pipes approximated with hollow cylinders.
+  let p1 = hollow_pipe(-50.0, 0.0, -30.0, 20.0, 10.0, 60.0)
+  let p2 = hollow_pipe(0.0, 0.0, -30.0, 20.0, 10.0, 60.0)
+  let p3 = hollow_pipe(50.0, -50.0, -30.0, 10.0, 6.0, 60.0)
+  let p4 = hollow_pipe(0.0, 0.0, 0.0, 12.0, 8.0, 60.0)
+  [
+    group(p1, col_blue),
+    group(p2, col_green),
+    group(p3, col_lemongrass),
+    group(p4, col_orchid),
+  ]
+}
+
+///|
+fn build_pipe_segment() -> Array[SceneGroup] {
+  let ps1 = hollow_pipe(-50.0, 0.0, -30.0, 40.0, 20.0, 60.0)
+  let ps2 = hollow_pipe(50.0, 0.0, -30.0, 12.0, 8.0, 60.0)
+  let ps3 = hollow_pipe(0.0, 0.0, 0.0, 12.0, 8.0, 60.0)
+  [
+    group(ps1, col_blue),
+    group(ps2, col_ruby),
+    group(ps3, col_racing_green),
+  ]
+}
+
+///|
+fn build_basic_lattices() -> Array[SceneGroup] {
+  let lat = @pk.new_lattice()
+  lat.add_sphere(@pk.Vec3::new(1.0, 5.0, -10.0), 5.0)
+  lat.add_beam(
+    @pk.Vec3::new(5.0, 3.0, 0.0),
+    @pk.Vec3::new(-3.0, 0.0, 7.0),
+    1.0,
+    3.0,
+    true,
+  )
+  let vox = @pk.from_lattice(lat)
+  lat.destroy()
+  [group(vox, col_blueberry)]
+}
+
+///|
+fn build_lattice_pipe() -> Array[SceneGroup] {
+  let lp1 = @pk.new_cylinder(-50.0, 0.0, -30.0, 10.0, 60.0, None, None, None)
+  let lp2 = @pk.new_cylinder(50.0, -50.0, -30.0, 10.0, 60.0, None, None, None)
+  let lp3 = @pk.new_cylinder(0.0, 0.0, 0.0, 10.0, 60.0, None, None, None)
+  [
+    group(lp1, col_yellow),
+    group(lp2, col_frozen),
+    group(lp3, col_racing_green),
+  ]
+}
+
+///|
+fn build_lattice_manifold() -> Array[SceneGroup] {
+  let lm1 = @pk.new_cylinder(-50.0, -25.0, 0.0, 5.0, 50.0, Some(0.0), Some(1.0), Some(0.0))
+  let lm2 = @pk.new_cylinder(0.0, -25.0, 0.0, 10.0, 50.0, Some(0.0), Some(1.0), Some(0.0))
+  let lm3 = @pk.new_cylinder(50.0, -25.0, 0.0, 5.0, 50.0, Some(0.0), Some(1.0), Some(0.0))
+  [
+    group(lm1, col_yellow),
+    group(lm2, col_crystal),
+    group(lm3, col_green),
+  ]
+}
+
+///|
+fn build_gyroid_sphere() -> Array[SceneGroup] {
+  // Real gyroid sphere via implicit SDF — same approach as PicoPie/Go FFI.
+  let unit_size = 3.0
+  let k = 2.0 * 3.14159265358979 / unit_size
+  let r = 10.0
+  let vox = @pk.new_voxels()
+  let pad = 2.0
+  vox.render_gyroid_sphere(
+    @pk.BBox3::new(
+      @pk.Vec3::new(-r - pad, -r - pad, -r - pad),
+      @pk.Vec3::new(r + pad, r + pad, r + pad),
+    ),
+    r,
+    0.5,
+    k,
+  )
+  [group(vox, col_billie)]
+}
+
+///|
+fn build_gyroid_genus() -> Array[SceneGroup] {
+  // Real gyroid genus via implicit SDF — same approach as PicoPie/Go FFI.
+  let s = 8.0
+  let vox = @pk.new_voxels()
+  vox.render_gyroid_genus(
+    @pk.BBox3::new(
+      @pk.Vec3::new(-3.0 * s, -3.0 * s, -1.6 * s),
+      @pk.Vec3::new(3.0 * s, 3.0 * s, 1.6 * s),
+    ),
+    s,
+    0.0,
+    2.0 * 3.14159265358979 / 10.0,
+  )
+  [group(vox, col_lavender)]
+}
+
+///|
+fn build_superellipsoid() -> Array[SceneGroup] {
+  // Real superellipsoid via implicit SDF — same approach as PicoPie/Go FFI.
+  // Three superellipsoids at different positions.
+  let a = 16.0
+  let specs = [
+    (@pk.Vec3::new(-45.0, 0.0, 0.0), 3.0, 0.25, col_ruby),
+    (@pk.Vec3::new(0.0, 0.0, 0.0), 1.5, 1.5, col_blue),
+    (@pk.Vec3::new(45.0, 0.0, 0.0), 0.25, 0.25, col_bubblegum),
+  ]
+  let groups : Array[SceneGroup] = []
+  for spec in specs {
+    let center = spec.0
+    let e1 = spec.1
+    let e2 = spec.2
+    let color = spec.3
+    let vox = @pk.new_voxels()
+    vox.render_superellipsoid(
+      @pk.BBox3::new(
+        @pk.Vec3::new(center.x - a, center.y - a, center.z - a),
+        @pk.Vec3::new(center.x + a, center.y + a, center.z + a),
+      ),
+      a,
+      a,
+      a,
+      e1,
+      e2,
+    )
+    groups.push(group(vox, color))
   }
-  println("  OK: " + label + " -> " + truncated)
+  groups
+}
+
+///|
+fn build_mesh_painter() -> Array[SceneGroup] {
+  // Approximated mesh painter: a single sphere.
+  let s = @pk.new_sphere(@pk.Vec3::new(0.0, 0.0, 0.0), 40.0)
+  [group(s, col_frozen)]
+}
+
+///|
+fn build_mesh_trafo() -> Array[SceneGroup] {
+  // Box + rotated box (approximated with two boxes).
+  let box1 = @pk.new_box(-20.0, -15.0, -10.0, 20.0, 15.0, 10.0)
+  let box2 = @pk.new_box(-20.0, -15.0, -10.0, 20.0, 15.0, 10.0)
+  box2.offset(0.0)
+  [
+    group(box1, col_gray),
+    group(box2, col_orchid),
+  ]
+}
+
+///|
+fn build_over_offset() -> Array[SceneGroup] {
+  let b1 = @pk.new_box(-30.0, -15.0, -15.0, 0.0, 15.0, 15.0)
+  let b2 = @pk.new_box(0.0, -15.0, -15.0, 30.0, 15.0, 15.0)
+  b1.bool_add(b2)
+  b2.destroy()
+  b1.double_offset(4.0, -4.0)
+  [group(b1, col_bubblegum)]
+}
+
+// --- Helper functions ---
+
+///|
+/// torus creates a torus voxel object by sweeping capsules in a circle.
+fn torus(
+  major_radius : Double,
+  minor_radius : Double,
+  center : @pk.Vec3,
+) -> @pk.Voxels {
+  let n_segments = 32
+  let mut result : @pk.Voxels? = None
+  for i in 0..<n_segments {
+    let angle1 = i.to_double() / n_segments.to_double() * 2.0 * 3.14159265358979
+    let angle2 = (i + 1).to_double() /
+      n_segments.to_double() *
+      2.0 *
+      3.14159265358979
+    let x1 = center.x + major_radius * @math.cos(angle1)
+    let y1 = center.y + major_radius * @math.sin(angle1)
+    let z1 = center.z
+    let x2 = center.x + major_radius * @math.cos(angle2)
+    let y2 = center.y + major_radius * @math.sin(angle2)
+    let z2 = center.z
+    let seg = @pk.new_capsule(
+      @pk.Vec3::new(x1, y1, z1),
+      @pk.Vec3::new(x2, y2, z2),
+      minor_radius,
+      minor_radius,
+    )
+    match result {
+      Some(prev) => {
+        let combined = prev.add(seg)
+        prev.destroy()
+        seg.destroy()
+        result = Some(combined)
+      }
+      None => result = Some(seg)
+    }
+  }
+  result.unwrap()
+}
+
+///|
+/// hollow_pipe creates a hollow cylinder (pipe) by subtracting inner from outer.
+fn hollow_pipe(
+  x : Double,
+  y : Double,
+  z : Double,
+  outer_r : Double,
+  inner_r : Double,
+  height : Double,
+) -> @pk.Voxels {
+  let outer = @pk.new_cylinder(x, y, z, outer_r, height, None, None, None)
+  let inner = @pk.new_cylinder(x, y, z, inner_r, height, None, None, None)
+  let pipe = outer.sub(inner)
+  outer.destroy()
+  inner.destroy()
+  pipe
 }

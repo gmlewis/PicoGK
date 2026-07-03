@@ -1,7 +1,15 @@
 members = [
-  "blender",
   "picogk",
   "picogkffi",
   "picogkffi/test",
   "picogkshapes",
+  "blender",
+  "examples/hello-picogk",
+  "examples/fields-and-io",
+  "examples/viewer-demo",
+  "examples/visualize",
+  "examples/web-demo",
+  "examples/shapekernel-gallery",
+  "examples/full-api",
+  "examples/blender-scene",
 ]

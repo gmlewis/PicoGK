@@ -2,89 +2,119 @@
 
 ## Boolean operations
 
-The SDK provides three boolean CSG operations. Each takes two object IDs
-(`A` and `B`) and returns a new object with the given `ID`:
+The FFI SDK provides three boolean CSG operations as methods on
+`*picogkffi.Voxels`. Each **returns a new** `*Voxels` (the originals are
+unchanged), so remember to `defer` the result's `Destroy`:
 
 ```go
 package main
 
 import (
-    "context"
-    "log"
+    "fmt"
+    "runtime"
 
-    "github.com/gmlewis/PicoGK/sdk/go/picogk"
+    "github.com/gmlewis/PicoGK/sdk/go/picogkffi"
 )
 
 func main() {
-    log.SetFlags(0)
-    client, err := picogk.NewClient(context.Background(), "")
-    if err != nil { log.Fatal(err) }
-    defer client.Close()
+    runtime.LockOSThread()
+    defer runtime.UnlockOSThread()
 
-    do := func(cmd any) { client.Must(cmd) }
+    picogkffi.InitWithSize(0.2)
+    defer picogkffi.Shutdown()
 
-    client.Must(picogk.Init{VoxelSizeMM: picogk.Ptr(0.2)})
+    a := picogkffi.NewSphere(picogkffi.Vec3{0, 0, 0}, 10)
+    defer a.Destroy()
+    b := picogkffi.NewSphere(picogkffi.Vec3{8, 0, 0}, 8)
+    defer b.Destroy()
 
-    do(picogk.CreateSphere{X: 0, Y: 0, Z: 0, Radius: 10, ID: "a"})
-    do(picogk.CreateSphere{X: 8, Y: 0, Z: 0, Radius: 8, ID: "b"})
+    // Union: A + B (new object)
+    union := a.Add(b)
+    defer union.Destroy()
 
-    // Union: A + B
-    do(picogk.BooleanAdd{A: "a", B: "b", ID: "union"})
+    // Subtract: A - B (new object)
+    cut := a.Sub(b)
+    defer cut.Destroy()
 
-    // Subtract: A - B
-    do(picogk.BooleanSubtract{A: "a", B: "b", ID: "cut"})
+    // Intersect: A & B (new object)
+    overlap := a.Intersect(b)
+    defer overlap.Destroy()
 
-    // Intersect: A & B
-    do(picogk.BooleanIntersect{A: "a", B: "b", ID: "overlap"})
+    fmt.Printf("union: %.1f mm³\n", union.Volume())
+    fmt.Printf("cut:   %.1f mm³\n", cut.Volume())
+    fmt.Printf("overlap: %.1f mm³\n", overlap.Volume())
 }
 ```
 
+There are also **in-place** variants — `BoolAdd`, `BoolSubtract`,
+`BoolIntersect` — that modify the receiver and return nothing. Use those
+when you don't need to keep the original.
+
 ### Multi-object booleans
 
+There's no `BooleanAddAll` in the FFI SDK; union many objects with a loop
+and the in-place `BoolAdd`:
+
 ```go
-    // Union of many objects at once:
-    do(picogk.BooleanAddAll{ObjectIDs: []string{"a", "b", "union"}, ID: "all"})
+    // Union of many objects:
+    objs := []*picogkffi.Voxels{a, b, union}
+    all := objs[0].Copy()
+    defer all.Destroy()
+    for _, o := range objs[1:] {
+        all.BoolAdd(o)
+    }
 
     // Subtract many from one:
-    do(picogk.BooleanSubtractAll{A: "a", SubtractIDs: []string{"b", "overlap"}, ID: "drilled"})
+    drilled := a.Copy()
+    defer drilled.Destroy()
+    for _, o := range []*picogkffi.Voxels{b, overlap} {
+        drilled.BoolSubtract(o)
+    }
 ```
 
 ## Offsets
 
-Offset expands (positive) or shrinks (negative) the surface by a distance:
+`Offset` expands (positive) or shrinks (negative) the surface in-place:
 
 ```go
     // Expand by 2mm:
-    do(picogk.Offset{ObjectID: "a", Distance: 2.0, ID: "grown"})
+    grown := a.Copy()
+    defer grown.Destroy()
+    grown.Offset(2.0)
 
     // Shrink by 1mm:
-    do(picogk.Offset{ObjectID: "a", Distance: -1.0, ID: "shrunk"})
+    shrunk := a.Copy()
+    defer shrunk.Destroy()
+    shrunk.Offset(-1.0)
 ```
 
-Double offset applies two sequential offsets — useful for morphological
+`DoubleOffset` applies two sequential offsets — useful for morphological
 operations (open, close, round):
 
 ```go
     // Morphological open: expand 2mm, then shrink 2mm (removes thin features):
-    do(picogk.DoubleOffset{ObjectID: "a", Offset1: 2.0, Offset2: -2.0, ID: "opened"})
+    opened := a.Copy()
+    defer opened.Destroy()
+    opened.DoubleOffset(2.0, -2.0)
 
     // Rounding: expand 2mm, then shrink 1.5mm (net +0.5mm, rounded edges):
-    do(picogk.DoubleOffset{ObjectID: "a", Offset1: 2.0, Offset2: -1.5, ID: "rounded"})
+    rounded := a.Copy()
+    defer rounded.Destroy()
+    rounded.DoubleOffset(2.0, -1.5)
 ```
 
 ## Hollowing (shell)
 
-Shell creates a hollow wall of a specified thickness:
+`Shell` creates a hollow wall of a given **thickness** (single `float32`,
+not separate inner/outer offsets). It works in-place: it copies the part,
+offsets the copy inward by `thickness`, and subtracts:
 
 ```go
-    do(picogk.CreateSphere{X: 0, Y: 0, Z: 0, Radius: 12, ID: "ball"})
+    ball := picogkffi.NewSphere(picogkffi.Vec3{0, 0, 0}, 12)
+    defer ball.Destroy()
     // Create a 1.5mm wall:
-    do(picogk.Shell{ObjectID: "ball", InnerOffset: 1.5, OuterOffset: 0, ID: "hollow"})
+    ball.Shell(1.5)
 ```
-
-- `InnerOffset`: how far the inner surface is from the original (wall thickness).
-- `OuterOffset`: how far the outer surface is from the original (0 = keep outer surface).
-- `Smooth` (optional): smoothing distance for the shell walls.
 
 ## Vented hollow ball (complete example)
 
@@ -92,37 +122,63 @@ Shell creates a hollow wall of a specified thickness:
 package main
 
 import (
-    "context"
+    "encoding/binary"
     "fmt"
-    "log"
+    "os"
+    "runtime"
 
-    "github.com/gmlewis/PicoGK/sdk/go/picogk"
+    "github.com/gmlewis/PicoGK/sdk/go/picogkffi"
 )
 
 func main() {
-    log.SetFlags(0)
-    client, err := picogk.NewClient(context.Background(), "")
-    if err != nil { log.Fatal(err) }
-    defer client.Close()
+    runtime.LockOSThread()
+    defer runtime.UnlockOSThread()
 
-    do := func(cmd any) { client.Must(cmd) }
-
-    client.Must(picogk.Init{VoxelSizeMM: picogk.Ptr(0.2)})
+    picogkffi.InitWithSize(0.2)
+    defer picogkffi.Shutdown()
 
     // Build a sphere, subtract a bite, then hollow it.
-    do(picogk.CreateSphere{X: 0, Y: 0, Z: 0, Radius: 12, ID: "ball"})
-    do(picogk.CreateSphere{X: 9, Y: 0, Z: 0, Radius: 6, ID: "bite"})
-    do(picogk.BooleanSubtract{A: "ball", B: "bite", ID: "part"})
-    do(picogk.Shell{ObjectID: "part", InnerOffset: 1.5, OuterOffset: 0, ID: "shelled"})
+    ball := picogkffi.NewSphere(picogkffi.Vec3{0, 0, 0}, 12)
+    defer ball.Destroy()
 
-    // Query volume.
-    _, vol := client.Must(picogk.GetVolume{ObjectID: "shelled"})
-    fmt.Println("volume:", vol)
+    bite := picogkffi.NewSphere(picogkffi.Vec3{9, 0, 0}, 6)
+    defer bite.Destroy()
+
+    part := ball.Sub(bite)
+    defer part.Destroy()
+
+    part.Shell(1.5)
+    fmt.Printf("volume: %.1f mm³\n", part.Volume())
 
     // Export STL.
-    do(picogk.VoxelsToMesh{VoxelsID: "shelled", ID: "mesh"})
-    do(picogk.SaveSTL{MeshID: "mesh", Path: "/tmp/vented_ball.stl"})
+    mesh := part.ToMesh()
+    defer mesh.Destroy()
+    saveSTL("/tmp/vented_ball.stl", mesh.Vertices(), mesh.Triangles())
     fmt.Println("wrote /tmp/vented_ball.stl")
+}
+
+// saveSTL writes a binary STL file from vertex and triangle arrays.
+func saveSTL(path string, vertices []float32, triangles []int32) {
+    f, err := os.Create(path)
+    if err != nil {
+        panic(err)
+    }
+    defer f.Close()
+
+    f.Write(make([]byte, 80))
+    nt := int32(len(triangles) / 3)
+    binary.Write(f, binary.LittleEndian, nt)
+
+    for i := 0; i < len(triangles); i += 3 {
+        a := triangles[i] * 3
+        b := triangles[i+1] * 3
+        c := triangles[i+2] * 3
+        binary.Write(f, binary.LittleEndian, [3]float32{0, 0, 0})
+        binary.Write(f, binary.LittleEndian, [3]float32{vertices[a], vertices[a+1], vertices[a+2]})
+        binary.Write(f, binary.LittleEndian, [3]float32{vertices[b], vertices[b+1], vertices[b+2]})
+        binary.Write(f, binary.LittleEndian, [3]float32{vertices[c], vertices[c+1], vertices[c+2]})
+        binary.Write(f, binary.LittleEndian, uint16(0))
+    }
 }
 ```
 
@@ -130,24 +186,25 @@ func main() {
 
 ```go
     // Is a point inside the solid?
-    _, r1 := client.Must(picogk.PointInside{ObjectID: "shelled", X: 0, Y: 0, Z: 0})
-    fmt.Println("inside origin:", r1) // true
+    fmt.Println("inside origin:", part.IsInside(picogkffi.Vec3{0, 0, 0})) // true
 
     // Closest surface point to a query point:
-    _, r2 := client.Must(picogk.ClosestPoint{ObjectID: "shelled", X: 50, Y: 0, Z: 0})
-    fmt.Println("closest:", r2)
+    closest, ok := part.ClosestPoint(picogkffi.Vec3{50, 0, 0})
+    if ok {
+        fmt.Printf("closest: (%.1f, %.1f, %.1f)\n", closest.X, closest.Y, closest.Z)
+    }
 
     // Surface normal at a point:
-    _, r3 := client.Must(picogk.SurfaceNormal{ObjectID: "shelled", X: 12, Y: 0, Z: 0})
-    fmt.Println("normal:", r3)
+    n := part.SurfaceNormal(picogkffi.Vec3{12, 0, 0})
+    fmt.Printf("normal: (%.2f, %.2f, %.2f)\n", n.X, n.Y, n.Z)
 
     // Volume (fast):
-    _, r4 := client.Must(picogk.GetVolume{ObjectID: "shelled"})
-    fmt.Println("volume:", r4)
+    fmt.Printf("volume: %.1f mm³\n", part.Volume())
 
     // Bounding box:
-    _, r5 := client.Must(picogk.GetBoundingBox{ObjectID: "shelled"})
-    fmt.Println("bbox:", r5)
+    bb := part.BoundingBox()
+    fmt.Printf("bbox: min=(%.1f, %.1f, %.1f) max=(%.1f, %.1f, %.1f)\n",
+        bb.Min.X, bb.Min.Y, bb.Min.Z, bb.Max.X, bb.Max.Y, bb.Max.Z)
 ```
 
 ## Next steps

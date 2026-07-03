@@ -1,111 +1,206 @@
 # Advanced 3 — Rendering
 
-## Headless rendering
+The FFI SDK ships with a **real interactive OpenGL Viewer** — the same
+GLFW/OpenGL viewer that PicoPie uses, bound directly via cgo. This is a
+major upgrade over the MCP SDK, which had no interactive viewer at all.
 
-The Go MCP SDK provides two rendering tools, both producing PNG files
-without requiring a display or OpenGL:
+The `picogkffi.ViewerEx` type provides orbit/pan/zoom, PBR materials, group
+visibility toggling, and headless screenshots — all in-process, with no
+JSON-RPC and no subprocess.
 
-### Isometric 3D render
+## The interactive viewer
 
-`RenderToImage` produces an isometric projection with Lambertian shading:
+`picogkffi.NewViewerEx(title, width, height, cam)` opens an OpenGL window
+and runs an event loop with orbit/pan/zoom controls. The camera is an
+orbit camera initialized from `picogkffi.DefaultCameraState()`.
+
+> **macOS requirement**: The Viewer must run on the OS main thread. Call
+> `runtime.LockOSThread()` at the top of `main` before creating the viewer.
 
 ```go
 package main
 
 import (
-    "context"
+    "fmt"
     "log"
+    "runtime"
 
-    "github.com/gmlewis/PicoGK/sdk/go/picogk"
+    "github.com/gmlewis/PicoGK/sdk/go/picogkffi"
 )
 
 func main() {
     log.SetFlags(0)
-    client, err := picogk.NewClient(context.Background(), "")
-    if err != nil { log.Fatal(err) }
-    defer client.Close()
 
-    do := func(cmd any) { client.Must(cmd) }
+    // macOS: the OpenGL Viewer must run on the OS main thread.
+    runtime.LockOSThread()
+    defer runtime.UnlockOSThread()
 
-    client.Must(picogk.Init{VoxelSizeMM: picogk.Ptr(0.2)})
+    if err := picogkffi.InitWithSize(0.2); err != nil {
+        log.Fatal(err)
+    }
+    defer picogkffi.Shutdown()
 
-    // Build a hollow part.
-    do(picogk.CreateSphere{X: 0, Y: 0, Z: 0, Radius: 12, ID: "body"})
-    do(picogk.CreateSphere{X: 8, Y: 0, Z: 0, Radius: 7, ID: "bite"})
-    do(picogk.BooleanSubtract{A: "body", B: "bite", ID: "part"})
-    do(picogk.Shell{ObjectID: "part", InnerOffset: 1.5, OuterOffset: 0, ID: "shelled"})
+    fmt.Println("PicoGK", picogkffi.Version())
 
-    // Render to PNG.
-    do(picogk.RenderToImage{
-        ObjectID:        "shelled",
-        Path:            "/tmp/part.png",
-        Width:           picogk.Ptr(1280),
-        Height:          picogk.Ptr(960),
-        BackgroundColor: "#292933",
-        ObjectColor:     "#5999e6",
-    })
+    // Build a hollow shelled part.
+    body := picogkffi.NewSphere(picogkffi.Vec3{0, 0, 0}, 12)
+    defer body.Destroy()
+    bite := picogkffi.NewSphere(picogkffi.Vec3{8, 0, 0}, 7)
+    defer bite.Destroy()
+    part := body.Sub(bite)
+    defer part.Destroy()
+    part.Shell(1.5)
+    fmt.Printf("  shelled part volume: %.1f mm³\n", part.Volume())
+
+    // Open the interactive viewer.
+    cam := picogkffi.DefaultCameraState()
+    v := picogkffi.NewViewerEx("PicoGK Viewer", 1280, 960, cam)
+    defer v.Destroy()
+
+    // Add the part to group 0 and give it a PBR material.
+    v.AddVoxels(0, part)
+    v.SetGroupMaterial(0,
+        picogkffi.ColorFloat{R: 0.35, G: 0.6, B: 0.9, A: 1.0},
+        0.1, // metallic
+        0.5, // roughness
+    )
+
+    // Run blocks until the user closes the window.
+    v.Run()
 }
 ```
 
 ![Viewer example](../images/viewer_example.png)
 
-### Parameters
+### Viewer controls
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `ObjectID` | `string` | (required) | The voxel or mesh object to render. |
-| `Path` | `string` | (required) | Output PNG file path. |
-| `Width` | `*int` | 800 | Image width in pixels. |
-| `Height` | `*int` | 600 | Image height in pixels. |
-| `BackgroundColor` | `string` | white | Hex color (e.g. `"#292933"`). |
-| `ObjectColor` | `string` | steel blue | Hex color (e.g. `"#5999e6"`). |
+| Control | Action |
+|---------|--------|
+| Left-drag | Orbit |
+| Scroll | Zoom |
+| Right/middle-drag | Pan |
 
-### Z-slice cross-section
+## Adding objects and setting materials
 
-`RenderSlice` renders a 2D cross-section at a specific Z height:
+The viewer organizes objects into numbered **groups**. Each group has one
+PBR material (color, metallic, roughness). Add voxel or mesh objects to a
+group, then set the material:
 
 ```go
-    // Render the cross-section at Z=0:
-    do(picogk.RenderSlice{
-        VoxelsID:   "shelled",
-        ZPosition:  0,
-        Path:       "/tmp/slice_z0.png",
-        // Mode: "Sdf" (default), "Bw", or "Antialiased"
-    })
+    v.AddVoxels(0, part)        // voxels into group 0
+    v.SetGroupMaterial(0,
+        picogkffi.ColorFloat{R: 0.35, G: 0.6, B: 0.9, A: 1.0},
+        0.1, 0.5)               // metallic, roughness
+
+    mesh := part.ToMesh()
+    defer mesh.Destroy()
+    v.AddMesh(1, mesh)          // mesh into group 1
+    v.SetGroupMaterial(1,
+        picogkffi.ColorFloat{R: 0.9, G: 0.5, B: 0.3, A: 1.0},
+        0.0, 0.4)
 ```
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `VoxelsID` | `string` | (required) | The voxel object to slice. |
-| `ZPosition` | `float64` | (required) | Z height in mm. |
-| `Path` | `string` | (required) | Output PNG file path. |
-| `Mode` | `string` | `"Antialiased"` | `"Sdf"`, `"Bw"`, or `"Antialiased"`. |
+### Toggling group visibility
 
-## No interactive viewer
+```go
+    v.SetGroupVisible(0, false) // hide group 0
+    v.SetGroupVisible(0, true)  // show it again
+```
 
-The Python PicoPie binding includes an interactive GLFW/OpenGL viewer
-(`picogk.show(part)`) with orbit/pan/zoom controls. The Go MCP SDK does
-**not** include an interactive viewer — it communicates with the PicoGK
-server over stdin/stdout JSON-RPC, and the server runs headless.
+## Headless screenshots
 
-For interactive viewing:
+For servers or CI, use `ViewerEx.Screenshot(path, frames)` instead of
+`Run()`. It pumps `frames` render frames (so the scene is fully drawn) and
+writes a PNG (or TGA) file. It still requires a display/GLFW context, but
+it does not block on user input:
 
-1. **Export and view**: save STL and open in any viewer (Blender, MeshLab,
-   your browser with three.js — see the `web-demo` example).
-2. **Use the Python binding**: `pip install picopie[viz]` and use
-   `picogk.show(part)` for interactive viewing.
+```go
+    cam := picogkffi.DefaultCameraState()
+    v := picogkffi.NewViewerEx("Headless", 1280, 960, cam)
+    defer v.Destroy()
+
+    v.AddVoxels(0, part)
+    v.SetGroupMaterial(0,
+        picogkffi.ColorFloat{R: 0.35, G: 0.6, B: 0.9, A: 1.0}, 0.1, 0.5)
+
+    // Render 12 frames and save a PNG.
+    v.Screenshot("/tmp/part.png", 12)
+    v.RequestClose()
+```
+
+The `Screenshot` method writes TGA natively and converts to PNG in Go when
+the path ends in `.png`. This produces a higher-quality PBR-shaded image
+than the MCP `render_to_image` tool's isometric Lambertian projection.
+
+See the `ffi-viewer-demo` example for a complete, runnable program:
+
+```bash
+cd examples/ffi-viewer-demo
+go run main.go                    # writes /tmp/.../viewer_demo.png
+go run main.go custom.png         # custom output path
+```
+
+## Z-slice cross-sections
+
+The FFI SDK does not have a `render_slice` tool. Instead, read the raw SDF
+slice array with `vox.GetInterpolatedZSlice(z)` (trilinear interpolation at a
+floating-point Z position in mm) and write it to a PNG with Go's
+`image/png` package:
+
+```go
+    import (
+        "image"
+        "image/png"
+        "os"
+    )
+
+    // Read the SDF values at Z=0 (geometric center).
+    slice := part.GetInterpolatedZSlice(0.0)
+
+    // Write a grayscale cross-section PNG.
+    ox, oy, oz, sx, sy, sz := part.VoxelDimensions()
+    img := image.NewGray(image.Rect(0, 0, int(sx), int(sy)))
+    for i, v := range slice {
+        var g uint8
+        if v <= 0 {
+            g = 40 // inside (solid) — dark
+        } else {
+            g = 200 // outside — light
+        }
+        if i < len(img.Pix) {
+            img.Pix[i] = g
+        }
+    }
+    f, _ := os.Create("/tmp/slice_z0.png")
+    defer f.Close()
+    png.Encode(f, img)
+```
+
+`GetZSlice(z)`, `GetXSlice(x)`, and `GetYSlice(y)` take integer voxel
+indices; `GetInterpolatedZSlice(z)` takes a float Z position in mm and
+trilinearly interpolates. SDF values ≤ 0 are inside the solid; > 0 are
+outside.
+
+See the `ffi-visualize` example for a complete program that renders both a
+Z-slice PNG (headless) and a 3D Viewer screenshot:
+
+```bash
+cd examples/ffi-visualize
+go run main.go
+```
 
 ## Combining multiple objects for rendering
 
-`RenderToImage` takes a single object ID. To render a scene with multiple
-objects, union them first:
+Add each object to its own group with its own material, or add several
+objects to the same group to share a material:
 
 ```go
-    // Union all parts into one scene:
-    do(picogk.BooleanAddAll{ObjectIDs: []string{"body", "holes", "struts"}, ID: "scene"})
+    v.AddVoxels(0, body)
+    v.AddVoxels(0, struts)      // same group, same material
+    v.SetGroupMaterial(0, blue, 0.1, 0.5)
 
-    // Render the combined scene:
-    do(picogk.RenderToImage{ObjectID: "scene", Path: "/tmp/scene.png", ...})
+    v.AddVoxels(1, holes)
+    v.SetGroupMaterial(1, red, 0.0, 0.4)
 ```
 
 ## Next steps

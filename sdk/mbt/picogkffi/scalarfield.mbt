@@ -57,7 +57,12 @@ pub fn ScalarField::set_value(
   pt : Vec3,
   val : Double,
 ) -> Unit {
-  scalar_field_set_value(get_instance(), self.h, pack_vec3(pt), Float::from_double(val))
+  scalar_field_set_value(
+    get_instance(),
+    self.h,
+    pack_vec3(pt),
+    Float::from_double(val),
+  )
 }
 
 ///|

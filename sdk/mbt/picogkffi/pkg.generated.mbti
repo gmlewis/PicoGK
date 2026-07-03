@@ -1,0 +1,351 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "gmlewis/picogkffi"
+
+// Values
+pub const FIELD_TYPE_SCALAR : Int = 1
+
+pub const FIELD_TYPE_UNKNOWN : Int = -1
+
+pub const FIELD_TYPE_VECTOR : Int = 2
+
+pub const FIELD_TYPE_VOXELS : Int = 0
+
+pub const META_TYPE_FLOAT : Int = 1
+
+pub const META_TYPE_STRING : Int = 0
+
+pub const META_TYPE_UNKNOWN : Int = -1
+
+pub const META_TYPE_VECTOR : Int = 2
+
+pub fn build_info() -> String
+
+pub fn from_lattice(Lattice) -> Voxels
+
+pub fn from_mesh(Mesh) -> Voxels
+
+pub fn get_instance() -> Int64
+
+pub fn init_library(Double) -> Result[Unit, String]
+
+pub fn init_with_size(Double) -> Result[Unit, String]
+
+pub fn is_initialized() -> Bool
+
+pub fn lattices_allocated() -> Int64
+
+pub fn lattices_mem_usage() -> Int64
+
+pub fn mesh_from_arrays(Array[Double], Array[Int]) -> Mesh
+
+pub fn mesh_from_voxels(Voxels) -> Mesh
+
+pub fn meshes_allocated() -> Int64
+
+pub fn meshes_mem_usage() -> Int64
+
+pub fn metadata_from_scalar_field(ScalarField) -> Metadata
+
+pub fn metadata_from_vector_field(VectorField) -> Metadata
+
+pub fn metadata_from_voxels(Voxels) -> Metadata
+
+pub fn mm_to_voxels(Vec3) -> Vec3
+
+pub fn name() -> String
+
+pub fn new_box(Double, Double, Double, Double, Double, Double) -> Voxels
+
+pub fn new_capsule(Vec3, Vec3, Double, Double) -> Voxels
+
+pub fn new_cylinder(Double, Double, Double, Double, Double, Double?, Double?, Double?) -> Voxels
+
+pub fn new_gpu_tex(Viewer, Int, Int, String) -> GpuTex
+
+pub fn new_lattice() -> Lattice
+
+pub fn new_mesh() -> Mesh
+
+pub fn new_mesh_shell(Mesh, Double) -> Voxels
+
+pub fn new_polyline(ColorFloat) -> PolyLine
+
+pub fn new_quad(Viewer, GpuTex, ColorFloat, Double, FixedArray[Byte], Bool, Bool, Bool) -> Quad
+
+pub fn new_scalar_field() -> ScalarField
+
+pub fn new_sidebar(Viewer, Bool, Int, Int, Int, ColorFloat, ColorFloat) -> SideBar
+
+pub fn new_sphere(Vec3, Double) -> Voxels
+
+pub fn new_vdb_file() -> VdbFile
+
+pub fn new_vector_field() -> VectorField
+
+pub fn new_viewer(String, Int, Int) -> Viewer
+
+pub fn new_voxels() -> Voxels
+
+pub fn polyline_from_vertices(Array[Double], ColorFloat) -> PolyLine
+
+pub fn polylines_allocated() -> Int64
+
+pub fn polylines_mem_usage() -> Int64
+
+pub fn scalar_field_build_from_voxels(Voxels, Double, Double) -> ScalarField
+
+pub fn scalar_field_from_voxels(Voxels) -> ScalarField
+
+pub fn scalar_fields_allocated() -> Int64
+
+pub fn scalar_fields_mem_usage() -> Int64
+
+pub fn shutdown() -> Unit
+
+pub fn total_memory_usage() -> Int64
+
+pub fn vdb_file_from_path(String) -> VdbFile
+
+pub fn vdb_files_allocated() -> Int64
+
+pub fn vdb_files_mem_usage() -> Int64
+
+pub fn vdb_metas_allocated() -> Int64
+
+pub fn vdb_metas_mem_usage() -> Int64
+
+pub fn vector_field_build_from_voxels(Voxels, Vec3, Double) -> VectorField
+
+pub fn vector_field_from_voxels(Voxels) -> VectorField
+
+pub fn vector_fields_allocated() -> Int64
+
+pub fn vector_fields_mem_usage() -> Int64
+
+pub fn version() -> String
+
+pub fn voxel_size() -> Double
+
+pub fn voxels_allocated() -> Int64
+
+pub fn voxels_mem_usage() -> Int64
+
+pub fn voxels_to_mm(Vec3) -> Vec3
+
+// Errors
+
+// Types and methods
+pub struct BBox3 {
+  min : Vec3
+  max : Vec3
+}
+pub fn BBox3::new(Vec3, Vec3) -> Self
+
+pub struct ColorFloat {
+  r : Double
+  g : Double
+  b : Double
+  a : Double
+}
+pub fn ColorFloat::new(Double, Double, Double, Double) -> Self
+
+pub struct GpuTex {
+  h : Int64
+}
+pub fn GpuTex::mark_for_cleanup(Self, Viewer) -> Unit
+pub fn GpuTex::refresh(Self, Viewer, String) -> Unit
+
+pub struct Lattice {
+  h : Int64
+}
+pub fn Lattice::add_beam(Self, Vec3, Vec3, Double, Double, Bool) -> Unit
+pub fn Lattice::add_sphere(Self, Vec3, Double) -> Unit
+pub fn Lattice::destroy(Self) -> Unit
+pub fn Lattice::is_valid(Self) -> Bool
+pub fn Lattice::mem_usage(Self) -> Int64
+
+pub struct Mesh {
+  h : Int64
+}
+pub fn Mesh::add_triangle(Self, Int, Int, Int) -> Int
+pub fn Mesh::add_vertex(Self, Vec3) -> Int
+pub fn Mesh::bounding_box(Self) -> BBox3
+pub fn Mesh::destroy(Self) -> Unit
+pub fn Mesh::get_triangle(Self, Int) -> Triangle
+pub fn Mesh::get_triangle_vertices(Self, Int) -> (Vec3, Vec3, Vec3)
+pub fn Mesh::get_vertex(Self, Int) -> Vec3
+pub fn Mesh::is_valid(Self) -> Bool
+pub fn Mesh::mem_usage(Self) -> Int64
+pub fn Mesh::save_stl(Self, String) -> Bool
+pub fn Mesh::triangle_count(Self) -> Int
+pub fn Mesh::triangles(Self) -> Array[Int]
+pub fn Mesh::vertex_count(Self) -> Int
+pub fn Mesh::vertices(Self) -> Array[Double]
+
+pub struct Metadata {
+  h : Int64
+}
+pub fn Metadata::count(Self) -> Int
+pub fn Metadata::destroy(Self) -> Unit
+pub fn Metadata::get_float(Self, String) -> Double?
+pub fn Metadata::get_string(Self, String) -> String?
+pub fn Metadata::get_vector(Self, String) -> Vec3?
+pub fn Metadata::name_at(Self, Int) -> String
+pub fn Metadata::remove(Self, String) -> Unit
+pub fn Metadata::set_float(Self, String, Double) -> Unit
+pub fn Metadata::set_string(Self, String, String) -> Unit
+pub fn Metadata::set_vector(Self, String, Vec3) -> Unit
+pub fn Metadata::type_at(Self, String) -> Int
+
+pub struct PolyLine {
+  h : Int64
+}
+pub fn PolyLine::add_vertex(Self, Vec3) -> Int
+pub fn PolyLine::bounding_box(Self) -> BBox3
+pub fn PolyLine::destroy(Self) -> Unit
+pub fn PolyLine::get_color(Self) -> ColorFloat
+pub fn PolyLine::get_vertex(Self, Int) -> Vec3
+pub fn PolyLine::is_valid(Self) -> Bool
+pub fn PolyLine::mem_usage(Self) -> Int64
+pub fn PolyLine::vertex_count(Self) -> Int
+pub fn PolyLine::vertices(Self) -> Array[Double]
+
+pub struct Quad {
+  h : Int64
+}
+pub fn Quad::destroy(Self, Viewer) -> Unit
+pub fn Quad::set_matrix(Self, Viewer, FixedArray[Byte]) -> Unit
+
+pub struct ScalarField {
+  h : Int64
+}
+pub fn ScalarField::copy(Self) -> Self
+pub fn ScalarField::destroy(Self) -> Unit
+pub fn ScalarField::get_slice(Self, Int) -> Array[Double]
+pub fn ScalarField::get_value(Self, Vec3) -> Double?
+pub fn ScalarField::is_valid(Self) -> Bool
+pub fn ScalarField::mem_usage(Self) -> Int64
+pub fn ScalarField::remove_value(Self, Vec3) -> Unit
+pub fn ScalarField::set_value(Self, Vec3, Double) -> Unit
+pub fn ScalarField::voxel_dimensions(Self) -> (Int, Int, Int, Int, Int, Int)
+
+pub struct SideBar {
+  h : Int64
+}
+pub fn SideBar::destroy(Self, Viewer) -> Unit
+
+pub struct Triangle {
+  a : Int
+  b : Int
+  c : Int
+}
+pub fn Triangle::new(Int, Int, Int) -> Self
+
+pub struct VdbFile {
+  h : Int64
+}
+pub fn VdbFile::add_scalar_field(Self, String, ScalarField) -> Int
+pub fn VdbFile::add_vector_field(Self, String, VectorField) -> Int
+pub fn VdbFile::add_voxels(Self, String, Voxels) -> Int
+pub fn VdbFile::destroy(Self) -> Unit
+pub fn VdbFile::field_count(Self) -> Int
+pub fn VdbFile::field_type(Self, Int) -> Int
+pub fn VdbFile::get_field_name(Self, Int) -> String
+pub fn VdbFile::get_scalar_field(Self, Int) -> ScalarField
+pub fn VdbFile::get_vector_field(Self, Int) -> VectorField
+pub fn VdbFile::get_voxels(Self, Int) -> Voxels
+pub fn VdbFile::is_valid(Self) -> Bool
+pub fn VdbFile::mem_usage(Self) -> Int64
+pub fn VdbFile::save_to_file(Self, String) -> Bool
+
+pub struct Vec3 {
+  x : Double
+  y : Double
+  z : Double
+}
+pub fn Vec3::new(Double, Double, Double) -> Self
+
+pub struct VectorField {
+  h : Int64
+}
+pub fn VectorField::copy(Self) -> Self
+pub fn VectorField::destroy(Self) -> Unit
+pub fn VectorField::get_value(Self, Vec3) -> Vec3?
+pub fn VectorField::is_valid(Self) -> Bool
+pub fn VectorField::mem_usage(Self) -> Int64
+pub fn VectorField::remove_value(Self, Vec3) -> Unit
+pub fn VectorField::set_value(Self, Vec3, Vec3) -> Unit
+
+pub struct Viewer {
+  h : Int64
+}
+pub fn Viewer::add_mesh(Self, Int, Mesh) -> Unit
+pub fn Viewer::add_poly_line(Self, Int, PolyLine) -> Unit
+pub fn Viewer::add_voxels(Self, Int, Voxels) -> Unit
+pub fn Viewer::bounding_box(Self) -> BBox3
+pub fn Viewer::destroy(Self) -> Unit
+pub fn Viewer::disable_group_warn_overhang(Self, Int) -> Unit
+pub fn Viewer::enable_experimental(Self, Bool) -> Unit
+pub fn Viewer::enable_group_warn_overhang(Self, Int, Double, Double) -> Unit
+pub fn Viewer::is_valid(Self) -> Bool
+pub fn Viewer::load_light_setup(Self, FixedArray[Byte], FixedArray[Byte]) -> Bool
+pub fn Viewer::poll(Self) -> Bool
+pub fn Viewer::remove_all_objects(Self) -> Unit
+pub fn Viewer::remove_mesh(Self, Mesh) -> Unit
+pub fn Viewer::remove_poly_line(Self, PolyLine) -> Unit
+pub fn Viewer::remove_voxels(Self, Voxels) -> Unit
+pub fn Viewer::request_close(Self) -> Unit
+pub fn Viewer::request_screen_shot(Self, String) -> Unit
+pub fn Viewer::request_update(Self) -> Unit
+pub fn Viewer::run(Self) -> Unit
+pub fn Viewer::screenshot(Self, String, Int) -> Unit
+pub fn Viewer::screenshot_png(Self, String, Int) -> Bool
+pub fn Viewer::set_group_material(Self, Int, ColorFloat, Double, Double) -> Unit
+pub fn Viewer::set_group_matrix(Self, Int, FixedArray[Byte]) -> Unit
+pub fn Viewer::set_group_visible(Self, Int, Bool) -> Unit
+pub fn Viewer::set_mesh_matrix(Self, Mesh, FixedArray[Byte]) -> Unit
+pub fn Viewer::set_poly_line_matrix(Self, PolyLine, FixedArray[Byte]) -> Unit
+pub fn Viewer::set_voxels_matrix(Self, Voxels, FixedArray[Byte]) -> Unit
+
+pub struct Voxels {
+  h : Int64
+}
+pub fn Voxels::add(Self, Self) -> Self
+pub fn Voxels::bool_add(Self, Self) -> Unit
+pub fn Voxels::bool_intersect(Self, Self) -> Unit
+pub fn Voxels::bool_subtract(Self, Self) -> Unit
+pub fn Voxels::bounding_box(Self) -> BBox3
+pub fn Voxels::closest_point(Self, Vec3) -> Vec3?
+pub fn Voxels::copy(Self) -> Self
+pub fn Voxels::destroy(Self) -> Unit
+pub fn Voxels::diagnose(Self) -> String
+pub fn Voxels::double_offset(Self, Double, Double) -> Unit
+pub fn Voxels::get_interpolated_z_slice(Self, Double) -> Array[Double]
+pub fn Voxels::get_x_slice(Self, Int) -> Array[Double]
+pub fn Voxels::get_y_slice(Self, Int) -> Array[Double]
+pub fn Voxels::get_z_slice(Self, Int) -> Array[Double]
+pub fn Voxels::intersect(Self, Self) -> Self
+pub fn Voxels::is_empty(Self) -> Bool
+pub fn Voxels::is_equal(Self, Self) -> Bool
+pub fn Voxels::is_inside(Self, Vec3) -> Bool
+pub fn Voxels::is_valid(Self) -> Bool
+pub fn Voxels::mem_usage(Self) -> Int64
+pub fn Voxels::offset(Self, Double) -> Unit
+pub fn Voxels::project_z_slice(Self, Double, Double) -> Unit
+pub fn Voxels::ray_cast(Self, Vec3, Vec3) -> Vec3?
+pub fn Voxels::render_lattice(Self, Lattice) -> Unit
+pub fn Voxels::render_mesh(Self, Mesh) -> Unit
+pub fn Voxels::shell(Self, Double) -> Unit
+pub fn Voxels::sub(Self, Self) -> Self
+pub fn Voxels::surface_normal(Self, Vec3) -> Vec3
+pub fn Voxels::to_mesh(Self) -> Mesh
+pub fn Voxels::triple_offset(Self, Double) -> Unit
+pub fn Voxels::volume(Self) -> Double
+pub fn Voxels::voxel_dimensions(Self) -> (Int, Int, Int, Int, Int, Int)
+pub fn Voxels::voxel_size(Self) -> Double
+
+// Type aliases
+pub type Handle = Int64
+
+// Traits
+

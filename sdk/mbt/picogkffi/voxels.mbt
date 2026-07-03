@@ -42,7 +42,11 @@ pub fn new_capsule(
 ///|
 pub fn new_mesh_shell(mesh : Mesh, radius : Double) -> Voxels {
   Voxels::{
-    h: voxels_h_create_mesh_shell(get_instance(), mesh.h, Float::from_double(radius)),
+    h: voxels_h_create_mesh_shell(
+      get_instance(),
+      mesh.h,
+      Float::from_double(radius),
+    ),
   }
 }
 
@@ -140,7 +144,12 @@ pub fn Voxels::offset(self : Voxels, dist : Double) -> Unit {
 
 ///|
 pub fn Voxels::double_offset(self : Voxels, d1 : Double, d2 : Double) -> Unit {
-  voxels_double_offset(get_instance(), self.h, Float::from_double(d1), Float::from_double(d2))
+  voxels_double_offset(
+    get_instance(),
+    self.h,
+    Float::from_double(d1),
+    Float::from_double(d2),
+  )
 }
 
 ///|
@@ -372,5 +381,9 @@ pub fn Voxels::get_interpolated_z_slice(
     out,
     FixedArray::make(0, 0L.to_byte()),
   )
-  Array::make(n, 0.0)
+  let arr = Array::make(n, 0.0)
+  for i in 0..<n {
+    arr[i] = read_float_le(out, i * 4).to_double()
+  }
+  arr
 }

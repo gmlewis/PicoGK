@@ -1,87 +1,78 @@
 ///|
-/// Headless visualization demo: slice PNG and 3D render.
+/// Visualization demo: slice data and STL export.
 ///
 /// This is a MoonBit port of the PicoPie Python example visualize.py.
-/// It demonstrates:
+/// Uses the picogkffi package for direct in-process FFI calls.
+///
+/// Demonstrates:
 ///   - building a hollow shelled part with a through-hole
 ///   - querying voxel grid dimensions
-///   - rendering a Z-slice cross-section to PNG
-///   - rendering a 3D isometric view to PNG
+///   - extracting a Z-slice cross-section
+///   - exporting a 3D mesh to STL
 ///
-/// Run:  moon run .  (from the sdk/mbt/examples/visualize directory)
-async fn main {
+/// Run:  moon run . --target native
+fn main {
   let outdir = "/tmp/mbt-picogk-visualize"
 
-  println("=== Visualize (MoonBit) ===")
+  println("=== Visualize (MoonBit FFI) ===")
   println("Output dir: " + outdir)
   println("")
 
-  let client = @picogk.new_client("")
-
-  check_tool("picogk_init", client.picogk_init(Some(0.3)))
+  match @pk.init_with_size(0.3) {
+    Ok(_) => ()
+    Err(e) => {
+      println("Failed to init PicoGK: " + e)
+      return
+    }
+  }
+  println("  PicoGK version: " + @pk.version())
 
   // A hollow shelled part with a through-hole.
-  check_tool(
-    "create_sphere(body)",
-    client.create_sphere(0.0, 0.0, 0.0, 12.0, Some("body")),
-  )
-  check_tool(
-    "create_sphere(hole)",
-    client.create_sphere(7.0, 0.0, 0.0, 7.0, Some("hole")),
-  )
-  check_tool(
-    "boolean_subtract",
-    client.boolean_subtract("body", "hole", Some("part")),
-  )
-  check_tool("shell", client.shell("part", 1.5, 0.0, None, Some("shelled")))
+  let body = @pk.new_sphere(@pk.Vec3::new(0.0, 0.0, 0.0), 12.0)
+  let hole = @pk.new_sphere(@pk.Vec3::new(7.0, 0.0, 0.0), 7.0)
+  let part = body.sub(hole)
+  hole.destroy()
+  body.destroy()
+  part.shell(1.5)
 
   // Query voxel grid dimensions.
   println("")
   println("--- Voxel dimensions ---")
-  check_tool("get_voxel_dimensions", client.get_voxel_dimensions("shelled"))
+  let (ox, oy, oz, sx, sy, sz) = part.voxel_dimensions()
+  println("  origin: (\{ox}, \{oy}, \{oz})")
+  println("  size:   (\{sx}, \{sy}, \{sz})")
 
-  // 1) A single mid-Z slice as a cross-section PNG.
+  // Extract a Z-slice at z=0.
   println("")
-  println("--- Z-slice render ---")
-  let slice_path = outdir + "/slice_z0.png"
-  check_tool(
-    "render_slice",
-    client.render_slice("shelled", 0.0, slice_path, None),
+  println("--- Z-slice ---")
+  let mid_z = (oz + oz + sz) / 2
+  let slice = part.get_z_slice(mid_z)
+  let mut non_zero = 0
+  for v in slice {
+    if v != 0.0 {
+      non_zero = non_zero + 1
+    }
+  }
+  println(
+    "  slice at z=\{mid_z}: \{slice.length()} values, \{non_zero} non-zero",
   )
-  println("  -> " + slice_path + "  (Z-slice cross-section)")
 
-  // 2) A 3D isometric render of the meshed surface.
+  // Export 3D mesh to STL.
   println("")
-  println("--- 3D render ---")
-  check_tool("voxels_to_mesh", client.voxels_to_mesh("shelled", Some("mesh")))
-  let preview_path = outdir + "/mesh_preview.png"
-  check_tool(
-    "render_to_image",
-    client.render_to_image(
-      "shelled",
-      preview_path,
-      Some(1280),
-      Some(960),
-      Some("#292933"),
-      Some("#5999e6"),
-    ),
-  )
-  println("  -> " + preview_path + "  (3D isometric render)")
+  println("--- 3D mesh export ---")
+  let mesh = part.to_mesh()
+  println("  mesh: \{mesh.vertex_count()} verts, \{mesh.triangle_count()} tris")
+  let stl_path = outdir + "/mesh_preview.stl"
+  if mesh.save_stl(stl_path) {
+    println("  -> " + stl_path)
+  } else {
+    println("  ERROR: failed to write STL (is the output directory created?)")
+  }
+
+  mesh.destroy()
+  part.destroy()
 
   println("")
   println("done.")
-
-  let _ = client.picogk_shutdown()
-  client.close()
-}
-
-///|
-/// check_tool calls a tool, checks for errors, and prints a truncated result.
-fn check_tool(label : String, result : String) -> Unit {
-  let truncated = if result.length() > 80 {
-    result[:80].to_owned() + "..."
-  } else {
-    result
-  }
-  println("  OK: " + label + " -> " + truncated)
+  @pk.shutdown()
 }

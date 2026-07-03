@@ -1,12 +1,16 @@
-// picogkffi package configuration
-
 import {
-  "moonbitlang/core/encoding/utf8" @utf8,
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/env",
   "moonbitlang/core/ref",
+  "moonbitlang/core/math",
 }
 
-warnings = "-unused_value"
-
 options(
-  link: { "native": { "cc-link-flags": "-lpicogk" } },
+  "native-stub": [
+    "picogk_loader.c",
+    "picogk_float_bits.c",
+    "picogk_stl.c",
+    "picogk_png.c",
+    "picogk_sdf.c",
+  ],
 )

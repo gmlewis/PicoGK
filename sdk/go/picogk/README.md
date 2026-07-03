@@ -5,6 +5,12 @@ kernel's MCP (Model Context Protocol) server. It provides a fully typed, idiomat
 interface to all 62 PicoGK tools — from creating primitives to boolean operations,
 lattice design, mesh manipulation, rendering, and 3D-printing export.
 
+> **Also see:** [`picogkffi`](../picogkffi/) — the FFI SDK binds directly to the
+> native C++ runtime via cgo (no MCP server needed, lower latency, access to
+> scalar/vector fields, per-voxel SDF callbacks, and the OpenGL Viewer). The
+> `ffi-*` examples in `sdk/go/examples/` are ports of the PicoPie Python
+> examples using the FFI SDK.
+
 ## Quick Start
 
 ```bash

@@ -488,6 +488,7 @@ xcuserdata/
 # Fortran module files
 *.mod
 !moon.mod
+!go.mod
 *.smod
 
 # Compiled Static libraries
@@ -503,4 +504,5 @@ xcuserdata/
 
 # MoonBit
 _build
+.moonagent
 .mooncakes

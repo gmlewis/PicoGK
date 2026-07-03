@@ -1,9 +1,12 @@
 // shapekernel-gallery example package
 
 import {
-  "gmlewis/picogk",
-  "moonbitlang/async",
+  "gmlewis/picogkffi" @pk,
+  "moonbitlang/core/math",
+  "moonbitlang/core/argparse",
 }
+
+supported_targets = "+native"
 
 options(
   "is-main": true,

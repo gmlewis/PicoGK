@@ -1,5 +1,4 @@
 // blender-scene: Blender scene inspection example for MoonBit
-// DO NOT EDIT — auto-generated
 
 name = "gmlewis/blender-scene-example"
 
@@ -16,8 +15,4 @@ supported_targets = "+native"
 import {
   "gmlewis/blender@0.1.0",
   "moonbitlang/async@0.19.2",
-}
-
-replace {
-  "gmlewis/blender@0.1.0" = "../../blender",
 }

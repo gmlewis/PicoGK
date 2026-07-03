@@ -1,0 +1,88 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "gmlewis/picogk"
+
+import {
+  "moonbitlang/async/process",
+}
+
+// Values
+pub async fn new_client(String) -> Client
+
+// Errors
+
+// Types and methods
+pub struct Client {
+  pid : Int
+  stdin : @process.WriteToProcess
+  stdout : @process.ReadFromProcess
+  mut msg_id : Int
+}
+pub async fn Client::boolean_add(Self, String, String, String?) -> String
+pub async fn Client::boolean_add_all(Self, Array[String], String?) -> String
+pub async fn Client::boolean_intersect(Self, String, String, String?) -> String
+pub async fn Client::boolean_subtract(Self, String, String, String?) -> String
+pub async fn Client::boolean_subtract_all(Self, String, Array[String], String?) -> String
+pub async fn Client::call_tool(Self, String, Map[String, Json]) -> String
+pub async fn Client::circular_pattern(Self, String, Int, Double?, Double?, Double?, Double?, Double?, Double?, Double?, String?) -> String
+pub fn Client::close(Self) -> Unit
+pub async fn Client::closest_point(Self, String, Double, Double, Double) -> String
+pub async fn Client::create_box(Self, Double, Double, Double, Double, Double, Double, String?) -> String
+pub async fn Client::create_capsule(Self, Double, Double, Double, Double, Double, Double, Double, String?) -> String
+pub async fn Client::create_cylinder(Self, Double, Double, Double, Double, Double, Double?, Double?, Double?, String?) -> String
+pub async fn Client::create_lattice(Self, String?) -> String
+pub async fn Client::create_mesh(Self, String?) -> String
+pub async fn Client::create_sphere(Self, Double, Double, Double, Double, String?) -> String
+pub async fn Client::create_torus(Self, Double, Double, Double?, Double?, Double?, String?) -> String
+pub async fn Client::delete_object(Self, String) -> String
+pub async fn Client::delete_objects(Self, Array[String], Bool?) -> String
+pub async fn Client::double_offset(Self, String, Double, Double, String?) -> String
+pub async fn Client::duplicate_object(Self, String, String?) -> String
+pub async fn Client::fillet(Self, String, Double, String?) -> String
+pub async fn Client::get_bounding_box(Self, String) -> String
+pub async fn Client::get_mesh_info(Self, String) -> String
+pub async fn Client::get_volume(Self, String) -> String
+pub async fn Client::get_voxel_dimensions(Self, String) -> String
+pub async fn Client::lattice_add_beam(Self, String, Double, Double, Double, Double, Double, Double, Double, Double, Bool?) -> String
+pub async fn Client::lattice_add_sphere(Self, String, Double, Double, Double, Double) -> String
+pub async fn Client::lattice_to_voxels(Self, String, String?) -> String
+pub async fn Client::list_objects(Self) -> String
+pub async fn Client::list_vdb_fields(Self, String) -> String
+pub async fn Client::load_vdb(Self, String, String?, String?) -> String
+pub async fn Client::measure_thickness(Self, String, Double, Double, Double, Double, Double, Double) -> String
+pub async fn Client::mesh_add_quad(Self, String, Double, Double, Double, Double, Double, Double, Double, Double, Double, Double, Double, Double, Bool?) -> String
+pub async fn Client::mesh_add_triangle(Self, String, Int, Int, Int) -> String
+pub async fn Client::mesh_add_triangle_vertices(Self, String, Double, Double, Double, Double, Double, Double, Double, Double, Double) -> String
+pub async fn Client::mesh_add_vertex(Self, String, Double, Double, Double) -> String
+pub async fn Client::mesh_append(Self, String, String) -> String
+pub async fn Client::mesh_from_stl(Self, String, String?) -> String
+pub async fn Client::mesh_mirror(Self, String, Double, Double, Double, Double, Double, Double, String?) -> String
+pub async fn Client::mesh_to_voxels(Self, String, String?) -> String
+pub async fn Client::mesh_transform(Self, String, Double?, Double?, Double?, Double?, String?) -> String
+pub async fn Client::offset(Self, String, Double, String?) -> String
+pub async fn Client::over_offset(Self, String, Double, Double?, String?) -> String
+pub async fn Client::picogk_info(Self) -> String
+pub async fn Client::picogk_init(Self, Double?) -> String
+pub async fn Client::picogk_shutdown(Self) -> String
+pub async fn Client::point_inside(Self, String, Double, Double, Double) -> String
+pub async fn Client::project_z_slice(Self, String, Double, Double, String?) -> String
+pub async fn Client::ray_cast(Self, String, Double, Double, Double, Double, Double, Double) -> String
+pub async fn Client::render_slice(Self, String, Double, String, String?) -> String
+pub async fn Client::render_to_image(Self, String, String, Int?, Int?, String?, String?) -> String
+pub async fn Client::save_cli(Self, String, String, Double?, String?, Bool?) -> String
+pub async fn Client::save_stl(Self, String, String, String?) -> String
+pub async fn Client::save_svg(Self, String, String, Double?) -> String
+pub async fn Client::save_vdb(Self, String, String, String?) -> String
+pub async fn Client::shell(Self, String, Double, Double, Double?, String?) -> String
+pub async fn Client::smooth(Self, String, Double, String?) -> String
+pub async fn Client::surface_normal(Self, String, Double, Double, Double) -> String
+pub async fn Client::transform_voxels(Self, String, Double?, Double?, Double?, Double?, Double?, Double?, Double?, String?) -> String
+pub async fn Client::trim(Self, String, Double, Double, Double, Double, Double, Double, String?) -> String
+pub async fn Client::voxels_is_empty(Self, String) -> String
+pub async fn Client::voxels_is_equal(Self, String, String) -> String
+pub async fn Client::voxels_mem_usage(Self, String) -> String
+pub async fn Client::voxels_to_mesh(Self, String, String?) -> String
+
+// Type aliases
+
+// Traits
+
