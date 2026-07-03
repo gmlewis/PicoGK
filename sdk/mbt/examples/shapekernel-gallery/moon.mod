@@ -14,4 +14,5 @@ supported_targets = "+native"
 
 import {
   "gmlewis/picogkffi@0.1.0",
+  "gmlewis/picogkshapes@0.1.0",
 }

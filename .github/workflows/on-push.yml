@@ -1,8 +1,7 @@
-name: On Push to gmlewis-main
+name: On Push
 
 on:
-  push:
-    branches: [gmlewis-main]
+  pull_request:
 
 concurrency:
   group: ${{ github.head_ref || github.ref }}
@@ -54,8 +53,3 @@ jobs:
       - name: Type check wasm-gc target
         working-directory: sdk/mbt
         run: moon check --target wasm-gc || true
-
-  # picogkffi/picogkshapes (Go) require cgo + libpicogk — tested locally
-  # picogkffi/picogkshapes/picogkffi/test (MoonBit) require -lpicogk — tested locally
-  # picogk (MoonBit) requires moonbitlang/async process spawn — tested locally
-  # MoonBit examples (hello-picogk, fields-and-io, etc.) require libpicogk — tested locally

@@ -2,6 +2,7 @@
 
 import {
   "gmlewis/picogkffi" @pk,
+  "gmlewis/picogkshapes" @s,
   "moonbitlang/core/math",
   "moonbitlang/core/argparse",
   "moonbitlang/core/strconv",
