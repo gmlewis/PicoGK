@@ -133,6 +133,7 @@ static void mbt_update_cb(void* viewer, const PKVector2* vp,
     }
 
     // Autofit: compute target and radius from the scene bounding box.
+    // Go's goUpdateCb keeps autofit on every frame (cam.Autofit stays true).
     if (g_cam.autofit) {
         PKBBox3 box;
         Viewer_GetBoundingBox(g_active_viewer, &box);
@@ -147,7 +148,7 @@ static void mbt_update_cb(void* viewer, const PKVector2* vp,
             if (diag < 1e-3f) diag = 1e-3f;
             g_cam.radius = diag * 0.5f;
         }
-        g_cam.autofit = 0;
+        // Do NOT clear autofit — Go keeps it on every frame
     }
 
     float aspect = 1.0f;

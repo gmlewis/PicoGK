@@ -548,25 +548,29 @@ fn build_lattice_manifold() -> Array[@s.SceneGroup] {
     45.0,
   ).to_voxels()
   let lm2 = @s.new_lattice_manifold(
-    @s.new_local_frame_xyz(
-      @s.vec3(0.0, 0.0, 0.0),
-      @s.vec3(0.0, 1.0, 0.0),
-      @s.vec3(1.0, 0.0, 0.0),
-    ),
-    50.0,
-    10.0,
-    30.0,
-  ).to_voxels()
+      @s.new_local_frame_xyz(
+        @s.vec3(0.0, 0.0, 0.0),
+        @s.vec3(0.0, 1.0, 0.0),
+        @s.vec3(1.0, 0.0, 0.0),
+      ),
+      50.0,
+      10.0,
+      30.0,
+    )
+    .set_extend_both_sides(true)
+    .to_voxels()
   let lm3 = @s.new_lattice_manifold(
-    @s.new_local_frame_xyz(
-      @s.vec3(50.0, 0.0, 0.0),
-      @s.vec3(0.0, 1.0, 0.0),
-      @s.vec3(1.0, 0.0, 0.0),
-    ),
-    50.0,
-    5.0,
-    60.0,
-  ).to_voxels()
+      @s.new_local_frame_xyz(
+        @s.vec3(50.0, 0.0, 0.0),
+        @s.vec3(0.0, 1.0, 0.0),
+        @s.vec3(1.0, 0.0, 0.0),
+      ),
+      50.0,
+      5.0,
+      60.0,
+    )
+    .set_extend_both_sides(true)
+    .to_voxels()
   [
     @s.scene_group_voxels(lm1, col("yellow")),
     @s.scene_group_voxels(lm2, col("crystal")),

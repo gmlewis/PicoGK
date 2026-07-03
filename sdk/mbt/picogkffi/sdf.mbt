@@ -66,6 +66,10 @@ pub fn Voxels::render_gyroid_genus(
   gap : Double,
   k : Double,
 ) -> Unit {
+  let sdf_params = FixedArray::make(12, 0L.to_byte())
+  write_float_le(sdf_params, 0, Float::from_double(scale))
+  write_float_le(sdf_params, 4, Float::from_double(gap))
+  write_float_le(sdf_params, 8, Float::from_double(k))
   mbt_render_gyroid_genus(
     get_instance(),
     self.h,
@@ -75,9 +79,7 @@ pub fn Voxels::render_gyroid_genus(
     Float::from_double(bbox.max.x),
     Float::from_double(bbox.max.y),
     Float::from_double(bbox.max.z),
-    Float::from_double(scale),
-    Float::from_double(gap),
-    Float::from_double(k),
+    sdf_params,
   )
 }
 
@@ -92,6 +94,12 @@ pub fn Voxels::render_superellipsoid(
   e1 : Double,
   e2 : Double,
 ) -> Unit {
+  let sdf_params = FixedArray::make(20, 0L.to_byte())
+  write_float_le(sdf_params, 0, Float::from_double(a))
+  write_float_le(sdf_params, 4, Float::from_double(b))
+  write_float_le(sdf_params, 8, Float::from_double(c))
+  write_float_le(sdf_params, 12, Float::from_double(e1))
+  write_float_le(sdf_params, 16, Float::from_double(e2))
   mbt_render_superellipsoid(
     get_instance(),
     self.h,
@@ -101,11 +109,7 @@ pub fn Voxels::render_superellipsoid(
     Float::from_double(bbox.max.x),
     Float::from_double(bbox.max.y),
     Float::from_double(bbox.max.z),
-    Float::from_double(a),
-    Float::from_double(b),
-    Float::from_double(c),
-    Float::from_double(e1),
-    Float::from_double(e2),
+    sdf_params,
   )
 }
 
@@ -183,6 +187,7 @@ extern "C" fn mbt_render_gyroid_sphere_offset(
 ) -> Unit = "mbt_render_gyroid_sphere_offset"
 
 ///|
+#borrow(sdf_params)
 extern "C" fn mbt_render_gyroid_genus(
   instance : Int64,
   vox : Int64,
@@ -192,12 +197,11 @@ extern "C" fn mbt_render_gyroid_genus(
   maxX : Float,
   maxY : Float,
   maxZ : Float,
-  scale : Float,
-  gap : Float,
-  k : Float,
+  sdf_params : FixedArray[Byte],
 ) -> Unit = "mbt_render_gyroid_genus"
 
 ///|
+#borrow(sdf_params)
 extern "C" fn mbt_render_superellipsoid(
   instance : Int64,
   vox : Int64,
@@ -207,11 +211,7 @@ extern "C" fn mbt_render_superellipsoid(
   maxX : Float,
   maxY : Float,
   maxZ : Float,
-  a : Float,
-  b : Float,
-  c : Float,
-  e1 : Float,
-  e2 : Float,
+  sdf_params : FixedArray[Byte],
 ) -> Unit = "mbt_render_superellipsoid"
 
 ///|

@@ -1590,7 +1590,10 @@ pub fn PipeSegment::to_mesh(self : PipeSegment) -> @picogkffi.Mesh {
   let pr = arange(self.pipe.polar_steps)
   let rr = arange(self.pipe.radial_steps)
   let lr = arange(self.pipe.length_steps)
-  let smb = smb.add(self.pipe.pipe_surface([lr[lr.length() - 1]], pr, rr), false)
+  let smb = smb.add(
+    self.pipe.pipe_surface([lr[lr.length() - 1]], pr, rr),
+    false,
+  )
   let smb = smb.add(self.pipe.pipe_surface([lr[0]], pr, rr), true)
   let smb = smb.add(self.pipe.pipe_surface(lr, pr, [0.0]), false)
   let smb = smb.add(self.pipe.pipe_surface(lr, pr, [1.0]), true)
@@ -1699,23 +1702,24 @@ pub fn new_lattice_pipe_with_frames(
 pub fn LatticePipe::to_voxels(self : LatticePipe) -> @picogkffi.Voxels {
   let lat = @picogkffi.new_lattice()
   let n = self.l_steps
-  for i in 0..<n {
-    let lr = i.to_double() / (n - 1).to_double()
-    let r = (self.radius)(lr)
-    let pos = match self.frames {
-      Some(fs) => fs.frame_at(lr).pos
-      None => self.frame.pos.add(self.frame.local_z.mul(self.length * lr))
+  for i in 1..<=n {
+    let lr0 = (i - 1).to_double() / n.to_double()
+    let lr1 = i.to_double() / n.to_double()
+    let p0 = match self.frames {
+      Some(fs) => fs.frame_at(lr0).pos
+      None => self.frame.pos.add(self.frame.local_z.mul(self.length * lr0))
     }
-    let lr_next = (i + 1).to_double() / (n - 1).to_double()
-    let pos_next = match self.frames {
-      Some(fs) => fs.frame_at(lr_next).pos
-      None => self.frame.pos.add(self.frame.local_z.mul(self.length * lr_next))
+    let p1 = match self.frames {
+      Some(fs) => fs.frame_at(lr1).pos
+      None => self.frame.pos.add(self.frame.local_z.mul(self.length * lr1))
     }
+    let r0 = (self.radius)(lr0)
+    let r1 = (self.radius)(lr1)
     lat.add_beam(
-      @picogkffi.Vec3::new(pos.x, pos.y, pos.z),
-      @picogkffi.Vec3::new(pos_next.x, pos_next.y, pos_next.z),
-      r,
-      r,
+      @picogkffi.Vec3::new(p0.x, p0.y, p0.z),
+      @picogkffi.Vec3::new(p1.x, p1.y, p1.z),
+      r0,
+      r1,
       true,
     )
   }
@@ -1730,9 +1734,12 @@ pub fn LatticePipe::to_voxels(self : LatticePipe) -> @picogkffi.Voxels {
 pub struct LatticeManifold {
   frame : LocalFrame
   length : Double
-  radius : Double
-  twist : Double
+  radius : (Double) -> Double
+  frames : Frames?
+  l_steps : Int
+  max_overhang_angle : Double
   extend_both_sides : Bool
+  min_printable_radius : Double
 }
 
 ///|
@@ -1740,35 +1747,91 @@ pub fn new_lattice_manifold(
   frame : LocalFrame,
   length : Double,
   radius : Double,
-  twist : Double,
+  max_overhang_angle : Double,
 ) -> LatticeManifold {
-  LatticeManifold::{ frame, length, radius, twist, extend_both_sides: false }
+  LatticeManifold::{
+    frame,
+    length,
+    radius: fn(_ : Double) { radius },
+    frames: None,
+    l_steps: 100,
+    max_overhang_angle,
+    extend_both_sides: false,
+    min_printable_radius: 0.1,
+  }
+}
+
+///|
+pub fn LatticeManifold::set_extend_both_sides(
+  self : LatticeManifold,
+  b : Bool,
+) -> LatticeManifold {
+  LatticeManifold::{
+    frame: self.frame,
+    length: self.length,
+    radius: self.radius,
+    frames: self.frames,
+    l_steps: self.l_steps,
+    max_overhang_angle: self.max_overhang_angle,
+    extend_both_sides: b,
+    min_printable_radius: self.min_printable_radius,
+  }
+}
+
+///|
+fn LatticeManifold::spine_point(self : LatticeManifold, lr : Double) -> Vec3 {
+  match self.frames {
+    Some(fs) => fs.frame_at(lr).pos
+    None => self.frame.pos.add(self.frame.local_z.mul(self.length * lr))
+  }
 }
 
 ///|
 pub fn LatticeManifold::to_voxels(self : LatticeManifold) -> @picogkffi.Voxels {
   let lat = @picogkffi.new_lattice()
-  let n = 200
-  let half = if self.extend_both_sides { 2 } else { 1 }
+  let n = self.l_steps
+  let limit_angle = self.max_overhang_angle * 3.14159265358979 / 180.0
+  let half_alpha = 3.14159265358979 / 2.0 - limit_angle
+  let max_r = (self.radius)(0.0)
+  let r = max_r
+  let h = r * (1.0 - @math.cos(half_alpha))
+  let s = 2.0 * r * @math.sin(half_alpha)
+  let tip_length = @math.tan(half_alpha) * (0.5 * s - self.min_printable_radius)
+  let world_z = vec3(0.0, 0.0, 1.0)
   for i in 0..<n {
-    let lr = i.to_double() / (n - 1).to_double()
-    let z = self.length * (lr - 0.5) * half.to_double()
-    let angle = self.twist * lr
-    let pos = self.frame.pos.add(self.frame.local_z.mul(z))
-    let beam_dir = rotate_around_axis(
-      self.frame.local_x,
-      self.frame.local_z,
-      angle,
-      vec3(0.0, 0.0, 0.0),
-    )
-    let end = pos.add(beam_dir.mul(self.radius))
+    let lr = i.to_double() / n.to_double()
+    let pt = self.spine_point(lr)
+    let beam = (self.radius)(lr)
+    // Round pipe station (sphere-like)
     lat.add_beam(
-      @picogkffi.Vec3::new(pos.x, pos.y, pos.z),
-      @picogkffi.Vec3::new(end.x, end.y, end.z),
-      1.0,
-      1.0,
+      @picogkffi.Vec3::new(pt.x, pt.y, pt.z),
+      @picogkffi.Vec3::new(pt.x, pt.y, pt.z),
+      beam,
+      beam,
       true,
     )
+    // Tear-drop tip (+Z direction)
+    let mid = pt.add(world_z.mul(r - h))
+    let tip = mid.add(world_z.mul(tip_length))
+    lat.add_beam(
+      @picogkffi.Vec3::new(mid.x, mid.y, mid.z),
+      @picogkffi.Vec3::new(tip.x, tip.y, tip.z),
+      0.5 * s,
+      self.min_printable_radius,
+      false,
+    )
+    if self.extend_both_sides {
+      // Tear-drop tip (-Z direction)
+      let mid_n = pt.sub(world_z.mul(r - h))
+      let tip_n = mid_n.sub(world_z.mul(tip_length))
+      lat.add_beam(
+        @picogkffi.Vec3::new(mid_n.x, mid_n.y, mid_n.z),
+        @picogkffi.Vec3::new(tip_n.x, tip_n.y, tip_n.z),
+        0.5 * s,
+        self.min_printable_radius,
+        false,
+      )
+    }
   }
   let vox = @picogkffi.from_lattice(lat)
   lat.destroy()

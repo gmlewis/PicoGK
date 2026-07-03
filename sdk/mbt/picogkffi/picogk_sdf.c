@@ -192,11 +192,13 @@ void mbt_render_gyroid_sphere_offset(uint64_t instance, uint64_t vox,
 }
 
 // Render implicit gyroid genus into voxels.
+// SDF params passed via a struct to avoid exceeding float register count on ARM64.
 void mbt_render_gyroid_genus(uint64_t instance, uint64_t vox,
                               float minX, float minY, float minZ,
                               float maxX, float maxY, float maxZ,
-                              float scale, float gap, float k) {
-    mbt_sdf_set_gyroid_genus(scale, gap, k);
+                              const float* sdf_params  // [scale, gap, k]
+                              ) {
+    mbt_sdf_set_gyroid_genus(sdf_params[0], sdf_params[1], sdf_params[2]);
     PKBBox3 bbox;
     bbox.vecMin.X = minX; bbox.vecMin.Y = minY; bbox.vecMin.Z = minZ;
     bbox.vecMax.X = maxX; bbox.vecMax.Y = maxY; bbox.vecMax.Z = maxZ;
@@ -204,11 +206,13 @@ void mbt_render_gyroid_genus(uint64_t instance, uint64_t vox,
 }
 
 // Render implicit superellipsoid into voxels.
+// SDF params passed via a struct to avoid exceeding float register count on ARM64.
 void mbt_render_superellipsoid(uint64_t instance, uint64_t vox,
                                 float minX, float minY, float minZ,
                                 float maxX, float maxY, float maxZ,
-                                float a, float b, float c, float e1, float e2) {
-    mbt_sdf_set_superellipsoid(a, b, c, e1, e2);
+                                const float* sdf_params  // [a, b, c, e1, e2]
+                                ) {
+    mbt_sdf_set_superellipsoid(sdf_params[0], sdf_params[1], sdf_params[2], sdf_params[3], sdf_params[4]);
     PKBBox3 bbox;
     bbox.vecMin.X = minX; bbox.vecMin.Y = minY; bbox.vecMin.Z = minZ;
     bbox.vecMax.X = maxX; bbox.vecMax.Y = maxY; bbox.vecMax.Z = maxZ;
