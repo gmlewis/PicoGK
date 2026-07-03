@@ -372,21 +372,29 @@ pub fn new_viewer_ex(
   bg_a : Double,
 ) -> ViewerEx {
   let title_buf = cstr(title)
+  // Pack camera params into a byte buffer to avoid ARM64 float register overflow
+  let cam = FixedArray::make(44, 0L.to_byte())
+  // target_x, target_y, target_z
+  write_float_le(cam, 0, 0.0)
+  write_float_le(cam, 4, 0.0)
+  write_float_le(cam, 8, 0.0)
+  // radius
+  write_float_le(cam, 12, 10.0)
+  // azimuth, elevation
+  write_float_le(cam, 16, Float::from_double(default_azimuth))
+  write_float_le(cam, 20, Float::from_double(default_elevation))
+  // zoom
+  write_float_le(cam, 24, 1.0)
+  // bg_r, bg_g, bg_b, bg_a
+  write_float_le(cam, 28, Float::from_double(bg_r))
+  write_float_le(cam, 32, Float::from_double(bg_g))
+  write_float_le(cam, 36, Float::from_double(bg_b))
+  write_float_le(cam, 40, Float::from_double(bg_a))
   let h = mbt_viewer_create(
     title_buf,
     Float::from_int(width),
     Float::from_int(height),
-    0.0,
-    0.0,
-    0.0,
-    10.0,
-    Float::from_double(default_azimuth),
-    Float::from_double(default_elevation),
-    1.0,
-    Float::from_double(bg_r),
-    Float::from_double(bg_g),
-    Float::from_double(bg_b),
-    Float::from_double(bg_a),
+    cam,
   )
   ViewerEx::{ h }
 }
@@ -493,22 +501,12 @@ pub fn ViewerEx::run(self : ViewerEx) -> Unit {
 
 // --- C extern declarations for ViewerEx ---
 
-#borrow(title)
+#borrow(title, cam_params)
 extern "C" fn mbt_viewer_create(
   title : FixedArray[Byte],
   width : Float,
   height : Float,
-  target_x : Float,
-  target_y : Float,
-  target_z : Float,
-  radius : Float,
-  azimuth : Float,
-  elevation : Float,
-  zoom : Float,
-  bg_r : Float,
-  bg_g : Float,
-  bg_b : Float,
-  bg_a : Float,
+  cam_params : FixedArray[Byte],
 ) -> Int64 = "mbt_viewer_create"
 
 extern "C" fn mbt_viewer_close(viewer : Int64) -> Unit = "mbt_viewer_close"

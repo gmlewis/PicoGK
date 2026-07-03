@@ -124,12 +124,36 @@ static void mbt_info_cb(const char* msg, bool fatal) {
 static void mbt_update_cb(void* viewer, const PKVector2* vp,
                            PKColorFloat* bg, PKMatrix4x4* mvp, PKVector3* eye) {
     (void)viewer;
-    (void)vp;
-    // Set background
-    bg->R = g_cam.bg_r; bg->G = g_cam.bg_g; bg->B = g_cam.bg_b; bg->A = g_cam.bg_a;
+    // Set background (matching Go goUpdateCb)
+    if (bg) {
+        bg->R = g_cam.bg_r;
+        bg->G = g_cam.bg_g;
+        bg->B = g_cam.bg_b;
+        bg->A = g_cam.bg_a;
+    }
+
+    // Autofit: compute target and radius from the scene bounding box.
+    if (g_cam.autofit) {
+        PKBBox3 box;
+        Viewer_GetBoundingBox(g_active_viewer, &box);
+        float lo[3] = {box.vecMin.X, box.vecMin.Y, box.vecMin.Z};
+        float hi[3] = {box.vecMax.X, box.vecMax.Y, box.vecMax.Z};
+        if (hi[0] >= lo[0] && hi[1] >= lo[1] && hi[2] >= lo[2]) {
+            g_cam.target[0] = (lo[0] + hi[0]) * 0.5f;
+            g_cam.target[1] = (lo[1] + hi[1]) * 0.5f;
+            g_cam.target[2] = (lo[2] + hi[2]) * 0.5f;
+            float dx = hi[0] - lo[0], dy = hi[1] - lo[1], dz = hi[2] - lo[2];
+            float diag = sqrtf(dx*dx + dy*dy + dz*dz);
+            if (diag < 1e-3f) diag = 1e-3f;
+            g_cam.radius = diag * 0.5f;
+        }
+        g_cam.autofit = 0;
+    }
 
     float aspect = 1.0f;
-    if (vp && vp->Y > 0) aspect = vp->X / vp->Y;
+    if (vp && vp->Y > 0.0f) {
+        aspect = vp->X / (vp->Y > 1e-6f ? vp->Y : 1e-6f);
+    }
 
     float dist = cameraDistance();
     float d[3], right[3], upCam[3];
@@ -214,33 +238,89 @@ static void mbt_window_size_cb(void* viewer, const PKVector2* size) {
 
 // --- Public API ---
 
+// Read a file into a malloc'd buffer. Returns size via *out_size, or NULL on error.
+static unsigned char* read_file(const char* path, long* out_size) {
+    FILE* f = fopen(path, "rb");
+    if (!f) return NULL;
+    fseek(f, 0, SEEK_END);
+    long sz = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    unsigned char* buf = (unsigned char*)malloc(sz);
+    if (!buf) { fclose(f); return NULL; }
+    if (fread(buf, 1, sz, f) != (size_t)sz) { free(buf); fclose(f); return NULL; }
+    fclose(f);
+    *out_size = sz;
+    return buf;
+}
+
+// Try to load IBL lighting from extracted DDS files.
+// Looks for _assets/Diffuse.dds and _assets/Specular.dds relative to
+// the picogkffi package directory, or via the PICOGK_ASSETS env var.
+// Returns 1 if loaded, 0 if not.
+static int load_ibl_lighting(void* viewer) {
+    const char* env_assets = getenv("PICOGK_ASSETS");
+    char diffuse_path[4096];
+    char specular_path[4096];
+
+    if (env_assets) {
+        snprintf(diffuse_path, sizeof(diffuse_path), "%s/Diffuse.dds", env_assets);
+        snprintf(specular_path, sizeof(specular_path), "%s/Specular.dds", env_assets);
+    } else {
+        // Default: look relative to the PicoGK repo root
+        const char* base = "/Users/glenn/src/github.com/gmlewis/PicoGK/sdk/mbt/picogkffi/_assets";
+        snprintf(diffuse_path, sizeof(diffuse_path), "%s/Diffuse.dds", base);
+        snprintf(specular_path, sizeof(specular_path), "%s/Specular.dds", base);
+    }
+
+    long diffuse_size = 0, specular_size = 0;
+    unsigned char* diffuse = read_file(diffuse_path, &diffuse_size);
+    unsigned char* specular = read_file(specular_path, &specular_size);
+
+    if (diffuse && specular && diffuse_size > 0 && specular_size > 0) {
+        bool ok = Viewer_bLoadLightSetup(viewer,
+            (const char*)diffuse, (int32_t)diffuse_size,
+            (const char*)specular, (int32_t)specular_size);
+        free(diffuse);
+        free(specular);
+        return ok ? 1 : 0;
+    }
+    free(diffuse);
+    free(specular);
+    return 0;
+}
+
 // Create a viewer with full callbacks and a default camera.
+// Camera params are passed via a struct to avoid exceeding float register count on ARM64.
 void* mbt_viewer_create(const char* title, float width, float height,
-                         float target_x, float target_y, float target_z,
-                         float radius, float azimuth, float elevation,
-                         float zoom,
-                         float bg_r, float bg_g, float bg_b, float bg_a) {
-    // Set up camera
+                         const float* cam_params  // [target_x, target_y, target_z, radius, azimuth, elevation, zoom, bg_r, bg_g, bg_b, bg_a]
+                         ) {
+    // Set up camera from params array
     memset(&g_cam, 0, sizeof(g_cam));
-    g_cam.target[0] = target_x;
-    g_cam.target[1] = target_y;
-    g_cam.target[2] = target_z;
-    g_cam.radius = radius;
-    g_cam.azimuth = azimuth;
-    g_cam.elevation = elevation;
-    g_cam.zoom = zoom;
+    g_cam.target[0] = cam_params[0];
+    g_cam.target[1] = cam_params[1];
+    g_cam.target[2] = cam_params[2];
+    g_cam.radius = cam_params[3];
+    g_cam.azimuth = cam_params[4];
+    g_cam.elevation = cam_params[5];
+    g_cam.zoom = cam_params[6];
     g_cam.autofit = 1;
     g_cam.drag_button = -1;
-    g_cam.bg_r = bg_r;
-    g_cam.bg_g = bg_g;
-    g_cam.bg_b = bg_b;
-    g_cam.bg_a = bg_a;
+    g_cam.bg_r = cam_params[7];
+    g_cam.bg_g = cam_params[8];
+    g_cam.bg_b = cam_params[9];
+    g_cam.bg_a = cam_params[10];
 
     PKVector2 size = {width, height};
     void* v = Viewer_hCreate(title, &size,
         mbt_info_cb, mbt_update_cb, mbt_key_cb,
         mbt_mouse_move_cb, mbt_mouse_button_cb, mbt_scroll_cb, mbt_window_size_cb);
     g_active_viewer = v;
+
+    // Load IBL lighting if available (essential for PBR rendering)
+    if (v) {
+        load_ibl_lighting(v);
+    }
+
     return v;
 }
 
@@ -267,16 +347,7 @@ void mbt_viewer_autofit(void* viewer) {
 extern int picogk_screenshot_png(void* viewer, const char* png_path, int frames);
 
 int mbt_viewer_screenshot_png(void* viewer, const char* png_path, int frames) {
-    // Autofit if needed
-    if (g_cam.autofit) {
-        mbt_viewer_autofit(viewer);
-    }
-    // Warm-up frames to render the scene before screenshot
-    for (int i = 0; i < frames; i++) {
-        Viewer_RequestUpdate(viewer);
-        Viewer_bPoll(viewer);
-    }
-    // Use the existing picogk_screenshot_png which handles TGA->PNG conversion
+    // Use picogk_screenshot_png which does warm-up + screenshot + TGA→PNG conversion
     return picogk_screenshot_png(viewer, png_path, frames);
 }
 
