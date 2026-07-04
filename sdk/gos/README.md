@@ -178,3 +178,155 @@ for the object constructor, uppercase for the others). The lowercase
 The LLVM backend is still maturing. Programs with many functions or
 complex module structures may hit lowerer limitations (undefined
 symbol errors). `gos run` (bytecode VM) is the reliable execution path.
+
+---
+
+## Observations on the Gossamer Language
+
+The following observations were made while porting the Go and MoonBit
+PicoGK/Blender SDKs to Gossamer.
+
+### No subprocess stdio pipe access
+
+`process::spawn` connects stdin/stdout/stderr to `/dev/null`.
+`process::run` is one-shot (captures stdout after exit). There is no
+way from `.gos` source to pipe data to a child process's stdin or read
+from its stdout interactively. The `Command`/`Stdio`/`Child` types
+exist in the Rust stdlib behind `gossamer-std` but are not exposed to
+`.gos` code (`process::Command::new(...)` is a `GX0002` error).
+
+This is the single biggest gap encountered. The standard MCP
+(Model Context Protocol) transport is JSON-RPC over stdio — the Go
+and MoonBit SDKs both launch the MCP server as a subprocess and
+communicate via piped stdin/stdout. Without stdio pipe access, every
+stdio-only MCP server requires a workaround:
+
+- The Blender SDK works because the Blender MCP server also supports
+  an HTTP transport, so the SDK uses `std::http` instead.
+- The PicoGK SDK works by batching all requests through
+  `process::pipeline_run` (a shell pipeline), which is fundamentally
+  non-interactive — all requests are collected and sent at once, then
+  all responses are parsed. This changes the API shape from "call and
+  get result immediately" to "queue everything, then execute."
+
+A subprocess pipe API — even a simple one like
+`process::popen(prog, args) -> (stdin_writer, stdout_reader, pid)` —
+would make Gossamer a first-class MCP client language and eliminate
+the need for the batch pipeline workaround.
+
+### Path dependencies resolve at check time but not at runtime
+
+`project.toml` supports `[dependencies]` with `path = "../other"`.
+`gos fetch` resolves and caches the dependency. `gos check` type-checks
+against the dependency's public API successfully. But `gos run` and
+`gos build` both fail at runtime with `GX0002: name not bound in this
+scope` — the dependency's code is never linked into the running
+program. The `read_entry_source` function used by both `gos run` and
+`gos build` auto-bundles sibling `.gos` files in the entry's directory
+but does not pull in path-dependency sources from the cache.
+
+This means there is no working library mechanism: you cannot write a
+reusable `.gos` library and `use` it from a separate project. Every
+file must live in the same directory (or subdirectory) as the entry
+point. The workaround used here is symlinks: examples symlink the SDK
+source files into their own directory so the auto-bundler picks them
+up as sibling modules. This works but is fragile — the SDK directory's
+own `project.toml` can confuse the auto-bundler's
+`is_inside_project` check if the whole directory is symlinked rather
+than individual files.
+
+Making path dependencies link at runtime — having `gos run` and
+`gos build` include cached dependency sources in the compilation
+unit the same way `gos check` resolves them — would enable proper
+code reuse and eliminate the symlink workaround.
+
+### No source-level C FFI
+
+Gossamer's only FFI surface is `[rust-bindings]` in `project.toml`,
+which requires writing a Rust crate using the `gossamer-binding`
+crate's `register_module!` macro. Source-level `extern "C"` is
+rejected at parse time (`GP0016`). There is no way to declare a C
+function, include a C header, define a C-compatible struct layout,
+or link a native library directly from `.gos` source.
+
+The Go `picogkffi` SDK (3,222 lines across 16 `.go` files) uses cgo
+to directly call the PicoGK C++ runtime: 200+ C functions, C struct
+fields in Go structs, `//export` for C callbacks, platform-specific
+linker flags. The MoonBit SDK (3,709 lines across 17 `.mbt` files +
+C stubs) uses `extern "C" fn` declarations and C stub files compiled
+alongside the MoonBit source. Neither approach is possible in
+Gossamer.
+
+A partial FFI wrapper could be written as a large Rust crate using
+`gossamer-binding`, but it would have a completely different API
+surface (integer handles instead of typed structs with methods), could
+not support per-voxel SDF callbacks (the binding ABI's callback
+mechanism is not designed for millions of per-voxel invocations), and
+could not support native Viewer callbacks (C function-pointer-based
+API). The `gossamer-binding` ABI types (`I64`, `F64`, `String`,
+`Vec`, `Option`, `Result`, `Bytes`, `Map`, `Opaque`, `Callback`,
+`Variant`) are sufficient for marshalling data but cannot represent C
+struct layout or raw pointer arithmetic.
+
+Even a limited source-level `extern "C" fn` mechanism — just function
+declarations with scalar/string/Vec params and integer handles for
+opaque pointers, without C structs or callbacks — would cover a large
+fraction of FFI use cases. MoonBit's approach (extern declarations
+in source + C stub files) is a good model.
+
+### Raw strings are in the grammar but not implemented
+
+The SPEC (§2.6) defines `raw_string = "r\"" { raw_char } "\"" | "r#\"" { raw_char } "\"#"`
+but `r"..."` is not accepted by the parser. Building JSON-RPC payloads
+containing both single and double quotes requires manual escaping or
+construction via `json::render()`.
+
+### Lint false positives with array literal elements
+
+`gos lint` reports unused-variable warnings for variables that are
+used as elements of array literals:
+
+```gossamer
+let dir = expand_path(path)
+let args = ["--directory", dir, ...]  // dir IS used, but lint says unused
+```
+
+The workaround is to prefix with `_` (`let _dir = ...`) or inline the
+expression, both of which reduce readability.
+
+### Match arm ergonomics
+
+- The last arm before `}` must not have a trailing comma if the arm
+  body is a bare expression (not a block). This is inconsistent with
+  the optional trailing comma on other arms and with Rust's
+  always-optional trailing comma.
+- `Ok(_) => ()` as a non-last arm confuses the parser — `()` looks
+  like the end of the match. Using `Ok(_) => { () }` with braces works
+  but is noisy.
+- `match` on a `bool` does not support `true =>` / `false =>` as
+  patterns. `if`/`else` is the only option, which is fine for simple
+  cases but means `match` cannot be used uniformly for all scrutinee
+  types.
+
+### `json::Value` constructor casing inconsistency
+
+The enum variant constructors are `json::Value::String` (capital S),
+`json::Value::Int`, `json::Value::Float`, `json::Value::Bool`,
+`json::Value::Array`, but `json::Value::object` (lowercase o). The
+lowercase `json::Value::string(...)` fails at runtime with `GX0002`.
+This inconsistency is easy to hit when writing JSON-building code.
+
+### No `.iter().map().collect()` on Vec
+
+`Vec<T>` does not expose `.iter().map(f).collect()` in the Rust style.
+The canonical replacement is a `for` loop with `push()`, which works
+but is more verbose for simple transformations.
+
+### `gos build` (LLVM AOT) may fail on complex programs
+
+The LLVM backend fails on programs with many auto-bundled module
+functions, producing "undefined symbol" errors (e.g. `@boolean_add`
+not found). `gos run` (bytecode VM) handles the same programs
+correctly. The `read_entry_source` auto-bundling path is shared
+between `gos run` and `gos build`, but the LLVM lowerer does not
+correctly resolve all auto-bundled module function symbols.
