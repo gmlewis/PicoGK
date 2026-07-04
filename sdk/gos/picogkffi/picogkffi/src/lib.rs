@@ -1210,20 +1210,39 @@ register_module!(
             cam.bg_r = bg_r as f32; cam.bg_g = bg_g as f32; cam.bg_b = bg_b as f32; cam.bg_a = bg_a as f32;
         }
         let c_title = std::ffi::CString::new(title).unwrap();
-        let size = PKVector2 { x: width as f32, y: height as f32 };
-        let v = unsafe {
-            viewer::Viewer_hCreate(
-                c_title.as_ptr(), &size,
-                viewer::viewer_info_cb, viewer::viewer_update_cb, viewer::viewer_key_cb,
-                viewer::viewer_mouse_move_cb, viewer::viewer_mouse_button_cb,
-                viewer::viewer_scroll_cb, viewer::viewer_window_size_cb,
-            )
+        let v = {
+            let args = viewer::ViewerCreateArgs {
+                title: c_title.as_ptr(),
+                width: width as f32, height: height as f32,
+                bg_r: bg_r as f32, bg_g: bg_g as f32, bg_b: bg_b as f32, bg_a: bg_a as f32,
+            };
+            #[cfg(target_os = "macos")]
+            {
+                let result = unsafe {
+                    viewer::dispatch_run_on_main(
+                        viewer::dispatch_viewer_create,
+                        &args as *const viewer::ViewerCreateArgs as *mut std::ffi::c_void,
+                    )
+                };
+                result
+            }
+            #[cfg(not(target_os = "macos"))]
+            {
+                let size = PKVector2 { x: width as f32, y: height as f32 };
+                unsafe {
+                    viewer::Viewer_hCreate(
+                        c_title.as_ptr(), &size,
+                        viewer::viewer_info_cb, viewer::viewer_update_cb, viewer::viewer_key_cb,
+                        viewer::viewer_mouse_move_cb, viewer::viewer_mouse_button_cb,
+                        viewer::viewer_scroll_cb, viewer::viewer_window_size_cb,
+                    ) as *mut std::ffi::c_void
+                }
+            }
         };
         if v.is_null() {
             return Err("Viewer_hCreate returned null (no display?)".into());
         }
         *viewer::ACTIVE_VIEWER.lock().unwrap() = Some(v as usize);
-        viewer::load_ibl_lighting(v);
         Ok(VIEWERS.insert(v as u64))
     }
 
@@ -1242,8 +1261,23 @@ register_module!(
     fn viewer_screenshot(handle: i64, path: String) -> () {
         let v = *VIEWERS.get(handle).unwrap() as *mut std::ffi::c_void;
         let c_path = std::ffi::CString::new(path).unwrap();
-        unsafe { viewer::Viewer_RequestScreenShot(v, c_path.as_ptr()) };
-        unsafe { viewer::Viewer_RequestUpdate(v) };
+        let args = viewer::ScreenshotArgs { viewer: v, path: c_path.as_ptr(), frames: 15 };
+        #[cfg(target_os = "macos")]
+        {
+            unsafe {
+                viewer::dispatch_run_on_main(
+                    viewer::dispatch_viewer_screenshot,
+                    &args as *const viewer::ScreenshotArgs as *mut std::ffi::c_void,
+                );
+            }
+        }
+        #[cfg(not(target_os = "macos"))]
+        {
+            unsafe {
+                viewer::Viewer_RequestScreenShot(v, c_path.as_ptr());
+                viewer::Viewer_RequestUpdate(v);
+            }
+        }
     }
 
     fn viewer_poll(handle: i64) -> bool {
@@ -1253,13 +1287,27 @@ register_module!(
 
     fn viewer_request_close(handle: i64) -> () {
         let v = *VIEWERS.get(handle).unwrap() as *mut std::ffi::c_void;
-        unsafe { viewer::Viewer_RequestClose(v) };
+        let args = viewer::CloseArgs { viewer: v };
+        #[cfg(target_os = "macos")]
+        {
+            unsafe {
+                viewer::dispatch_run_on_main(
+                    viewer::dispatch_viewer_close,
+                    &args as *const viewer::CloseArgs as *mut std::ffi::c_void,
+                );
+            }
+        }
+        #[cfg(not(target_os = "macos"))]
+        {
+            unsafe {
+                viewer::Viewer_RequestClose(v);
+                viewer::Viewer_Destroy(v);
+            }
+        }
     }
 
     fn viewer_destroy(handle: i64) -> () {
-        if let Ok(v) = VIEWERS.get(handle) {
-            unsafe { viewer::Viewer_Destroy(*v as *mut std::ffi::c_void) };
-        }
+        // Destroy is handled in viewer_request_close on macOS
     }
 
     fn viewer_remove_all_objects(handle: i64) -> () {
@@ -1326,3 +1374,4 @@ fn c_buf_to_string(buf: &[i8]) -> String {
 pub fn __bindings_force_link() {
     __gos_picogkffi::force_link();
 }
+

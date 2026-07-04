@@ -8,6 +8,72 @@ use std::os::raw::c_char;
 
 use crate::{PKVector2, PKVector3, PKVector4, PKBBox3, PKColorFloat, PKMatrix4x4};
 
+// macOS main-thread dispatch (for OpenGL Viewer)
+#[cfg(target_os = "macos")]
+unsafe extern "C" {
+    pub fn dispatch_run_on_main(fn_ptr: unsafe extern "C" fn(*mut std::ffi::c_void) -> *mut std::ffi::c_void,
+                             arg: *mut std::ffi::c_void) -> *mut std::ffi::c_void;
+}
+
+// Workaround struct for passing args through dispatch
+#[repr(C)]
+pub struct ViewerCreateArgs {
+    pub title: *const c_char,
+    pub width: f32,
+    pub height: f32,
+    pub bg_r: f32, pub bg_g: f32, pub bg_b: f32, pub bg_a: f32,
+}
+
+#[cfg(target_os = "macos")]
+pub unsafe extern "C" fn dispatch_viewer_create(arg: *mut std::ffi::c_void) -> *mut std::ffi::c_void {
+    let args = &*(arg as *const ViewerCreateArgs);
+    let size = PKVector2 { x: args.width, y: args.height };
+    let v = Viewer_hCreate(
+        args.title, &size,
+        viewer_info_cb, viewer_update_cb, viewer_key_cb,
+        viewer_mouse_move_cb, viewer_mouse_button_cb,
+        viewer_scroll_cb, viewer_window_size_cb,
+    );
+    if !v.is_null() {
+        load_ibl_lighting(v);
+    }
+    v as *mut std::ffi::c_void
+}
+
+// Screenshot args
+#[repr(C)]
+pub struct ScreenshotArgs {
+    pub viewer: *mut std::ffi::c_void,
+    pub path: *const c_char,
+    pub frames: i32,
+}
+
+#[cfg(target_os = "macos")]
+pub unsafe extern "C" fn dispatch_viewer_screenshot(arg: *mut std::ffi::c_void) -> *mut std::ffi::c_void {
+    let args = &*(arg as *const ScreenshotArgs);
+    Viewer_RequestScreenShot(args.viewer, args.path);
+    Viewer_RequestUpdate(args.viewer);
+    // Poll for a few frames to let the screenshot render
+    for _ in 0..args.frames {
+        if !Viewer_bPoll(args.viewer) { break; }
+    }
+    std::ptr::null_mut()
+}
+
+// Close args
+#[repr(C)]
+pub struct CloseArgs {
+    pub viewer: *mut std::ffi::c_void,
+}
+
+#[cfg(target_os = "macos")]
+pub unsafe extern "C" fn dispatch_viewer_close(arg: *mut std::ffi::c_void) -> *mut std::ffi::c_void {
+    let args = &*(arg as *const CloseArgs);
+    Viewer_RequestClose(args.viewer);
+    Viewer_Destroy(args.viewer);
+    std::ptr::null_mut()
+}
+
 // C function pointer types (matching picogk_ffi.h)
 pub type PFInfo = unsafe extern "C" fn(*const c_char, bool);
 pub type PFUpdate = unsafe extern "C" fn(*mut std::ffi::c_void, *const PKVector2, *mut PKColorFloat, *mut PKMatrix4x4, *mut PKVector3);
@@ -301,3 +367,4 @@ pub fn load_ibl_lighting(viewer: *mut std::ffi::c_void) -> bool {
         )
     }
 }
+

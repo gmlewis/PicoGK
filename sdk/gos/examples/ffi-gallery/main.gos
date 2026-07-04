@@ -7,7 +7,8 @@ use std::os
 use picogkffi::{init, version, shutdown, new_lattice, lattice_add_sphere, lattice_add_beam,
     lattice_destroy, voxels_destroy, mesh_destroy, voxels_bool_add, voxels_double_offset,
     new_voxels, render_gyroid, render_gyroid_genus, render_superellipsoid,
-    render_to_image_colored, render_mesh_to_image, render_gyroid_sphere, voxels_from_lattice, Vec3}
+    new_viewer, viewer_add_voxels, viewer_set_group_material, viewer_screenshot,
+    viewer_request_close, viewer_destroy, render_gyroid_sphere, voxels_from_lattice, Vec3}
 use shapes::{
     V, new_local_frame, new_local_frame_xyz,
     new_sphere_shape, new_sphere_shape_const, new_box, new_cylinder, new_cylinder_const,
@@ -35,24 +36,22 @@ fn render_scene(name: String, groups: Vec<shapes::SceneGroup>) {
     os::mkdir_all(outdir)
     println!("--- {} ---", name)
     if groups.is_empty() { println!("  (empty)"); return }
-    let mut i = 0
-    while i < groups.len() {
-        let c = groups[i].color
-        let path = outdir + "/" + name + ".png"
-        let r = (c.r * 255.0) as i64
-        let g = (c.g * 255.0) as i64
-        let b = (c.b * 255.0) as i64
-        if groups[i].voxels != 0 {
-            render_to_image_colored(groups[i].voxels, path, 800, 600, 255, 255, 255, r, g, b)
-            println!("  -> {}", path)
-            break
-        }
-        if groups[i].mesh != 0 {
-            render_mesh_to_image(groups[i].mesh, path, 800, 600, 255, 255, 255, r, g, b)
-            println!("  -> {}", path)
-            break
-        }
-        i += 1
+    match new_viewer("PicoGK Gallery — " + name, 1280.0, 960.0, 0.16, 0.16, 0.20, 1.0) {
+        Ok(v) => {
+            let mut i = 0
+            while i < groups.len() {
+                if groups[i].voxels != 0 { viewer_add_voxels(v, i as i64, groups[i].voxels) }
+                let c = groups[i].color
+                viewer_set_group_material(v, i as i64, c.r, c.g, c.b, 1.0, 0.1, 0.5)
+                i += 1
+            }
+            let png_path = outdir + "/" + name + ".png"
+            viewer_screenshot(v, png_path)
+            viewer_request_close(v)
+            viewer_destroy(v)
+            println!("  -> {}", png_path)
+        },
+        Err(e) => println!("  viewer: {}", e)
     }
     let mut ci = 0
     while ci < groups.len() {
@@ -204,5 +203,6 @@ fn main() {
     }
     println!("\ndone.")
 }
+
 
 
