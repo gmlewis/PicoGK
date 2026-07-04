@@ -1,0 +1,22 @@
+go 1.22
+
+use (
+	./blender
+	./examples/blender-scene
+	./examples/ffi-fields-and-io
+	./examples/ffi-gallery
+	./examples/ffi-hello-picogk
+	./examples/ffi-viewer-demo
+	./examples/ffi-visualize
+	./examples/ffi-web-demo
+	./examples/fields-and-io
+	./examples/full-api
+	./examples/hello-picogk
+	./examples/shapekernel-gallery
+	./examples/viewer-demo
+	./examples/visualize
+	./examples/web-demo
+	./picogk
+	./picogkffi
+	./picogkshapes
+)
