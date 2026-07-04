@@ -13,6 +13,15 @@ gos run . -- --v
 
 Prerequisites: the PicoGK MCP server binary at `~/.local/bin/picogk-mcp/PicoGK.Mcp`.
 
+### PicoGK FFI Demo (native binding)
+
+```bash
+cd sdk/gos/picogkffi
+RUSTFLAGS="-Awarnings" gos run src/main.gos
+```
+
+Prerequisites: the PicoGK native library at `native/<platform>/` (included in the repo).
+
 ### Blender Scene Example
 
 ```bash
@@ -37,12 +46,41 @@ sdk/gos/
 │   └── src/
 │       ├── lib.gos                    # Client struct, stdio transport
 │       └── tools.gos                  # 62 PicoGK MCP tool methods
+├── picogkffi/                         # PicoGK FFI SDK (Rust binding crate)
+│   ├── project.toml
+│   ├── picogkffi/                     # Rust crate
+│   │   ├── Cargo.toml
+│   │   ├── build.rs                   # locates native libpicogk
+│   │   ├── picogk_ffi.h               # C API header
+│   │   └── src/
+│   │       ├── lib.rs                 # register_module! with 100+ FFI functions
+│   │       ├── sdf.rs                 # SDF callbacks (gyroid, superellipsoid, etc.)
+│   │       └── viewer.rs              # OpenGL Viewer with camera callbacks
+│   └── src/main.gos                   # demo entry (primitives, SDF, mesh)
 └── examples/
-    ├── blender-scene/                 # Blender scene inspection example
+    ├── blender-scene/                 # Blender scene inspection
     │   ├── project.toml               # path dep on blender SDK
     │   └── main.gos
-    └── full-api/                      # PicoGK full API exercise
-        ├── project.toml               # path dep on picogk SDK
+    ├── full-api/                      # PicoGK MCP full API exercise
+    │   ├── project.toml               # path dep on picogk SDK
+    │   └── main.gos
+    ├── ffi-hello-picogk/              # FFI: primitives, booleans, shell, lattice, SDF
+    │   ├── project.toml               # [rust-bindings] on picogkffi
+    │   └── main.gos
+    ├── ffi-fields-and-io/             # FFI: VDB, scalar fields, metadata, STL round-trip
+    │   ├── project.toml
+    │   └── main.gos
+    ├── ffi-visualize/                 # FFI: Z-slice cross-section
+    │   ├── project.toml
+    │   └── main.gos
+    ├── ffi-viewer-demo/              # FFI: OpenGL Viewer render
+    │   ├── project.toml
+    │   └── main.gos
+    ├── ffi-web-demo/                 # FFI: HTML viewer (stub — needs picogkshapes)
+    │   ├── project.toml
+    │   └── main.gos
+    └── ffi-gallery/                  # FFI: parametric shape gallery (stub — needs picogkshapes)
+        ├── project.toml
         └── main.gos
 ```
 

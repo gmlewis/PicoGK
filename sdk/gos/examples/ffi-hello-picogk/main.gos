@@ -1,0 +1,117 @@
+// End-to-end PicoGK demo via the native FFI binding: primitives, booleans,
+// shell, a lattice, a gyroid SDF, and mesh export.
+//
+// This is the Gossamer FFI counterpart to the Go hello-picogk example.
+// Uses the picogkffi [rust-bindings] crate which binds directly to the
+// native PicoGK C++ runtime — no MCP server required.
+// The gyroid is rendered via a C-side SDF callback implemented in Rust.
+//
+// Run:  RUSTFLAGS="-Awarnings" gos run .
+
+use std::os
+use picogkffi::{init, version, shutdown, new_sphere, new_voxels, new_lattice,
+    voxels_bool_subtract, voxels_shell, voxels_volume, voxels_to_mesh,
+    voxels_from_lattice, voxels_destroy, mesh_destroy, lattice_destroy,
+    mesh_vertex_count, mesh_triangle_count, lattice_add_sphere, lattice_add_beam,
+    render_gyroid_sphere, total_memory_usage, Vec3}
+
+fn main() {
+    let outdir = "/tmp/gos-picogkffi-hello"
+    os::mkdir_all(outdir)
+
+    println!("=== Hello PicoGK (Gossamer FFI) ===")
+    println!("Output dir: {}\n", outdir)
+
+    match init(0.2) {
+        Ok(_) => (),
+        Err(e) => { eprintln!("init failed: {}", e); return }
+    }
+    defer shutdown()
+
+    println!("PicoGK {}", version())
+
+    // 1) Shelled sphere part
+    println!("\n--- Shelled part ---")
+    let body = match new_sphere(Vec3 { x: 0.0, y: 0.0, z: 0.0 }, 10.0) {
+        Ok(h) => h,
+        Err(e) => { eprintln!("new_sphere: {}", e); return }
+    }
+    let hole = match new_sphere(Vec3 { x: 6.0, y: 0.0, z: 0.0 }, 6.0) {
+        Ok(h) => h,
+        Err(e) => { eprintln!("hole: {}", e); return }
+    }
+    voxels_bool_subtract(body, hole)
+    println!("  volume before shell: {:.1}", voxels_volume(body))
+    voxels_shell(body, 1.0)
+    println!("  volume after shell:  {:.1}", voxels_volume(body))
+
+    let mesh = match voxels_to_mesh(body) {
+        Ok(h) => h,
+        Err(e) => { eprintln!("voxels_to_mesh: {}", e); return }
+    }
+    println!("  mesh: {} verts, {} tris", mesh_vertex_count(mesh), mesh_triangle_count(mesh))
+    voxels_destroy(body)
+    voxels_destroy(hole)
+    mesh_destroy(mesh)
+
+    // 2) Lattice cage
+    println!("\n--- Lattice cage ---")
+    let lat = match new_lattice() {
+        Ok(h) => h,
+        Err(e) => { eprintln!("new_lattice: {}", e); return }
+    }
+    let corners: [Vec3; 8] = [
+        Vec3 { x: -8.0, y: -8.0, z: -8.0 }, Vec3 { x: 8.0, y: -8.0, z: -8.0 },
+        Vec3 { x: -8.0, y: 8.0, z: -8.0 }, Vec3 { x: 8.0, y: 8.0, z: -8.0 },
+        Vec3 { x: -8.0, y: -8.0, z: 8.0 }, Vec3 { x: 8.0, y: -8.0, z: 8.0 },
+        Vec3 { x: -8.0, y: 8.0, z: 8.0 }, Vec3 { x: 8.0, y: 8.0, z: 8.0 },
+    ].to_vec()
+    for c in corners {
+        lattice_add_sphere(lat, c, 1.5)
+    }
+    // Add beams between corners that differ in exactly one axis
+    for i in 0..8 {
+        for j in (i + 1)..8 {
+            let a = corners[i]
+            let b = corners[j]
+            let diff = (if a.x != b.x { 1 } else { 0 }) + (if a.y != b.y { 1 } else { 0 }) + (if a.z != b.z { 1 } else { 0 })
+            if diff == 1 {
+                lattice_add_beam(lat, a, b, 1.0, 1.0, true)
+            }
+        }
+    }
+    let cage = match voxels_from_lattice(lat) {
+        Ok(h) => h,
+        Err(e) => { eprintln!("voxels_from_lattice: {}", e); return }
+    }
+    println!("  lattice cage volume: {:.1}", voxels_volume(cage))
+    let cage_mesh = match voxels_to_mesh(cage) {
+        Ok(h) => h,
+        Err(e) => { eprintln!("voxels_to_mesh: {}", e); return }
+    }
+    println!("  cage mesh: {} verts, {} tris", mesh_vertex_count(cage_mesh), mesh_triangle_count(cage_mesh))
+    lattice_destroy(lat)
+    voxels_destroy(cage)
+    mesh_destroy(cage_mesh)
+
+    // 3) Gyroid sphere via SDF
+    println!("\n--- Gyroid sphere (SDF) ---")
+    let tpms = match new_voxels() {
+        Ok(h) => h,
+        Err(e) => { eprintln!("new_voxels: {}", e); return }
+    }
+    let r = 10.0
+    let k = 2.0 * 3.14159265358979 / 6.0
+    render_gyroid_sphere(tpms, -r - 2.0, -r - 2.0, -r - 2.0, r + 2.0, r + 2.0, r + 2.0, r, 0.4, k)
+    println!("  gyroid sphere volume: {:.1}", voxels_volume(tpms))
+    let gyroid_mesh = match voxels_to_mesh(tpms) {
+        Ok(h) => h,
+        Err(e) => { eprintln!("voxels_to_mesh: {}", e); return }
+    }
+    println!("  gyroid mesh: {} verts, {} tris", mesh_vertex_count(gyroid_mesh), mesh_triangle_count(gyroid_mesh))
+    voxels_destroy(tpms)
+    mesh_destroy(gyroid_mesh)
+
+    println!("\nNative memory: {:.1} MB", total_memory_usage() as f64 / 1e6)
+    println!("done.")
+}
