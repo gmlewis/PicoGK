@@ -1,0 +1,13 @@
+[package]
+name = "picogkffi"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+gossamer-binding = { path = "/Users/glenn/src/github.com/danpozmanter/gossamer/crates/gossamer-binding" }
+
+[build-dependencies]
