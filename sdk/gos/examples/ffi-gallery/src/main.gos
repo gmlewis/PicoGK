@@ -1,0 +1,324 @@
+// Gallery: 16 parametric shape scenes via the picogkshapes library,
+// rendered with the native OpenGL Viewer (FFI binding).
+//
+// This is the Gossamer port of the Go ffi-gallery example, which is
+// itself a port of PicoPie's shapekernel/gallery.py.
+//
+// Run:  RUSTFLAGS="-Awarnings" gos run --no-jit .
+//
+// Notes:
+//   - Use --no-jit: the JIT crashes with large bindings.
+//   - Requires a display for the OpenGL Viewer.
+//   - Output PNGs are written to /tmp/gos-ffi-gallery/.
+
+use std::math
+use std::os
+use picogkffi::{init, version, shutdown, new_lattice, lattice_add_sphere, lattice_add_beam,
+    lattice_destroy, voxels_destroy, mesh_destroy, voxels_bool_add, voxels_double_offset,
+    new_voxels, render_gyroid, render_gyroid_genus, render_superellipsoid,
+    new_viewer, viewer_add_voxels, viewer_set_group_material, viewer_screenshot,
+    viewer_poll, viewer_request_close, viewer_destroy, voxels_to_mesh, voxels_from_lattice, render_gyroid_sphere, Vec3}
+use picogkshapes::{
+    V, v_add, v_sub, v_mul, new_local_frame, new_local_frame_xyz, frame_point_to_world,
+    new_sphere_shape, new_sphere_shape_const, new_box, new_cylinder, new_cylinder_const,
+    new_ring, new_lens, new_pipe, new_lattice_pipe,
+    new_lattice_manifold, new_control_point_spline, frames_aligned_to_x,
+    surf_mod_fn, surf_mod_constant, line_mod_fn, line_mod_constant,
+    surf_mod_call, line_mod_call,
+    to_ffi_color, to_voxels,
+    new_color_scale_3d, rainbow_spectrum, split_by_overhang_angle,
+}
+
+fn line1(lr: f64) -> f64 { 10.0 - 3.0 * math::cos(8.0 * lr) }
+fn line2(lr: f64) -> f64 { 8.0 - math::cos(40.0 * lr) }
+fn surf1(phi: f64, lr: f64) -> f64 { 12.0 + 3.0 * math::cos(5.0 * phi) }
+fn surf3(phi: f64, lr: f64) -> f64 { 8.0 + 5.0 * math::cos(5.0 * phi) }
+
+fn spline_points() -> Vec<Vec3> {
+    let ctrl = [
+        V(0.0, 0.0, 0.0),
+        V(0.0, 40.0, 0.0),
+        V(0.0, 50.0, 20.0),
+        V(0.0, 60.0, 60.0),
+    ].to_vec()
+    let spline = new_control_point_spline(ctrl, 2, false)
+    spline.points(500)
+}
+
+fn render_scene(name: String, groups: Vec<SceneGroup>) {
+    let outdir = "/tmp/gos-ffi-gallery"
+    os::mkdir_all(outdir)
+    println!("--- {} ---", name)
+    if groups.is_empty() {
+        println!("  (empty)")
+        return
+    }
+    let viewer = match new_viewer("PicoGK Gallery — " + name, 1280.0, 960.0, 0.16, 0.16, 0.20, 1.0) {
+        Ok(v) => v,
+        Err(e) => { eprintln!("  new_viewer failed: {}", e); return }
+    }
+    for i in 0..groups.len() {
+        viewer_add_voxels(viewer, i as i64, groups[i].voxels)
+        let c = groups[i].color
+        viewer_set_group_material(viewer, i as i64, c.r, c.g, c.b, 1.0, 0.1, 0.5)
+    }
+    let png_path = outdir + "/" + name + ".png"
+    viewer_screenshot(viewer, png_path)
+    let mut frames = 0
+    while frames < 15 {
+        let _ = viewer_poll(viewer)
+        frames += 1
+    }
+    viewer_request_close(viewer)
+    viewer_destroy(viewer)
+    println!("  -> {}", png_path)
+    for g in groups {
+        voxels_destroy(g.voxels)
+        if g.mesh != 0 { mesh_destroy(g.mesh) }
+    }
+}
+
+fn build_box() -> Vec<SceneGroup> {
+    let b1 = new_box(new_local_frame(V(-50.0, 0.0, 0.0)), 20.0, 10.0, 15.0).to_voxels()
+    let b2 = new_box(new_local_frame(V(50.0, 0.0, 0.0)), 20.0, 10.0, 15.0).to_voxels()
+    let b3 = new_box(new_local_frame(V(0.0, 0.0, 0.0)), 20.0, 10.0, 15.0).to_voxels()
+    [
+        SceneGroup { voxels: b1, mesh: 0, color: COLOR_BLUE },
+        SceneGroup { voxels: b2, mesh: 0, color: COLOR_GREEN },
+        SceneGroup { voxels: b3, mesh: 0, color: COLOR_YELLOW },
+    ].to_vec()
+}
+
+fn build_sphere() -> Vec<SceneGroup> {
+    let s1 = new_sphere_shape_const(new_local_frame(V(-100.0, 0.0, 0.0)), 40.0).to_voxels()
+    let s2 = new_sphere_shape(new_local_frame(V(0.0, 0.0, 0.0)), surf_mod_fn(|_phi, theta| 40.0 - 10.0 * math::cos(6.0 * theta))).to_voxels()
+    let s3 = new_sphere_shape(new_local_frame(V(150.0, 0.0, 0.0)), surf_mod_fn(|phi, theta| 40.0 - 10.0 * math::cos(6.0 * theta) + 30.0 * math::cos(2.0 * phi))).to_voxels()
+    [
+        SceneGroup { voxels: s1, mesh: 0, color: COLOR_FROZEN },
+        SceneGroup { voxels: s2, mesh: 0, color: COLOR_PITAYA },
+        SceneGroup { voxels: s3, mesh: 0, color: COLOR_WARNING },
+    ].to_vec()
+}
+
+fn build_cylinder() -> Vec<SceneGroup> {
+    let c1 = new_cylinder_const(new_local_frame(V(-50.0, 0.0, 0.0)), 60.0, 40.0).to_voxels()
+    let c2 = new_cylinder(new_local_frame(V(50.0, 0.0, 0.0)), 60.0, surf_mod_fn(|_phi, lr| line1(lr))).to_voxels()
+    let c3 = new_cylinder(new_local_frame(V(0.0, 0.0, 0.0)), 60.0, surf_mod_fn(|phi, _lr| surf1(phi, 0.0))).to_voxels()
+    [
+        SceneGroup { voxels: c1, mesh: 0, color: COLOR_BLUE },
+        SceneGroup { voxels: c2, mesh: 0, color: COLOR_GREEN },
+        SceneGroup { voxels: c3, mesh: 0, color: COLOR_YELLOW },
+    ].to_vec()
+}
+
+fn build_ring() -> Vec<SceneGroup> {
+    let r1 = new_ring(new_local_frame(V(-50.0, -50.0, 0.0)), 30.0, 8.0).to_voxels()
+    let r2 = new_ring(new_local_frame(V(-50.0, 50.0, 0.0)), 30.0, 10.0).to_voxels()
+    let r3 = new_ring(new_local_frame(V(50.0, 50.0, 0.0)), 30.0, 10.0).to_voxels()
+    let r4 = new_ring(new_local_frame(V(50.0, -50.0, 0.0)), 30.0, 10.0).to_voxels()
+    [
+        SceneGroup { voxels: r1, mesh: 0, color: COLOR_FROZEN },
+        SceneGroup { voxels: r2, mesh: 0, color: COLOR_PITAYA },
+        SceneGroup { voxels: r3, mesh: 0, color: COLOR_WARNING },
+        SceneGroup { voxels: r4, mesh: 0, color: COLOR_BLUEBERRY },
+    ].to_vec()
+}
+
+fn build_lens() -> Vec<SceneGroup> {
+    let l1 = new_lens(new_local_frame(V(-50.0, -50.0, 0.0)), 10.0, 10.0, 40.0).to_voxels()
+    let l2 = new_lens(new_local_frame(V(50.0, 50.0, 0.0)), 10.0, 10.0, 40.0)
+        .with_lower(surf_mod_fn(|phi, _rr| 5.0 - surf1(phi, 0.0)))
+        .with_upper(surf_mod_fn(|phi, _rr| 5.0 + surf1(phi, 0.0)))
+        .to_voxels()
+    let l3 = new_lens(new_local_frame(V(-50.0, 50.0, 0.0)), 10.0, 10.0, 40.0)
+        .with_lower(surf_mod_fn(|phi, _rr| 5.0 - surf1(phi, 0.0)))
+        .with_upper(surf_mod_fn(|phi, rr| 5.0 + math::cos(6.0 * (phi + 0.3 * math::PI * rr)) + 3.0 * math::cos(20.0 * rr)))
+        .to_voxels()
+    [
+        SceneGroup { voxels: l1, mesh: 0, color: COLOR_FROZEN },
+        SceneGroup { voxels: l2, mesh: 0, color: COLOR_PITAYA },
+        SceneGroup { voxels: l3, mesh: 0, color: COLOR_WARNING },
+    ].to_vec()
+}
+
+fn build_pipe() -> Vec<SceneGroup> {
+    let p1 = new_pipe(new_local_frame(V(-50.0, 0.0, 0.0)), 60.0, 10.0, 20.0).to_voxels()
+    let p2 = new_pipe(new_local_frame(V(0.0, 0.0, 0.0)), 60.0, 10.0, 20.0).to_voxels()
+    let p3 = new_pipe(new_local_frame(V(50.0, -50.0, 0.0)), 60.0, 6.0, 20.0).to_voxels()
+    let spine = frames_aligned_to_x(spline_points(), V(0.0, 1.0, 0.0))
+    let p4 = new_pipe(new_local_frame(V(0.0, 0.0, 0.0)), 60.0, 8.0, 12.0)
+        .with_frames(spine)
+        .to_voxels()
+    [
+        SceneGroup { voxels: p1, mesh: 0, color: COLOR_BLUE },
+        SceneGroup { voxels: p2, mesh: 0, color: COLOR_GREEN },
+        SceneGroup { voxels: p3, mesh: 0, color: COLOR_LEMONGRASS },
+        SceneGroup { voxels: p4, mesh: 0, color: COLOR_ORCHID },
+    ].to_vec()
+}
+
+fn build_pipe_segment() -> Vec<SceneGroup> {
+    let p1 = new_pipe(new_local_frame(V(-50.0, 0.0, 0.0)), 60.0, 20.0, 40.0).to_voxels()
+    let p2 = new_pipe(new_local_frame(V(50.0, 0.0, 0.0)), 60.0, 8.0, 12.0).to_voxels()
+    let spine = frames_aligned_to_x(spline_points(), V(0.0, 1.0, 0.0))
+    let p3 = new_pipe(new_local_frame(V(0.0, 0.0, 0.0)), 60.0, 8.0, 12.0)
+        .with_frames(spine)
+        .to_voxels()
+    [
+        SceneGroup { voxels: p1, mesh: 0, color: COLOR_BLUE },
+        SceneGroup { voxels: p2, mesh: 0, color: COLOR_RUBY },
+        SceneGroup { voxels: p3, mesh: 0, color: COLOR_RACINGGREEN },
+    ].to_vec()
+}
+
+fn build_basic_lattices() -> Vec<SceneGroup> {
+    let lat = match new_lattice() {
+        Ok(h) => h,
+        Err(e) => { eprintln!("new_lattice: {}", e); return [] }
+    }
+    lattice_add_sphere(lat, V(1.0, 5.0, -10.0), 5.0)
+    lattice_add_beam(lat, V(5.0, 3.0, 0.0), V(-3.0, 0.0, 7.0), 1.0, 3.0, true)
+    let v = match voxels_from_lattice(lat) {
+        Ok(h) => h,
+        Err(e) => { eprintln!("voxels_from_lattice: {}", e); lattice_destroy(lat); return [] }
+    }
+    lattice_destroy(lat)
+    [SceneGroup { voxels: v, mesh: 0, color: COLOR_BLUEBERRY }].to_vec()
+}
+
+fn build_lattice_pipe() -> Vec<SceneGroup> {
+    let lp1 = new_lattice_pipe(new_local_frame(V(-50.0, 0.0, 0.0)), 60.0, 10.0).to_voxels()
+    let lp2 = new_lattice_pipe(new_local_frame(V(50.0, -50.0, 0.0)), 60.0, 10.0).to_voxels()
+    let spine = frames_aligned_to_x(spline_points(), V(0.0, 1.0, 0.0))
+    let lp3 = new_lattice_pipe(new_local_frame(V(0.0, 0.0, 0.0)), 60.0, 10.0).to_voxels()
+    [
+        SceneGroup { voxels: lp1, mesh: 0, color: COLOR_YELLOW },
+        SceneGroup { voxels: lp2, mesh: 0, color: COLOR_FROZEN },
+        SceneGroup { voxels: lp3, mesh: 0, color: COLOR_RACINGGREEN },
+    ].to_vec()
+}
+
+fn build_lattice_manifold() -> Vec<SceneGroup> {
+    let lm1 = new_lattice_manifold(new_local_frame_xyz(V(-50.0, 0.0, 0.0), V(0.0, 1.0, 0.0), V(1.0, 0.0, 0.0)), 50.0, 5.0, 45.0).to_voxels()
+    let lm2 = new_lattice_manifold(new_local_frame_xyz(V(0.0, 0.0, 0.0), V(0.0, 1.0, 0.0), V(1.0, 0.0, 0.0)), 50.0, 10.0, 30.0)
+        .with_extend_both_sides(true)
+        .to_voxels()
+    let lm3 = new_lattice_manifold(new_local_frame_xyz(V(50.0, 0.0, 0.0), V(0.0, 1.0, 0.0), V(1.0, 0.0, 0.0)), 50.0, 5.0, 60.0)
+        .with_extend_both_sides(true)
+        .to_voxels()
+    [
+        SceneGroup { voxels: lm1, mesh: 0, color: COLOR_YELLOW },
+        SceneGroup { voxels: lm2, mesh: 0, color: COLOR_CRYSTAL },
+        SceneGroup { voxels: lm3, mesh: 0, color: COLOR_GREEN },
+    ].to_vec()
+}
+
+fn build_gyroid_sphere() -> Vec<SceneGroup> {
+    let v = match new_voxels() {
+        Ok(h) => h,
+        Err(e) => { eprintln!("new_voxels: {}", e); return [] }
+    }
+    let r = 10.0
+    let k = 2.0 * math::PI / 6.0
+    render_gyroid_sphere(v, -r - 2.0, -r - 2.0, -r - 2.0, r + 2.0, r + 2.0, r + 2.0, r, 0.4, k)
+    [SceneGroup { voxels: v, mesh: 0, color: COLOR_BILLIE }].to_vec()
+}
+
+fn build_gyroid_genus() -> Vec<SceneGroup> {
+    let v = match new_voxels() {
+        Ok(h) => h,
+        Err(e) => { eprintln!("new_voxels: {}", e); return [] }
+    }
+    let s = 8.0
+    render_gyroid_genus(v, -3.0 * s, -3.0 * s, -1.6 * s, 3.0 * s, 3.0 * s, 1.6 * s, s, 0.0, 2.0 * math::PI / 6.0)
+    [SceneGroup { voxels: v, mesh: 0, color: COLOR_LAVENDER }].to_vec()
+}
+
+fn build_superellipsoid() -> Vec<SceneGroup> {
+    let a = 16.0
+    let specs = [
+        (V(-45.0, 0.0, 0.0), 3.0, 0.25, COLOR_RUBY),
+        (V(0.0, 0.0, 0.0), 1.5, 1.5, COLOR_BLUE),
+        (V(45.0, 0.0, 0.0), 0.25, 0.25, COLOR_BUBBLEGUM),
+    ].to_vec()
+    let mut groups: Vec<SceneGroup> = Vec::new()
+    for spec in specs {
+        let v = match new_voxels() {
+            Ok(h) => h,
+            Err(_) => continue
+        }
+        render_superellipsoid(v, -a, -a, -a, a, a, a, a, a, a, spec.1, spec.2)
+        groups.push(SceneGroup { voxels: v, mesh: 0, color: spec.3 })
+    }
+    groups
+}
+
+fn build_mesh_painter() -> Vec<SceneGroup> {
+    let ball = new_sphere_shape_const(new_local_frame(V(0.0, 0.0, 0.0)), 40.0)
+    let mesh = match ball.to_mesh() {
+        Ok(m) => m,
+        Err(e) => { eprintln!("to_mesh: {}", e); return [] }
+    }
+    let scale = new_color_scale_3d(rainbow_spectrum(), 0.0, 90.0)
+    let groups = split_by_overhang_angle(mesh, scale, 50)
+    mesh_destroy(mesh)
+    groups
+}
+
+fn build_mesh_trafo() -> Vec<SceneGroup> {
+    let box_vox = new_box(new_local_frame(V(0.0, 0.0, 0.0)), 40.0, 30.0, 20.0).to_voxels()
+    let original_box = new_box(new_local_frame(V(0.0, 0.0, 0.0)), 40.0, 30.0, 20.0).to_voxels()
+    voxels_destroy(box_vox)
+    [
+        SceneGroup { voxels: original_box, mesh: 0, color: COLOR_GRAY },
+    ].to_vec()
+}
+
+fn build_over_offset() -> Vec<SceneGroup> {
+    let b1 = new_box(new_local_frame(V(-15.0, 0.0, 0.0)), 30.0, 30.0, 30.0).to_voxels()
+    let b2 = new_box(new_local_frame(V(15.0, 0.0, 0.0)), 30.0, 30.0, 30.0).to_voxels()
+    voxels_bool_add(b1, b2)
+    voxels_destroy(b2)
+    voxels_double_offset(b1, 4.0, -4.0)
+    [SceneGroup { voxels: b1, mesh: 0, color: COLOR_BUBBLEGUM }].to_vec()
+}
+
+fn main() {
+    println!("=== FFI Gallery (Gossamer) ===")
+    println!("Output dir: /tmp/gos-ffi-gallery")
+    println!("Voxel size: 0.20 mm")
+
+    match init(0.2) {
+        Ok(_) => (),
+        Err(e) => { eprintln!("init failed: {}", e); return }
+    }
+    defer shutdown()
+
+    println!("PicoGK {}", version())
+
+    let scenes: Vec<(String, Fn() -> Vec<SceneGroup>)> = [
+        ("box".to_string(), || build_box()),
+        ("sphere".to_string(), || build_sphere()),
+        ("cylinder".to_string(), || build_cylinder()),
+        ("ring".to_string(), || build_ring()),
+        ("lens".to_string(), || build_lens()),
+        ("pipe".to_string(), || build_pipe()),
+        ("pipe_segment".to_string(), || build_pipe_segment()),
+        ("basic_lattices".to_string(), || build_basic_lattices()),
+        ("lattice_pipe".to_string(), || build_lattice_pipe()),
+        ("lattice_manifold".to_string(), || build_lattice_manifold()),
+        ("gyroid_sphere".to_string(), || build_gyroid_sphere()),
+        ("gyroid_genus".to_string(), || build_gyroid_genus()),
+        ("superellipsoid".to_string(), || build_superellipsoid()),
+        ("mesh_painter".to_string(), || build_mesh_painter()),
+        ("mesh_trafo".to_string(), || build_mesh_trafo()),
+        ("over_offset".to_string(), || build_over_offset()),
+    ].to_vec()
+
+    for scene in scenes {
+        let groups = (scene.1)()
+        render_scene(scene.0, groups)
+    }
+
+    println!("\ndone.")
+}

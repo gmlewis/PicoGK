@@ -3,5 +3,9 @@ id      = "github.com/gmlewis/picogk/ffi-gallery"
 version = "0.1.0"
 license = "Apache-2.0"
 
+[dependencies]
+"github.com/gmlewis/picogk/picogkffi-gos" = { path = "../../picogkffi" }
+"github.com/gmlewis/picogk/shapes" = { path = "../../picogkshapes" }
+
 [rust-bindings]
 picogkffi = { path = "../../picogkffi/picogkffi" }

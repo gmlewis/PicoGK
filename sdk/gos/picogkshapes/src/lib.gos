@@ -5,8 +5,9 @@
 // picogkffi FFI binding.
 
 use std::math
-use picogkffi::{Vec3, new_mesh, mesh_add_vertex, mesh_add_triangle, mesh_vertex_count, new_lattice, lattice_add_beam, voxels_from_lattice,
-    voxels_from_mesh, voxels_to_mesh, new_lattice, lattice_add_beam, voxels_from_lattice}
+use picogkffi::{Vec3, ColorFloat, Triangle, new_mesh, mesh_add_vertex, mesh_add_triangle,
+    mesh_vertex_count, mesh_triangle_count, mesh_get_vertex, mesh_get_triangle,
+    new_lattice, lattice_add_beam, voxels_from_lattice, voxels_from_mesh, voxels_to_mesh}
 
 // === Local Vec3 (avoids cross-module auto-json issues) ===
 
@@ -137,6 +138,19 @@ pub const COLOR_WARNING: RGB = RGB { r: 0.988235, g: 0.400000, b: 0.031373 }
 pub const COLOR_GREEN: RGB = RGB { r: 0.000000, g: 0.721569, b: 0.000000 }
 pub const COLOR_YELLOW: RGB = RGB { r: 0.988235, g: 0.847059, b: 0.031373 }
 pub const COLOR_GRAY: RGB = RGB { r: 0.741176, g: 0.741176, b: 0.741176 }
+pub const COLOR_BLUEBERRY: RGB = RGB { r: 0.309804, g: 0.050980, b: 0.749020 }
+pub const COLOR_LEMONGRASS: RGB = RGB { r: 0.721569, g: 0.878431, b: 0.192157 }
+pub const COLOR_ORCHID: RGB = RGB { r: 0.780392, g: 0.141176, b: 0.513725 }
+pub const COLOR_RUBY: RGB = RGB { r: 0.690196, g: 0.000000, b: 0.172549 }
+pub const COLOR_RACINGGREEN: RGB = RGB { r: 0.023529, g: 0.360784, b: 0.207843 }
+pub const COLOR_CRYSTAL: RGB = RGB { r: 0.047059, g: 0.756863, b: 0.968627 }
+pub const COLOR_BILLIE: RGB = RGB { r: 0.007843, g: 0.968627, b: 0.043137 }
+pub const COLOR_LAVENDER: RGB = RGB { r: 0.788235, g: 0.400000, b: 1.000000 }
+pub const COLOR_BUBBLEGUM: RGB = RGB { r: 1.000000, g: 0.400000, b: 0.807843 }
+
+pub fn to_ffi_color(c: RGB) -> ColorFloat {
+    ColorFloat { r: c.r, g: c.g, b: c.b, a: 1.0 }
+}
 
 // === Mesh building from grids ===
 
@@ -513,6 +527,532 @@ impl LatticePipe {
     pub fn to_voxels(&self) -> Result<i64, String> {
         let lat = self.to_lattice()?
         voxels_from_lattice(lat)
+    }
+}
+
+// === Frames (ported from frames.go) ===
+
+pub struct Frames {
+    pub spine: Vec<Vec3>,
+    pub local_x: Vec<Vec3>,
+    pub local_y: Vec<Vec3>,
+    pub local_z: Vec<Vec3>,
+}
+
+pub fn frames_extrude(length: f64, frame: LocalFrame, spacing: f64) -> Frames {
+    let mut n = (length / spacing).ceil() as i64
+    if n < 2 { n = 2 }
+    let mut pts: Vec<Vec3> = Vec::new()
+    for i in 0..=n {
+        let lr = i as f64 / n as f64
+        pts.push(v_add(frame.pos, v_mul(frame.local_z, length * lr)))
+    }
+    let mut lx: Vec<Vec3> = Vec::new()
+    let mut ly: Vec<Vec3> = Vec::new()
+    let mut lz: Vec<Vec3> = Vec::new()
+    for _ in 0..pts.len() {
+        lx.push(frame.local_x)
+        ly.push(frame.local_y)
+        lz.push(frame.local_z)
+    }
+    Frames { spine: pts, local_x: lx, local_y: ly, local_z: lz }
+}
+
+impl Frames {
+    pub fn frame_at(&self, lr: f64) -> LocalFrame {
+    let n = self.spine.len()
+    if n == 0 { return new_local_frame(V(0.0, 0.0, 0.0)) }
+    if lr <= 0.0 {
+        return new_local_frame_xyz(self.spine[0], self.local_z[0], self.local_x[0])
+    }
+    if lr >= 1.0 {
+        return new_local_frame_xyz(self.spine[n - 1], self.local_z[n - 1], self.local_x[n - 1])
+    }
+    let t = lr * (n - 1) as f64
+    let i = t as i64
+    let frac = t - i as f64
+    let ii = if i >= n as i64 - 1 { n as i64 - 2 } else { i }
+    let f = if i >= n as i64 - 1 { 1.0 } else { frac }
+    let pos = lerp(self.spine[ii as i64], self.spine[ii as i64 + 1], f)
+    let z = v_normalized(lerp(self.local_z[ii as i64], self.local_z[ii as i64 + 1], f))
+    let x = v_normalized(lerp(self.local_x[ii as i64], self.local_x[ii as i64 + 1], f))
+    new_local_frame_xyz(pos, z, x)
+    }
+}
+
+fn align_with_target_x(local_z: Vec3, target_x: Vec3) -> Vec3 {
+    let mut best_dot = -2.0
+    let mut best_dir = orthogonal_dir(local_z)
+    let mut deg = 0.0
+    while deg < 180.0 {
+        let angle = deg * math::PI / 180.0
+        let dir = rotate_around_axis(orthogonal_dir(local_z), local_z, angle)
+        let d = v_dot(dir, target_x)
+        if d > best_dot {
+            best_dot = d
+            best_dir = dir
+        }
+        deg += 0.01
+    }
+    if v_dot(best_dir, target_x) < 0.0 {
+        best_dir = v_mul(best_dir, -1.0)
+    }
+    v_normalized(best_dir)
+}
+
+pub fn frames_aligned_to_x(points: Vec<Vec3>, target_x: Vec3) -> Frames {
+    let n = points.len()
+    let mut lx: Vec<Vec3> = Vec::new()
+    let mut ly: Vec<Vec3> = Vec::new()
+    let mut lz: Vec<Vec3> = Vec::new()
+    for i in 0..n {
+        let tangent = if i == 0 {
+            v_sub(points[1], points[0])
+        } else if i == n - 1 {
+            v_sub(points[n - 1], points[n - 2])
+        } else {
+            v_sub(points[i + 1], points[i - 1])
+        }
+        lz.push(v_normalized(tangent))
+    }
+    let mut last_x = target_x
+    for i in 0..n {
+        lx.push(align_with_target_x(lz[i], last_x))
+        last_x = lx[i]
+        ly.push(v_normalized(v_cross(lz[i], lx[i])))
+    }
+    Frames { spine: points, local_x: lx, local_y: ly, local_z: lz }
+}
+
+// === ControlPointSpline (Catmull-Rom, ported from splines.go) ===
+
+pub struct ControlPointSpline {
+    ctrl: Vec<Vec3>,
+    resolution: i64,
+}
+
+pub fn new_control_point_spline(ctrl: Vec<Vec3>, resolution: i64, closed: bool) -> ControlPointSpline {
+    let mut pts = ctrl
+    if closed {
+        if pts.len() > 1 {
+            if v_len(v_sub(pts[0], pts[pts.len() - 1])) < 1e-7 {
+                pts.pop()
+            }
+        }
+        let n_before = pts.len()
+        for i in 0..(n_before - 1) {
+            pts.push(pts[i])
+        }
+    }
+    ControlPointSpline { ctrl: pts, resolution }
+}
+
+impl ControlPointSpline {
+    pub fn points(&self, n: i64) -> Vec<Vec3> {
+    let mut out: Vec<Vec3> = Vec::new()
+    let m = self.ctrl.len()
+    if m < 2 {
+        for _ in 0..n { out.push(self.ctrl[0]) }
+        return out
+    }
+    let segs = m - 1
+    let per = n / segs as i64
+    for s in 0..segs {
+        let p0 = self.ctrl[if s == 0 { 0 } else { s - 1 }]
+        let p1 = self.ctrl[s]
+        let p2 = self.ctrl[s + 1]
+        let p3 = self.ctrl[if s + 2 >= m { m - 1 } else { s + 2 }]
+        let count = if s == segs - 1 { n - s as i64 * per } else { per }
+        for k in 0..count {
+            let t = k as f64 / count as f64
+            let t2 = t * t
+            let t3 = t2 * t
+            let x = 0.5 * ((2.0 * p1.x) + (-p0.x + p2.x) * t + (2.0 * p0.x - 5.0 * p1.x + 4.0 * p2.x - p3.x) * t2 + (-p0.x + 3.0 * p1.x - 3.0 * p2.x + p3.x) * t3)
+            let y = 0.5 * ((2.0 * p1.y) + (-p0.y + p2.y) * t + (2.0 * p0.y - 5.0 * p1.y + 4.0 * p2.y - p3.y) * t2 + (-p0.y + 3.0 * p1.y - 3.0 * p2.y + p3.y) * t3)
+            let z = 0.5 * ((2.0 * p1.z) + (-p0.z + p2.z) * t + (2.0 * p0.z - 5.0 * p1.z + 4.0 * p2.z - p3.z) * t2 + (-p0.z + 3.0 * p1.z - 3.0 * p2.z + p3.z) * t3)
+            out.push(V(x, y, z))
+        }
+    }
+    out
+    }
+}
+
+// === Lens (ported from shapes.go) ===
+
+pub struct Lens {
+    frame: LocalFrame,
+    height: f64,
+    inner_radius: f64,
+    outer_radius: f64,
+    lower: SurfaceModulation,
+    upper: SurfaceModulation,
+    radial_steps: i64,
+    polar_steps: i64,
+    height_steps: i64,
+}
+
+pub fn new_lens(frame: LocalFrame, height: f64, inner_radius: f64, outer_radius: f64) -> Lens {
+    Lens {
+        frame, height, inner_radius, outer_radius,
+        lower: surf_mod_constant(0.0),
+        upper: surf_mod_constant(height),
+        radial_steps: 5, polar_steps: 360, height_steps: 5,
+    }
+}
+
+    pub fn with_lower(&self, m: SurfaceModulation) -> Lens {
+    Lens { lower: m, radial_steps: 500, ..self }
+}
+
+    pub fn with_upper(&self, m: SurfaceModulation) -> Lens {
+    Lens { upper: m, radial_steps: 500, ..self }
+}
+
+impl Lens {
+    fn lens_surface(&self, h: f64, phi_r: Vec<f64>, rad_r: Vec<f64>) -> Vec<Vec<Vec3>> {
+        let nphi = phi_r.len()
+        let nrad = rad_r.len()
+        let mut grid = make_grid(nphi as i64, nrad as i64)
+        for i in 0..nphi {
+            let phi = 2.0 * math::PI * phi_r[i]
+            for j in 0..nrad {
+                let radius = (self.outer_radius - self.inner_radius) * rad_r[j] + self.inner_radius
+                let lower = surf_mod_call(self.lower, phi, rad_r[j])
+                let upper = surf_mod_call(self.upper, phi, rad_r[j])
+                let z = lower + h * (upper - lower)
+                grid[i][j] = v_add(v_add(v_add(self.frame.pos, v_mul(self.frame.local_x, radius * math::cos(phi))), v_mul(self.frame.local_y, radius * math::sin(phi))), v_mul(self.frame.local_z, z))
+            }
+        }
+        grid
+    }
+
+    fn lens_mantle_surface(&self, hr: Vec<f64>, p: Vec<f64>, rad_r: f64) -> Vec<Vec<Vec3>> {
+        let nh = hr.len()
+        let np = p.len()
+        let mut grid = make_grid(nh as i64, np as i64)
+        for i in 0..nh {
+            for j in 0..np {
+                let phi = 2.0 * math::PI * p[j]
+                let radius = (self.outer_radius - self.inner_radius) * rad_r + self.inner_radius
+                let lower = surf_mod_call(self.lower, phi, rad_r)
+                let upper = surf_mod_call(self.upper, phi, rad_r)
+                let z = lower + hr[i] * (upper - lower)
+                grid[i][j] = v_add(v_add(v_add(self.frame.pos, v_mul(self.frame.local_x, radius * math::cos(phi))), v_mul(self.frame.local_y, radius * math::sin(phi))), v_mul(self.frame.local_z, z))
+            }
+        }
+        grid
+    }
+
+    pub fn to_mesh(&self) -> Result<i64, String> {
+        let smb = new_surface_mesh_builder()
+        let p = arange(self.polar_steps)
+        let rr = arange(self.radial_steps)
+        let hr = arange(self.height_steps)
+        let smb = smb.add(self.lens_surface(1.0, p.clone(), rr.clone()), false)
+        let smb = smb.add(self.lens_surface(0.0, p.clone(), rr.clone()), true)
+        let smb = smb.add(self.lens_mantle_surface(hr.clone(), p.clone(), 0.0), false)
+        let smb = smb.add(self.lens_mantle_surface(hr.clone(), p.clone(), 1.0), true)
+        Ok(smb.build())
+    }
+
+    pub fn to_voxels(&self) -> Result<i64, String> {
+        let mesh = self.to_mesh()?
+        to_voxels(mesh)
+    }
+}
+
+// === Pipe (ported from shapes.go) ===
+
+pub struct Pipe {
+    frame: LocalFrame,
+    length: f64,
+    inner: SurfaceModulation,
+    outer: SurfaceModulation,
+    frames: Option<Frames>,
+    polar_steps: i64,
+    radial_steps: i64,
+    length_steps: i64,
+}
+
+pub fn new_pipe(frame: LocalFrame, length: f64, inner_radius: f64, outer_radius: f64) -> Pipe {
+    Pipe {
+        frame, length,
+        inner: surf_mod_constant(inner_radius),
+        outer: surf_mod_constant(outer_radius),
+        frames: None,
+        polar_steps: 360, radial_steps: 5, length_steps: 5,
+    }
+}
+
+    pub fn with_frames(&self, fs: Frames) -> Pipe {
+    Pipe { frames: Some(fs), length_steps: 500, ..self }
+}
+
+impl Pipe {
+    fn pipe_spine(&self, lr: f64) -> (Vec3, Vec3, Vec3) {
+        match &self.frames {
+            Some(fs) => {
+                let fr = fs.frame_at(lr)
+                (fr.pos, fr.local_x, fr.local_y)
+            }
+            None => {
+                let pos = v_add(self.frame.pos, v_mul(self.frame.local_z, self.length * lr))
+                (pos, self.frame.local_x, self.frame.local_y)
+            }
+        }
+    }
+
+    fn pipe_surface(&self, lrs: Vec<f64>, phi_rs: Vec<f64>, rad_rs: Vec<f64>) -> Vec<Vec<Vec3>> {
+        let nl = lrs.len()
+        let npp = phi_rs.len()
+        let nr = rad_rs.len()
+        let mut r0 = 1
+        let mut r1 = 1
+        let mut lr_axis = -1
+        let mut phi_axis = -1
+        let mut rad_axis = -1
+        if npp > 1 && nl > 1 {
+            phi_axis = 0; lr_axis = 1
+            r0 = npp; r1 = nl
+        } else if npp > 1 && nr > 1 {
+            phi_axis = 0; rad_axis = 1
+            r0 = npp; r1 = nr
+        } else if nl > 1 && nr > 1 {
+            lr_axis = 0; rad_axis = 1
+            r0 = nl; r1 = nr
+        } else if npp > 1 {
+            phi_axis = 0; r0 = npp
+        } else if nl > 1 {
+            lr_axis = 0; r0 = nl
+        } else if nr > 1 {
+            rad_axis = 0; r0 = nr
+        }
+        let mut grid = make_grid(r0 as i64, r1 as i64)
+        for i in 0..r0 {
+            for j in 0..r1 {
+                let lr_val = if lr_axis == 0 { lrs[if i < nl { i } else { nl - 1 }] } else if lr_axis == 1 { lrs[if j < nl { j } else { nl - 1 }] } else { lrs[0] }
+                let phi_val = if phi_axis == 0 { phi_rs[if i < npp { i } else { npp - 1 }] } else if phi_axis == 1 { phi_rs[if j < npp { j } else { npp - 1 }] } else { phi_rs[0] }
+                let rad_val = if rad_axis == 0 { rad_rs[if i < nr { i } else { nr - 1 }] } else if rad_axis == 1 { rad_rs[if j < nr { j } else { nr - 1 }] } else { rad_rs[0] }
+                let (sp, lx, ly) = self.pipe_spine(lr_val)
+                let phi = 2.0 * math::PI * phi_val
+                let outer = surf_mod_call(self.outer, phi, lr_val)
+                let inner = surf_mod_call(self.inner, phi, lr_val)
+                let radius = rad_val * (outer - inner) + inner
+                grid[i][j] = v_add(v_add(sp, v_mul(lx, radius * math::cos(phi))), v_mul(ly, radius * math::sin(phi)))
+            }
+        }
+        grid
+    }
+
+    pub fn to_mesh(&self) -> Result<i64, String> {
+        let smb = new_surface_mesh_builder()
+        let pr = arange(self.polar_steps)
+        let rr = arange(self.radial_steps)
+        let lr = arange(self.length_steps)
+        let lr_last = [lr[lr.len() - 1]].to_vec()
+        let lr_first = [lr[0]].to_vec()
+        let rad0 = [0.0].to_vec()
+        let rad1 = [1.0].to_vec()
+        let smb = smb.add(self.pipe_surface(lr_last, pr.clone(), rr.clone()), false)
+        let smb = smb.add(self.pipe_surface(lr_first, pr.clone(), rr.clone()), true)
+        let smb = smb.add(self.pipe_surface(lr.clone(), pr.clone(), rad0), false)
+        let smb = smb.add(self.pipe_surface(lr.clone(), pr.clone(), rad1), true)
+        Ok(smb.build())
+    }
+
+    pub fn to_voxels(&self) -> Result<i64, String> {
+        let mesh = self.to_mesh()?
+        to_voxels(mesh)
+    }
+}
+
+// === LatticeManifold (ported from implicits-lattice.go) ===
+
+pub struct LatticeManifold {
+    frame: LocalFrame,
+    length: f64,
+    radius: LineModulation,
+    max_overhang_angle: f64,
+    extend_both_sides: bool,
+    min_printable_radius: f64,
+    l_steps: i64,
+}
+
+pub fn new_lattice_manifold(frame: LocalFrame, length: f64, radius: f64, max_overhang_angle: f64) -> LatticeManifold {
+    LatticeManifold {
+        frame, length,
+        radius: line_mod_constant(radius),
+        max_overhang_angle,
+        extend_both_sides: false,
+        min_printable_radius: 0.1,
+        l_steps: 100,
+    }
+}
+
+    pub fn with_extend_both_sides(&self, b: bool) -> LatticeManifold {
+    LatticeManifold { extend_both_sides: b, ..self }
+}
+
+impl LatticeManifold {
+    fn spine_point(&self, lr: f64) -> Vec3 {
+        v_add(self.frame.pos, v_mul(self.frame.local_z, self.length * lr))
+    }
+
+    pub fn to_lattice(&self) -> Result<i64, String> {
+        let lat = new_lattice()?
+        let n = self.l_steps
+        let limit_angle = self.max_overhang_angle * math::PI / 180.0
+        let half_alpha = math::PI / 2.0 - limit_angle
+        let max_r = line_mod_call(self.radius, 0.0)
+        let r = max_r
+        let h = r * (1.0 - math::cos(half_alpha))
+        let s = 2.0 * r * math::sin(half_alpha)
+        let tip_length = math::tan(half_alpha) * (0.5 * s - self.min_printable_radius)
+        let world_z = V(0.0, 0.0, 1.0)
+        for i in 0..n {
+            let lr = i as f64 / n as f64
+            let pt = self.spine_point(lr)
+            let beam = line_mod_call(self.radius, lr)
+            lattice_add_beam(lat, pt, pt, beam, beam, true)
+            let mid = v_add(pt, v_mul(world_z, r - h))
+            let tip = v_add(mid, v_mul(world_z, tip_length))
+            lattice_add_beam(lat, mid, tip, 0.5 * s, self.min_printable_radius, false)
+            if self.extend_both_sides {
+                let mid_n = v_sub(pt, v_mul(world_z, r - h))
+                let tip_n = v_sub(mid_n, v_mul(world_z, tip_length))
+                lattice_add_beam(lat, mid_n, tip_n, 0.5 * s, self.min_printable_radius, false)
+            }
+        }
+        Ok(lat)
+    }
+
+    pub fn to_voxels(&self) -> Result<i64, String> {
+        let lat = self.to_lattice()?
+        voxels_from_lattice(lat)
+    }
+}
+
+// === ColorScale3D and SplitByOverhangAngle (ported from painter.go) ===
+
+pub struct ColorScale3D {
+    rgb_colors: Vec<RGB>,
+    min_value: f64,
+    max_value: f64,
+}
+
+pub fn new_color_scale_3d(spectrum: Vec<RGB>, min_value: f64, max_value: f64) -> ColorScale3D {
+    let n = 500
+    let mut rgb: Vec<RGB> = Vec::new()
+    let nc = spectrum.len()
+    for i in 0..n {
+        let t = i as f64 / (n - 1) as f64
+        let idx = t * (nc - 1) as f64
+        let lo = idx as i64
+        let lo2 = if lo >= nc as i64 - 1 { nc as i64 - 2 } else { lo }
+        let frac = idx - lo2 as f64
+        let c1 = spectrum[lo2 as i64]
+        let c2 = spectrum[lo2 as i64 + 1]
+        rgb.push(RGB {
+            r: c1.r + frac * (c2.r - c1.r),
+            g: c1.g + frac * (c2.g - c1.g),
+            b: c1.b + frac * (c2.b - c1.b),
+        })
+    }
+    ColorScale3D { rgb_colors: rgb, min_value, max_value }
+}
+
+impl ColorScale3D {
+    pub fn color(&self, value: f64) -> RGB {
+    let mut v = value
+    if v < self.min_value { v = self.min_value }
+    if v > self.max_value { v = self.max_value }
+    let ratio = (v - self.min_value) / (self.max_value - self.min_value)
+    let mut idx = (ratio * (self.rgb_colors.len() - 1) as f64) as i64
+    if idx < 0 { idx = 0 }
+    if idx >= self.rgb_colors.len() as i64 { idx = self.rgb_colors.len() as i64 - 1 }
+    let c = self.rgb_colors[idx]
+    RGB { r: clamp(c.r, 0.0, 1.0), g: clamp(c.g, 0.0, 1.0), b: clamp(c.b, 0.0, 1.0) }
+}
+
+pub fn rainbow_spectrum() -> Vec<RGB> {
+    [
+        RGB { r: 0.0, g: 0.0, b: 1.0 },
+        RGB { r: 0.0, g: 1.0, b: 0.0 },
+        RGB { r: 1.0, g: 1.0, b: 0.0 },
+        RGB { r: 1.0, g: 130.0 / 255.0, b: 0.0 },
+        RGB { r: 1.0, g: 0.0, b: 0.0 },
+    ]
+}
+
+pub fn split_by_overhang_angle(mesh: i64, scale: ColorScale3D, n_classes: i64) -> Vec<SceneGroup> {
+    let mut groups: Vec<SceneGroup> = Vec::new()
+    let nt = mesh_triangle_count(mesh)
+    let mut angles: Vec<f64> = Vec::new()
+    for i in 0..nt {
+        let t = mesh_get_triangle(mesh, i)
+        let a = mesh_get_vertex(mesh, t.a)
+        let b = mesh_get_vertex(mesh, t.b)
+        let c = mesh_get_vertex(mesh, t.c)
+        let nx = (a.y - b.y) * (c.z - b.z) - (a.z - b.z) * (c.y - b.y)
+        let ny = (a.z - b.z) * (c.x - b.x) - (a.x - b.x) * (c.z - b.z)
+        let nz = (a.x - b.x) * (c.y - b.y) - (a.y - b.y) * (c.x - b.x)
+        let nlen = math::sqrt(nx * nx + ny * ny + nz * nz)
+        let mut nxn = nx
+        let mut nyn = ny
+        let mut nzn = nz
+        if nlen > 0.0 {
+            nxn = nx / nlen
+            nyn = ny / nlen
+            nzn = nz / nlen
+        }
+        let dr = math::sqrt(nxn * nxn + nyn * nyn)
+        let dz = nzn.abs()
+        let mut angle = math::atan2(dz, dr) * 180.0 / math::PI
+        if angle > 90.0 { angle = 90.0 }
+        if angle < 0.0 { angle = 0.0 }
+        angles.push(angle)
+    }
+    let lo = scale.min_value
+    let hi = scale.max_value
+    for k in 0..n_classes {
+        let lo_k = lo + k as f64 * (hi - lo) / (n_classes - 1) as f64
+        let hi_k = lo + (k + 1) as f64 * (hi - lo) / (n_classes - 1) as f64
+        let mut sub_mesh_verts: Vec<Vec3> = Vec::new()
+        let mut sub_mesh_tris: Vec<Triangle> = Vec::new()
+        for i in 0..nt {
+            let include = angles[i as i64] >= lo_k && (angles[i as i64] < hi_k || k == n_classes - 1)
+            if include {
+                let t = mesh_get_triangle(mesh, i)
+                let a = mesh_get_vertex(mesh, t.a)
+                let b = mesh_get_vertex(mesh, t.b)
+                let c = mesh_get_vertex(mesh, t.c)
+                let base = sub_mesh_verts.len() as i64
+                sub_mesh_verts.push(a)
+                sub_mesh_verts.push(b)
+                sub_mesh_verts.push(c)
+                sub_mesh_tris.push(Triangle { a: base, b: base + 1, c: base + 2 })
+            }
+        }
+        if !sub_mesh_tris.is_empty() {
+            let sub_mesh = match new_mesh() {
+                Ok(m) => m,
+                Err(_) => continue
+            }
+            for v in sub_mesh_verts {
+                mesh_add_vertex(sub_mesh, v)
+            }
+            for tri in sub_mesh_tris {
+                mesh_add_triangle(sub_mesh, tri.a, tri.b, tri.c)
+            }
+            let color = scale.color(lo_k)
+            let vox = match voxels_from_mesh(sub_mesh) {
+                Ok(v) => v,
+                Err(_) => continue
+            }
+            groups.push(SceneGroup { voxels: vox, mesh: sub_mesh, color })
+        }
+    }
+    groups
     }
 }
 

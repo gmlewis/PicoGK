@@ -1,0 +1,35 @@
+site_name: PicoGK Gossamer SDK
+site_description: A Gossamer SDK for the PicoGK computational-geometry kernel
+repo_url: https://github.com/gmlewis/PicoGK
+docs_dir: docs
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - content.code.copy
+  palette:
+    - scheme: default
+      primary: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+
+nav:
+  - Home: index.md
+  - Gallery: gallery.md
+  - API reference: api.md

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Regenerate all gallery images for both the Go and MoonBit PicoGK SDKs.
+Regenerate all gallery images for the Go, MoonBit, and Gossamer PicoGK SDKs.
 
 This script:
   1. Runs the Go FFI shapekernel-gallery example to produce 16 gallery PNGs
@@ -9,21 +9,23 @@ This script:
   4. Runs the MoonBit shapekernel-gallery example to produce 16 gallery PNGs
   5. Runs the MoonBit viewer-demo example
   6. Runs the MoonBit visualize example
-  7. Compares Go vs MoonBit gallery images for visual similarity
-  8. Copies generated images into the docs/images/ directories
+  7. Runs the Gossamer ffi-gallery example to produce 16 gallery PNGs
+  8. Compares Go vs MoonBit and Go vs Gossamer gallery images for similarity
+  9. Copies generated images into the docs/images/ directories
 
-Both the Go and MoonBit SDKs use the newer in-process FFI bindings
-(picogkffi / gmlewis/picogkffi), which bind directly to the native
-PicoGK C++ runtime and render via the native OpenGL Viewer.
+All three SDKs use the in-process FFI bindings (picogkffi), which bind
+directly to the native PicoGK C++ runtime and render via the OpenGL Viewer.
 
 Requires:
   - The PicoGK native runtime (built under native/)
   - Go 1.22+ (go command on PATH)
   - MoonBit (moon command on PATH)
+  - Gossamer (gos command on PATH) for Gossamer gallery
   - Python 3 with Pillow (pip install Pillow) for image comparison
 
 Usage:
   python3 scripts/regenerate-gallery-images.py [--verbose]
+  python3 scripts/regenerate-gallery-images.py --gos-only
 """
 
 import argparse
@@ -37,8 +39,10 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 GO_SDK = REPO_ROOT / "sdk" / "go"
 MBT_SDK = REPO_ROOT / "sdk" / "mbt"
+GOS_SDK = REPO_ROOT / "sdk" / "gos"
 GO_GALLERY_DIR = GO_SDK / "examples" / "ffi-gallery"
 MBT_GALLERY_DIR = MBT_SDK / "examples" / "shapekernel-gallery"
+GOS_GALLERY_DIR = GOS_SDK / "examples" / "ffi-gallery"
 GO_VIEWER_DIR = GO_SDK / "examples" / "ffi-viewer-demo"
 GO_VISUALIZE_DIR = GO_SDK / "examples" / "ffi-visualize"
 MBT_VIEWER_DIR = MBT_SDK / "examples" / "viewer-demo"
@@ -46,6 +50,7 @@ MBT_VISUALIZE_DIR = MBT_SDK / "examples" / "visualize"
 
 GO_DOCS_IMAGES = GO_SDK / "docs" / "images"
 MBT_DOCS_IMAGES = MBT_SDK / "docs" / "images"
+GOS_DOCS_IMAGES = GOS_SDK / "docs" / "images"
 
 # All 16 gallery scene names
 GALLERY_SCENES = [
@@ -55,7 +60,7 @@ GALLERY_SCENES = [
 ]
 
 
-def run(cmd: list[str], cwd: Path, label: str, timeout: int = 300, verbose: bool = False) -> bool:
+def run(cmd: list[str], cwd: Path, label: str, timeout: int = 300, verbose: bool = False, env: dict | None = None) -> bool:
     """Run a command and return True on success."""
     print(f"\n{'='*60}")
     print(f"  {label}")
@@ -67,7 +72,7 @@ def run(cmd: list[str], cwd: Path, label: str, timeout: int = 300, verbose: bool
     try:
         result = subprocess.run(
             cmd, cwd=str(cwd), capture_output=True, text=True,
-            timeout=timeout,
+            timeout=timeout, env=env,
         )
     except subprocess.TimeoutExpired:
         print(f"  TIMEOUT after {timeout}s")
@@ -105,8 +110,8 @@ def check_files(directory: Path, expected: list[str], label: str) -> list[Path]:
     return found
 
 
-def compare_images(go_dir: Path, mbt_dir: Path, scenes: list[str]) -> None:
-    """Compare Go vs MoonBit gallery images using Pillow if available."""
+def compare_images(go_dir: Path, mbt_dir: Path, scenes: list[str], label: str = "Image Comparison") -> None:
+    """Compare two gallery image directories using Pillow if available."""
     try:
         from PIL import Image
         import struct
@@ -116,7 +121,7 @@ def compare_images(go_dir: Path, mbt_dir: Path, scenes: list[str]) -> None:
         return
 
     print(f"\n{'='*60}")
-    print(f"  Image Comparison: Go vs MoonBit Gallery")
+    print(f"  Image Comparison: {label}")
     print(f"{'='*60}")
 
     for scene in scenes:
@@ -182,18 +187,21 @@ def main():
     parser.add_argument("--verbose", action="store_true", help="Show full command output")
     parser.add_argument("--go-only", action="store_true", help="Only run Go examples")
     parser.add_argument("--mbt-only", action="store_true", help="Only run MoonBit examples")
+    parser.add_argument("--gos-only", action="store_true", help="Only run Gossamer examples")
     parser.add_argument("--no-copy", action="store_true", help="Don't copy images to docs dirs")
     parser.add_argument("--no-compare", action="store_true", help="Don't compare Go vs MoonBit images")
     args = parser.parse_args()
 
-    run_go = not args.mbt_only
-    run_mbt = not args.go_only
+    run_go = not args.mbt_only and not args.gos_only
+    run_mbt = not args.go_only and not args.gos_only
+    run_gos = not args.go_only and not args.mbt_only
 
     all_success = True
 
     # Output directories
     go_output = Path("/tmp/go-ffi-gallery")
     mbt_output = Path("/tmp/mbt-picogk-gallery")
+    gos_output = Path("/tmp/gos-ffi-gallery")
     go_viewer_output = Path("/tmp/go-picogkffi-viewer")
     go_visualize_output = Path("/tmp/go-picogkffi-visualize")
     mbt_viewer_output = Path("/tmp/mbt-picogk-viewer")
@@ -277,9 +285,32 @@ def main():
         all_success = all_success and ok
         check_files(mbt_visualize_output, ["slice_z0.png", "mesh_preview.png"], "MoonBit visualize PNGs")
 
+    # --- Gossamer examples ---
+    if run_gos:
+        print("\n" + "=" * 60)
+        print("  Gossamer SDK (FFI): Regenerating gallery images")
+        print("=" * 60)
+
+        gos_env = os.environ.copy()
+        gos_env["RUSTFLAGS"] = "-Awarnings"
+        ok = run(
+            ["gos", "run", "--no-jit", "."],
+            cwd=GOS_GALLERY_DIR,
+            label="Gossamer: ffi-gallery (16 scenes)",
+            timeout=900,
+            verbose=args.verbose,
+            env=gos_env,
+        )
+        all_success = all_success and ok
+        gos_files = check_files(gos_output, [f"{s}.png" for s in GALLERY_SCENES], "Gossamer gallery PNGs")
+
     # --- Compare Go vs MoonBit ---
     if run_go and run_mbt and not args.no_compare:
-        compare_images(go_output, mbt_output, GALLERY_SCENES)
+        compare_images(go_output, mbt_output, GALLERY_SCENES, "Go vs MoonBit Gallery")
+
+    # --- Compare Go vs Gossamer ---
+    if run_go and run_gos and not args.no_compare:
+        compare_images(go_output, gos_output, GALLERY_SCENES, "Go vs Gossamer Gallery")
 
     # --- Copy images to docs directories ---
     if not args.no_copy:
@@ -305,6 +336,10 @@ def main():
                 shutil.copy2(viewer_src, MBT_DOCS_IMAGES / "viewer_example.png")
                 print(f"  Copied viewer_demo.png -> docs/images/viewer_example.png")
 
+        if run_gos:
+            # Copy gallery images to Gossamer docs
+            copy_images(gos_output, GOS_DOCS_IMAGES / "gallery", GALLERY_SCENES, "Gossamer gallery")
+
     # --- Summary ---
     print("\n" + "=" * 60)
     print("  SUMMARY")
@@ -323,6 +358,8 @@ def main():
         print(f"  MoonBit gallery:  {mbt_output}/")
         print(f"  MoonBit viewer:   {mbt_viewer_output}/")
         print(f"  MoonBit visualize:{mbt_visualize_output}/")
+    if run_gos:
+        print(f"  Gossamer gallery: {gos_output}/")
 
     if not all_success:
         sys.exit(1)
