@@ -1,0 +1,177 @@
+// picogk: Gossamer SDK for the PicoGK MCP server.
+//
+// Launches the PicoGK MCP server as a subprocess and communicates
+// via JSON-RPC over stdio, matching the Go and MoonBit SDKs.
+//
+// Prerequisites:
+//   - The PicoGK MCP server binary at ~/.local/bin/picogk-mcp/PicoGK.Mcp
+
+use std::encoding::json
+use std::env
+use std::errors
+use std::process
+use std::strings
+use std::sync
+
+const PROTOCOL_VERSION: String = "2024-11-05"
+const DEFAULT_SERVER_BIN: String = "~/.local/bin/picogk-mcp/PicoGK.Mcp"
+
+// Client manages a connection to the PicoGK MCP server via stdio.
+//
+// Usage:
+//   let client = picogk::new_client()?
+//   defer client.close()
+//   let res = client.picogk_init(Some(0.5))?
+//   let sphere = client.create_sphere(0.0, 0.0, 0.0, 30.0, Some("body"))?
+pub struct Client {
+    child: process::Child,
+    msg_id: sync::AtomicI64,
+}
+
+// new_client launches the PicoGK MCP server and returns a Client.
+pub fn new_client() -> Result<Client, errors::Error> {
+    new_client_with("")
+}
+
+pub fn new_client_with(server_bin: String) -> Result<Client, errors::Error> {
+    let bin = if server_bin == "" {
+        expand_path(DEFAULT_SERVER_BIN)
+    } else {
+        expand_path(server_bin)
+    }
+    let c = Client {
+        child: process::spawn_piped(bin, [])?,
+        msg_id: sync::AtomicI64::new(0),
+    }
+    c.initialize()?
+    Ok(c)
+}
+
+impl Client {
+    pub fn close(&self) {
+        self.child.close_stdin()
+        self.child.kill()
+    }
+
+    fn next_id(&self) -> i64 {
+        self.msg_id.fetch_add(1) + 1
+    }
+
+    fn initialize(&self) -> Result<(), errors::Error> {
+        let req = build_rpc_request(self.next_id(), "initialize", init_params())
+        let _ = self.call_raw(req)?
+        let notif = json::Value::object([
+            ("jsonrpc", json::Value::String("2.0")),
+            ("method", json::Value::String("notifications/initialized")),
+        ])
+        self.child.write_stdin(json::render(notif) + "\n")
+        Ok(())
+    }
+
+    fn call_raw(&self, req: json::Value) -> Result<json::Value, errors::Error> {
+        self.child.write_stdin(json::render(req) + "\n")
+        match self.child.read_line() {
+            Some(line) => {
+                let line = strings::trim(line)
+                match json::parse(line) {
+                    Ok(v) => {
+                        if let Some(err) = json::get(&v, "error") {
+                            let mut code: i64 = 0
+                            if let Some(cv) = json::get(err, "code") {
+                                if let Some(n) = json::as_i64(cv) { code = n }
+                            }
+                            let mut msg = "unknown error"
+                            if let Some(mv) = json::get(err, "message") {
+                                if let Some(s) = json::as_str(mv) { msg = s }
+                            }
+                            return Err(errors::newf("server error [{}]: {}", code, msg))
+                        }
+                        Ok(v)
+                    },
+                    Err(e) => Err(errors::newf("json parse: {}", e)),
+                }
+            },
+            None => Err(errors::new("server closed stdout")),
+        }
+    }
+
+    pub fn call_tool(&self, tool_name: String, args: json::Value) -> Result<String, errors::Error> {
+        let params = json::Value::object([
+            ("name", json::Value::String(tool_name)),
+            ("arguments", args),
+        ])
+        let req = build_rpc_request(self.next_id(), "tools/call", params)
+        let result = self.call_raw(req)?
+        let res_obj = match json::get(&result, "result") {
+            Some(v) => v,
+            None => return Err(errors::new("missing result field")),
+        }
+        let content = match json::get(res_obj, "content") {
+            Some(v) => v,
+            None => return Err(errors::new("missing content field")),
+        }
+        let items = match json::as_array(content) {
+            Some(a) => a,
+            None => return Err(errors::new("content is not an array")),
+        }
+        let mut text = ""
+        for item in items {
+            if let Some(t) = json::get(item, "type") {
+                if json::as_str(t) == Some("text") {
+                    if let Some(txt) = json::get(item, "text") {
+                        if let Some(s) = json::as_str(txt) {
+                            text += s
+                        }
+                    }
+                }
+            }
+        }
+        let mut is_error = false
+        if let Some(v) = json::get(res_obj, "isError") {
+            if let Some(b) = json::as_bool(v) { is_error = b }
+        }
+        if is_error {
+            return Err(errors::newf("tool error: {}", text))
+        }
+        Ok(text)
+    }
+}
+
+fn build_rpc_request(id: i64, method: String, params: json::Value) -> json::Value {
+    json::Value::object([
+        ("jsonrpc", json::Value::String("2.0")),
+        ("id", json::Value::Int(id)),
+        ("method", json::Value::String(method)),
+        ("params", params),
+    ])
+}
+
+fn init_params() -> json::Value {
+    json::Value::object([
+        ("protocolVersion", json::Value::String(PROTOCOL_VERSION)),
+        ("capabilities", json::Value::object([])),
+        ("clientInfo", json::Value::object([
+            ("name", json::Value::String("picogk-gos-sdk")),
+            ("version", json::Value::String("1.0.0")),
+        ])),
+    ])
+}
+
+pub fn expand_path(path: String) -> String {
+    if let Some(rest) = strings::strip_prefix(path, "~") {
+        let home = env::home_dir().unwrap_or("")
+        home + rest
+    } else {
+        path
+    }
+}
+
+pub fn resolve_path(path: String) -> String {
+    let expanded = expand_path(path)
+    if expanded.starts_with("/") {
+        expanded
+    } else {
+        let cwd = env::current_dir().unwrap_or(".".to_string())
+        cwd + "/" + expanded
+    }
+}

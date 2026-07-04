@@ -1,5 +1,5 @@
 [project]
-id      = "github.com/gmlewis/picogk/picogk-gos"
+id      = "github.com/gmlewis/picogk/gos"
 version = "0.1.0"
 authors = ["Glenn Lewis"]
 license = "Apache-2.0"
