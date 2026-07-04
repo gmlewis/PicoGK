@@ -1,0 +1,322 @@
+// blender tools: all 26 Blender MCP tool methods.
+// Each method maps to one MCP tool, building JSON arguments
+// and returning the tool's text content.
+
+use std::encoding::json
+
+impl Client {
+    // === Execute ===
+
+    // execute_blender_code runs Python code in the connected Blender
+    // instance. Assign a JSON-serialisable dict to `result` to return
+    // data.
+    pub fn execute_blender_code(&self, code: String) -> Result<String, errors::Error> {
+        let args = json::Value::object([("code", json::Value::String(code))])
+        self.call_tool("execute_blender_code", args)
+    }
+
+    // execute_blender_code_for_cli runs Python code in a background
+    // Blender process, opening blend_file with `blender --background`.
+    pub fn execute_blender_code_for_cli(
+        &self,
+        blend_file: String,
+        code: String,
+    ) -> Result<String, errors::Error> {
+        let args = json::Value::object([
+            ("blend_file", json::Value::String(blend_file)),
+            ("code", json::Value::String(code)),
+        ])
+        self.call_tool("execute_blender_code_for_cli", args)
+    }
+
+    // === Blend File ===
+
+    // get_blendfile_summary_datablocks returns a summary of the blend
+    // file: data-block counts, active workspace, and render engine.
+    pub fn get_blendfile_summary_datablocks(&self) -> Result<String, errors::Error> {
+        self.call_tool("get_blendfile_summary_datablocks", json::Value::object([]))
+    }
+
+    // get_blendfile_summary_datablocks_for_cli returns a data-block
+    // summary by opening blend_file in background Blender.
+    pub fn get_blendfile_summary_datablocks_for_cli(
+        &self,
+        blend_file: String,
+    ) -> Result<String, errors::Error> {
+        let args = json::Value::object([("blend_file", json::Value::String(blend_file))])
+        self.call_tool("get_blendfile_summary_datablocks_for_cli", args)
+    }
+
+    // get_blendfile_summary_missing_files reports external file
+    // references that are missing from disk.
+    pub fn get_blendfile_summary_missing_files(&self) -> Result<String, errors::Error> {
+        self.call_tool("get_blendfile_summary_missing_files", json::Value::object([]))
+    }
+
+    // get_blendfile_summary_missing_files_for_cli reports missing file
+    // references by opening blend_file in background Blender.
+    pub fn get_blendfile_summary_missing_files_for_cli(
+        &self,
+        blend_file: String,
+    ) -> Result<String, errors::Error> {
+        let args = json::Value::object([("blend_file", json::Value::String(blend_file))])
+        self.call_tool("get_blendfile_summary_missing_files_for_cli", args)
+    }
+
+    // get_blendfile_summary_of_linked_libraries returns a tree of
+    // directly and indirectly linked library files.
+    pub fn get_blendfile_summary_of_linked_libraries(&self) -> Result<String, errors::Error> {
+        self.call_tool("get_blendfile_summary_of_linked_libraries", json::Value::object([]))
+    }
+
+    // get_blendfile_summary_of_linked_libraries_for_cli returns
+    // linked-library info by opening blend_file in background Blender.
+    pub fn get_blendfile_summary_of_linked_libraries_for_cli(
+        &self,
+        blend_file: String,
+    ) -> Result<String, errors::Error> {
+        let args = json::Value::object([("blend_file", json::Value::String(blend_file))])
+        self.call_tool("get_blendfile_summary_of_linked_libraries_for_cli", args)
+    }
+
+    // get_blendfile_summary_path_info gives simple/fast access to the
+    // blend file's path, save status, age, and backups.
+    pub fn get_blendfile_summary_path_info(&self) -> Result<String, errors::Error> {
+        self.call_tool("get_blendfile_summary_path_info", json::Value::object([]))
+    }
+
+    // get_blendfile_summary_path_info_for_cli returns path info by
+    // opening blend_file in background Blender.
+    pub fn get_blendfile_summary_path_info_for_cli(
+        &self,
+        blend_file: String,
+    ) -> Result<String, errors::Error> {
+        let args = json::Value::object([("blend_file", json::Value::String(blend_file))])
+        self.call_tool("get_blendfile_summary_path_info_for_cli", args)
+    }
+
+    // get_blendfile_summary_usage_guess guesses the primary use-cases
+    // of the current blend file (scored 0-100 with certainty).
+    pub fn get_blendfile_summary_usage_guess(&self) -> Result<String, errors::Error> {
+        self.call_tool("get_blendfile_summary_usage_guess", json::Value::object([]))
+    }
+
+    // get_blendfile_summary_usage_guess_for_cli guesses use-cases by
+    // opening blend_file in background Blender.
+    pub fn get_blendfile_summary_usage_guess_for_cli(
+        &self,
+        blend_file: String,
+    ) -> Result<String, errors::Error> {
+        let args = json::Value::object([("blend_file", json::Value::String(blend_file))])
+        self.call_tool("get_blendfile_summary_usage_guess_for_cli", args)
+    }
+
+    // === Objects ===
+
+    // get_object_detail_summary returns a structured summary of the
+    // object identified by name: type, transforms, parent, children,
+    // modifiers, constraints, materials, visibility, data-block name,
+    // and collections.
+    pub fn get_object_detail_summary(&self, name: String) -> Result<String, errors::Error> {
+        let args = json::Value::object([("name", json::Value::String(name))])
+        self.call_tool("get_object_detail_summary", args)
+    }
+
+    // get_objects_summary returns the scene's collection hierarchy and
+    // their objects.
+    pub fn get_objects_summary(&self) -> Result<String, errors::Error> {
+        self.call_tool("get_objects_summary", json::Value::object([]))
+    }
+
+    // === API Docs ===
+
+    // get_python_api_docs returns the Blender Python API docs for
+    // identifier, or lists modules matching a trailing-* discovery
+    // pattern.
+    pub fn get_python_api_docs(&self, identifier: String) -> Result<String, errors::Error> {
+        let args = json::Value::object([("identifier", json::Value::String(identifier))])
+        self.call_tool("get_python_api_docs", args)
+    }
+
+    // search_api_docs full-text searches the Blender Python API docs.
+    // max_results, context, and index are optional (pass None to omit).
+    pub fn search_api_docs(
+        &self,
+        query: String,
+        max_results: Option<i64>,
+        context: Option<i64>,
+        index: Option<i64>,
+    ) -> Result<String, errors::Error> {
+        let args = build_search_args(query, max_results, context, index)
+        self.call_tool("search_api_docs", args)
+    }
+
+    // === Screenshot ===
+
+    // get_screenshot_of_area_as_image takes a screenshot of a single
+    // Blender area and returns it as a PNG image. size_limit_in_bytes
+    // caps the image size; 0 uses the MCP message size limit.
+    pub fn get_screenshot_of_area_as_image(
+        &self,
+        area_ui_type: String,
+        size_limit_in_bytes: Option<i64>,
+    ) -> Result<String, errors::Error> {
+        let args = build_screenshot_area_args(area_ui_type, size_limit_in_bytes)
+        self.call_tool("get_screenshot_of_area_as_image", args)
+    }
+
+    // get_screenshot_of_window_as_image takes a screenshot of the
+    // entire Blender window and returns it as a PNG image.
+    pub fn get_screenshot_of_window_as_image(
+        &self,
+        size_limit_in_bytes: Option<i64>,
+    ) -> Result<String, errors::Error> {
+        let args = build_screenshot_window_args(size_limit_in_bytes)
+        self.call_tool("get_screenshot_of_window_as_image", args)
+    }
+
+    // get_screenshot_of_window_as_json returns a JSON description of
+    // the Blender window layout, areas, active object, and selection.
+    pub fn get_screenshot_of_window_as_json(&self) -> Result<String, errors::Error> {
+        self.call_tool("get_screenshot_of_window_as_json", json::Value::object([]))
+    }
+
+    // === Workspace ===
+
+    // jump_to_tab_by_name switches the active workspace tab to name.
+    pub fn jump_to_tab_by_name(&self, name: String) -> Result<String, errors::Error> {
+        let args = json::Value::object([("name", json::Value::String(name))])
+        self.call_tool("jump_to_tab_by_name", args)
+    }
+
+    // jump_to_tab_by_space_type switches to a workspace whose main area
+    // matches space_type. If allow_edits is true and no matching
+    // workspace exists, a new one is created by duplicating the
+    // current workspace.
+    pub fn jump_to_tab_by_space_type(
+        &self,
+        space_type: String,
+        allow_edits: Option<bool>,
+    ) -> Result<String, errors::Error> {
+        let args = build_jump_space_type_args(space_type, allow_edits)
+        self.call_tool("jump_to_tab_by_space_type", args)
+    }
+
+    // === Viewport ===
+
+    // jump_to_view3d_object_by_name moves the 3D viewport to focus on
+    // an object by name. If allow_edits is true the object may be
+    // un-hidden and its collections enabled to make it visible.
+    pub fn jump_to_view3d_object_by_name(
+        &self,
+        name: String,
+        allow_edits: Option<bool>,
+    ) -> Result<String, errors::Error> {
+        let args = build_jump_view3d_args(name, allow_edits)
+        self.call_tool("jump_to_view3d_object_by_name", args)
+    }
+
+    // jump_to_view3d_object_data_by_name moves the 3D viewport to the
+    // object whose data block matches name.
+    pub fn jump_to_view3d_object_data_by_name(
+        &self,
+        name: String,
+        allow_edits: Option<bool>,
+    ) -> Result<String, errors::Error> {
+        let args = build_jump_view3d_args(name, allow_edits)
+        self.call_tool("jump_to_view3d_object_data_by_name", args)
+    }
+
+    // === Render ===
+
+    // render_thumbnail_to_path renders a small, low-quality thumbnail
+    // to output_path (temporarily overrides settings).
+    pub fn render_thumbnail_to_path(&self, output_path: String) -> Result<String, errors::Error> {
+        let args = json::Value::object([("output_path", json::Value::String(output_path))])
+        self.call_tool("render_thumbnail_to_path", args)
+    }
+
+    // render_viewport_to_path renders the current scene to output_path
+    // using current render settings.
+    pub fn render_viewport_to_path(&self, output_path: String) -> Result<String, errors::Error> {
+        let args = json::Value::object([("output_path", json::Value::String(output_path))])
+        self.call_tool("render_viewport_to_path", args)
+    }
+
+    // === Manual Docs ===
+
+    // search_manual_docs full-text searches the Blender user manual.
+    // max_results, context, and index are optional (pass None to omit).
+    pub fn search_manual_docs(
+        &self,
+        query: String,
+        max_results: Option<i64>,
+        context: Option<i64>,
+        index: Option<i64>,
+    ) -> Result<String, errors::Error> {
+        let args = build_search_args(query, max_results, context, index)
+        self.call_tool("search_manual_docs", args)
+    }
+}
+
+// === Argument builders ===
+
+fn build_search_args(
+    query: String,
+    max_results: Option<i64>,
+    context: Option<i64>,
+    index: Option<i64>,
+) -> json::Value {
+    let mut obj = json::Value::object([("query", json::Value::String(query))])
+    if let Some(v) = max_results {
+        let _ = json::set(&mut obj, &"max_results", json::Value::Int(v))
+    }
+    if let Some(v) = context {
+        let _ = json::set(&mut obj, &"context", json::Value::Int(v))
+    }
+    if let Some(v) = index {
+        let _ = json::set(&mut obj, &"index", json::Value::Int(v))
+    }
+    obj
+}
+
+fn build_screenshot_area_args(
+    area_ui_type: String,
+    size_limit_in_bytes: Option<i64>,
+) -> json::Value {
+    let mut obj = json::Value::object([("area_ui_type", json::Value::String(area_ui_type))])
+    if let Some(v) = size_limit_in_bytes {
+        let _ = json::set(&mut obj, &"size_limit_in_bytes", json::Value::Int(v))
+    }
+    obj
+}
+
+fn build_screenshot_window_args(size_limit_in_bytes: Option<i64>) -> json::Value {
+    let mut obj = json::Value::object([])
+    if let Some(v) = size_limit_in_bytes {
+        let _ = json::set(&mut obj, &"size_limit_in_bytes", json::Value::Int(v))
+    }
+    obj
+}
+
+fn build_jump_space_type_args(
+    space_type: String,
+    allow_edits: Option<bool>,
+) -> json::Value {
+    let mut obj = json::Value::object([("space_type", json::Value::String(space_type))])
+    if let Some(v) = allow_edits {
+        let _ = json::set(&mut obj, &"allow_edits", json::Value::Bool(v))
+    }
+    obj
+}
+
+fn build_jump_view3d_args(
+    name: String,
+    allow_edits: Option<bool>,
+) -> json::Value {
+    let mut obj = json::Value::object([("name", json::Value::String(name))])
+    if let Some(v) = allow_edits {
+        let _ = json::set(&mut obj, &"allow_edits", json::Value::Bool(v))
+    }
+    obj
+}
