@@ -267,8 +267,8 @@ static int load_ibl_lighting(void* viewer) {
         snprintf(diffuse_path, sizeof(diffuse_path), "%s/Diffuse.dds", env_assets);
         snprintf(specular_path, sizeof(specular_path), "%s/Specular.dds", env_assets);
     } else {
-        // Default: look relative to the PicoGK repo root
-        const char* base = "/Users/glenn/src/github.com/gmlewis/PicoGK/sdk/mbt/picogkffi/_assets";
+        // Default: look relative to the executable / current directory
+        const char* base = "_assets";
         snprintf(diffuse_path, sizeof(diffuse_path), "%s/Diffuse.dds", base);
         snprintf(specular_path, sizeof(specular_path), "%s/Specular.dds", base);
     }

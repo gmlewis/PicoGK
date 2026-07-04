@@ -8,6 +8,4 @@ publish = false
 crate-type = ["rlib"]
 
 [dependencies]
-gossamer-binding = { path = "/Users/glenn/src/github.com/danpozmanter/gossamer/crates/gossamer-binding" }
-
-[build-dependencies]
+gossamer-binding = "0.24"

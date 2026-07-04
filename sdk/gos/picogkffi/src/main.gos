@@ -1,0 +1,36 @@
+// picogkffi FFI demo entry — test the native binding.
+// Run:  gos run .
+
+use picogkffi::{init, version, name, new_sphere, voxels_volume, voxels_to_mesh,
+    mesh_vertex_count, mesh_triangle_count, voxels_destroy, mesh_destroy, shutdown,
+    Vec3}
+
+fn main() {
+    match init(0.5) {
+        Ok(_) => println!("init OK"),
+        Err(e) => { eprintln!("init failed: {}", e); return }
+    }
+    println!("version: {}", version())
+    println!("name: {}", name())
+
+    let sphere = match new_sphere(Vec3 { x: 0.0, y: 0.0, z: 0.0 }, 30.0) {
+        Ok(h) => h,
+        Err(e) => { eprintln!("new_sphere failed: {}", e); return }
+    }
+    println!("sphere handle: {}", sphere)
+
+    let vol = voxels_volume(sphere)
+    println!("volume: {:.1}", vol)
+
+    let mesh = match voxels_to_mesh(sphere) {
+        Ok(h) => h,
+        Err(e) => { eprintln!("voxels_to_mesh failed: {}", e); return }
+    }
+    println!("mesh verts: {}", mesh_vertex_count(mesh))
+    println!("mesh tris: {}", mesh_triangle_count(mesh))
+
+    voxels_destroy(sphere)
+    mesh_destroy(mesh)
+    shutdown()
+    println!("done!")
+}

@@ -14,9 +14,11 @@ pub fn get_instance() -> Int64 {
 ///|
 fn do_init(vs : Double) -> Result[Unit, String] {
   // Try to find the PicoGK shared library.
-  // Check environment variable PICOGK_LIB first, then fall back to default path.
+  // Check environment variable PICOGK_LIB first, then fall back to
+  // a path relative to this package's source directory.
+  let default_path = "../../../native/osx-arm64/picogk.26.2.dylib"
   let lib_path = @env.get_env_var("PICOGK_LIB").unwrap_or(
-    "/Users/glenn/src/github.com/gmlewis/PicoGK/native/osx-arm64/picogk.26.2.dylib",
+    default_path,
   )
   let path_bytes = cstr(lib_path)
   let result = picogk_dlopen(path_bytes)
