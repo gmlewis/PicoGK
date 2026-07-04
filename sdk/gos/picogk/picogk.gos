@@ -26,16 +26,21 @@ const DEFAULT_SERVER_BIN: String = "~/.local/bin/picogk-mcp/PicoGK.Mcp"
 // Gossamer cannot maintain an interactive subprocess pipe, so all
 // requests are sent to the PicoGK server in a single pipeline run.
 //
+// The `do` method queues a call and records a label for printing.
+// After all calls are queued, `execute` runs them all and `print_results`
+// prints a summary. This mirrors the Go SDK's `do` / `doPrint` helpers.
+//
 // Usage:
 //   let mut client = picogk::new_client()
-//   client.picogk_init(Some(0.5))
-//   client.create_sphere(0.0, 0.0, 0.0, 30.0, Some("body"))
+//   client.do("Init", client.picogk_init(Some(0.5)))
+//   client.do("Sphere", client.create_sphere(0.0, 0.0, 0.0, 30.0, Some("body")))
 //   let results = client.execute()?
-//   // results[0] = init response, results[1] = sphere response
+//   client.print_results(results, true)  // verbose
 pub struct Client {
     server_bin: String,
     msg_id: sync::AtomicI64,
     requests: Vec<json::Value>,
+    labels: Vec<(i64, String)>,
 }
 
 // new_client returns a Client that will batch-call the PicoGK MCP server.
@@ -54,6 +59,7 @@ pub fn new_client_with(server_bin: String) -> Client {
         server_bin: bin,
         msg_id: sync::AtomicI64::new(0),
         requests: Vec::new(),
+        labels: Vec::new(),
     }
     c.initialize()
     c
@@ -174,6 +180,38 @@ impl Client {
         let req = build_rpc_request(id, "tools/call", params)
         self.requests.push(req)
         id
+    }
+
+    // do records a label for the given request id, so print_results
+    // can show a human-readable name for each tool call. Returns the
+    // same id, so it can be chained: client.do("Init", client.picogk_init(...))
+    pub fn do(&mut self, label: String, id: i64) -> i64 {
+        self.labels.push((id, label))
+        id
+    }
+
+    // print_results prints the outcome of every recorded tool call.
+    // If verbose is false, only failures are shown.
+    pub fn print_results(&self, results: HashMap<i64, String>, verbose: bool) {
+        for (id, label) in self.labels {
+            match results.get(&id) {
+                Some(text) => {
+                    if verbose {
+                        println!("  OK: {} -> {}", label, truncate_str(text, 80))
+                    }
+                },
+                None => println!("  MISSING: {} (id={})", label, id),
+            }
+        }
+    }
+}
+
+fn truncate_str(s: String, n: i64) -> String {
+    let s = strings::trim(s)
+    if s.len() <= n {
+        s
+    } else {
+        s.substring(0, n) + "..."
     }
 }
 
