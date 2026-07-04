@@ -9,3 +9,5 @@ crate-type = ["rlib"]
 
 [dependencies]
 gossamer-binding = "0.24"
+png = "0.17"
+

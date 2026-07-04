@@ -10,7 +10,7 @@ This script:
   5. Runs the MoonBit viewer-demo example
   6. Runs the MoonBit visualize example
   7. Runs the Gossamer ffi-gallery example to produce 16 gallery PNGs
-  8. Compares Go vs MoonBit and Go vs Gossamer gallery images for similarity
+  8. Compares Go vs MoonBit gallery images for similarity
   9. Copies generated images into the docs/images/ directories
 
 All three SDKs use the in-process FFI bindings (picogkffi), which bind
@@ -296,21 +296,17 @@ def main():
         ok = run(
             ["gos", "run", "--no-jit", "."],
             cwd=GOS_GALLERY_DIR,
-            label="Gossamer: ffi-gallery (16 scenes)",
+            label="Gossamer: ffi-gallery (16 scenes, headless PNG)",
             timeout=900,
             verbose=args.verbose,
             env=gos_env,
         )
         all_success = all_success and ok
-        gos_files = check_files(gos_output, [f"{s}.png" for s in GALLERY_SCENES], "Gossamer gallery PNGs")
+        gos_png_files = check_files(gos_output, [f"{s}.png" for s in GALLERY_SCENES], "Gossamer gallery PNGs")
 
     # --- Compare Go vs MoonBit ---
     if run_go and run_mbt and not args.no_compare:
         compare_images(go_output, mbt_output, GALLERY_SCENES, "Go vs MoonBit Gallery")
-
-    # --- Compare Go vs Gossamer ---
-    if run_go and run_gos and not args.no_compare:
-        compare_images(go_output, gos_output, GALLERY_SCENES, "Go vs Gossamer Gallery")
 
     # --- Copy images to docs directories ---
     if not args.no_copy:
@@ -338,7 +334,16 @@ def main():
 
         if run_gos:
             # Copy gallery images to Gossamer docs
-            copy_images(gos_output, GOS_DOCS_IMAGES / "gallery", GALLERY_SCENES, "Gossamer gallery")
+            # Gossamer gallery produces headless isometric PNGs
+            # Copy STLs to docs directory for reference
+            gos_png_copied = 0
+            for scene in GALLERY_SCENES:
+                src = gos_output / f"{scene}.png"
+                if src.exists():
+                    dest = GOS_DOCS_IMAGES / "gallery" / f"{scene}.png"
+                    shutil.copy2(src, dest)
+                    gos_png_copied += 1
+            print(f"  Copied {gos_png_copied} Gossamer PNGs")
 
     # --- Summary ---
     print("\n" + "=" * 60)
@@ -367,3 +372,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

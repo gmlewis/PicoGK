@@ -16,6 +16,7 @@
 
 mod sdf;
 mod viewer;
+mod render;
 
 use gossamer_binding::{register_module, Registry, FromGos, ToGos, GosStruct};
 
@@ -1264,6 +1265,48 @@ register_module!(
     fn viewer_remove_all_objects(handle: i64) -> () {
         let v = *VIEWERS.get(handle).unwrap() as *mut std::ffi::c_void;
         unsafe { viewer::Viewer_RemoveAllObjects(v) };
+    }
+
+    // === Headless software rendering (no OpenGL/Viewer needed) ===
+
+    fn render_to_image(handle: i64, path: String, width: i64, height: i64) -> () {
+        let h = match VOXELS.get(handle) { Ok(v) => *v, Err(_) => return };
+        let mesh_h = unsafe { Mesh_hCreateFromVoxels(get_instance(), h) };
+        if mesh_h == 0 { return; }
+        render::render_mesh_to_png(
+            mesh_h, &path,
+            width as u32, height as u32,
+            0xFF, 0xFF, 0xFF,  // white background
+            0x46, 0x82, 0xB4,  // steel blue
+        );
+        unsafe { Mesh_Destroy(get_instance(), mesh_h) };
+    }
+
+    fn render_to_image_colored(handle: i64, path: String, width: i64, height: i64,
+                                bg_r: i64, bg_g: i64, bg_b: i64,
+                                obj_r: i64, obj_g: i64, obj_b: i64) -> () {
+        let h = match VOXELS.get(handle) { Ok(v) => *v, Err(_) => return };
+        let mesh_h = unsafe { Mesh_hCreateFromVoxels(get_instance(), h) };
+        if mesh_h == 0 { return; }
+        render::render_mesh_to_png(
+            mesh_h, &path,
+            width as u32, height as u32,
+            bg_r as u8, bg_g as u8, bg_b as u8,
+            obj_r as u8, obj_g as u8, obj_b as u8,
+        );
+        unsafe { Mesh_Destroy(get_instance(), mesh_h) };
+    }
+
+    fn render_mesh_to_image(mesh_handle: i64, path: String, width: i64, height: i64,
+                             bg_r: i64, bg_g: i64, bg_b: i64,
+                             obj_r: i64, obj_g: i64, obj_b: i64) -> () {
+        let mh = match MESHES.get(mesh_handle) { Ok(v) => *v, Err(_) => return };
+        render::render_mesh_to_png(
+            mh, &path,
+            width as u32, height as u32,
+            bg_r as u8, bg_g as u8, bg_b as u8,
+            obj_r as u8, obj_g as u8, obj_b as u8,
+        );
     }
 
 );
