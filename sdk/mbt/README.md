@@ -32,10 +32,10 @@ Runnable example programs are in [`examples/`](examples/). See the
 ## Moon workspace
 
 The `moon.work` file at the root ties all packages together for local
-development. Run examples with `moon run . --target native` from their
-directory.
+development. Run examples with `moon run .` from their
+directory (all `moon.mod` files set `preferred_target = "native"`).
 
 ```bash
 cd sdk/mbt/examples/hello-picogk
-moon run . --target native
+moon run .
 ```
