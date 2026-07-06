@@ -6,11 +6,11 @@
 
 use std::math
 use picogkffi::{Vec3, ColorFloat, Triangle, new_mesh, mesh_add_vertex, mesh_add_triangle,
+
     mesh_vertex_count, mesh_triangle_count, mesh_get_vertex, mesh_get_triangle,
     new_lattice, lattice_add_beam, voxels_from_lattice, voxels_from_mesh, voxels_to_mesh}
 
 // === Local Vec3 (avoids cross-module auto-json issues) ===
-
 
 
 // === Vec3 helpers ===
@@ -46,8 +46,8 @@ pub fn rotate_around_axis(v: Vec3, axis: Vec3, angle: f64) -> Vec3 {
     let dot = v_dot(v, n)
     let cross = v_cross(n, v)
     V(v.x * c + cross.x * s + n.x * dot * (1.0 - c),
-      v.y * c + cross.y * s + n.y * dot * (1.0 - c),
-      v.z * c + cross.z * s + n.z * dot * (1.0 - c))
+        v.y * c + cross.y * s + n.y * dot * (1.0 - c),
+        v.z * c + cross.z * s + n.z * dot * (1.0 - c))
 }
 
 // === LocalFrame ===
@@ -197,39 +197,39 @@ pub fn new_surface_mesh_builder() -> SurfaceMeshBuilder {
 
 impl SurfaceMeshBuilder {
     pub fn add(&self, grid: Vec<Vec<Vec3>>, flip: bool) -> SurfaceMeshBuilder {
-    let a = grid.len()
-    if a < 2 { return *self }
-    let b = grid[0].len()
-    if b < 2 { return *self }
-    for i in 0..(a - 1) {
-        for j in 0..(b - 1) {
-            let p0 = grid[i][j]
-            let p1 = grid[i][j + 1]
-            let p2 = grid[i + 1][j + 1]
-            let p3 = grid[i + 1][j]
-            if flip {
-                let ia = mesh_add_vertex(self.mesh, p0)
-                let ib = mesh_add_vertex(self.mesh, p2)
-                let ic = mesh_add_vertex(self.mesh, p1)
-                let _ = mesh_add_triangle(self.mesh, ia, ib, ic)
-                let ia2 = mesh_add_vertex(self.mesh, p0)
-                let ib2 = mesh_add_vertex(self.mesh, p3)
-                let ic2 = mesh_add_vertex(self.mesh, p2)
-                let _ = mesh_add_triangle(self.mesh, ia2, ib2, ic2)
-            } else {
-                let ia = mesh_add_vertex(self.mesh, p0)
-                let ib = mesh_add_vertex(self.mesh, p1)
-                let ic = mesh_add_vertex(self.mesh, p2)
-                let _ = mesh_add_triangle(self.mesh, ia, ib, ic)
-                let ia2 = mesh_add_vertex(self.mesh, p0)
-                let ib2 = mesh_add_vertex(self.mesh, p2)
-                let ic2 = mesh_add_vertex(self.mesh, p3)
-                let _ = mesh_add_triangle(self.mesh, ia2, ib2, ic2)
+        let a = grid.len()
+        if a < 2 { return *self }
+        let b = grid[0].len()
+        if b < 2 { return *self }
+        for i in 0..(a - 1) {
+            for j in 0..(b - 1) {
+                let p0 = grid[i][j]
+                let p1 = grid[i][j + 1]
+                let p2 = grid[i + 1][j + 1]
+                let p3 = grid[i + 1][j]
+                if flip {
+                    let ia = mesh_add_vertex(self.mesh, p0)
+                    let ib = mesh_add_vertex(self.mesh, p2)
+                    let ic = mesh_add_vertex(self.mesh, p1)
+                    let _ = mesh_add_triangle(self.mesh, ia, ib, ic)
+                    let ia2 = mesh_add_vertex(self.mesh, p0)
+                    let ib2 = mesh_add_vertex(self.mesh, p3)
+                    let ic2 = mesh_add_vertex(self.mesh, p2)
+                    let _ = mesh_add_triangle(self.mesh, ia2, ib2, ic2)
+                } else {
+                    let ia = mesh_add_vertex(self.mesh, p0)
+                    let ib = mesh_add_vertex(self.mesh, p1)
+                    let ic = mesh_add_vertex(self.mesh, p2)
+                    let _ = mesh_add_triangle(self.mesh, ia, ib, ic)
+                    let ia2 = mesh_add_vertex(self.mesh, p0)
+                    let ib2 = mesh_add_vertex(self.mesh, p2)
+                    let ic2 = mesh_add_vertex(self.mesh, p3)
+                    let _ = mesh_add_triangle(self.mesh, ia2, ib2, ic2)
+                }
             }
         }
+        *self
     }
-    *self
-}
 
     pub fn build(&self) -> i64 { self.mesh }
 }
@@ -281,30 +281,30 @@ pub fn new_sphere_shape_const(frame: LocalFrame, radius: f64) -> Sphere {
 
 impl Sphere {
     pub fn with_azim_steps(&self, n: i64) -> Sphere {
-    Sphere { azim_steps: n, ..self }
-}
-
-pub fn with_polar_steps(&self, n: i64) -> Sphere {
-    Sphere { polar_steps: n, ..self }
-}
-
-pub fn to_mesh(&self) -> Result<i64, String> {
-    let a = self.azim_steps
-    let p = self.polar_steps + 1
-    let mut grid = make_grid(a, p)
-    for i in 0..a {
-        let theta = math::PI * i as f64 / (a - 1) as f64
-        for j in 0..p {
-            let phi = 2.0 * math::PI * (j as f64 - 1.0) / (self.polar_steps - 1) as f64
-            let r = surf_mod_call(self.radius, phi, theta)
-            let x = r * math::cos(phi) * math::sin(theta)
-            let y = r * math::sin(phi) * math::sin(theta)
-            let z = r * math::cos(theta)
-            grid[i][j] = frame_point_to_world(self.frame, V(x, y, z))
-        }
+        Sphere { azim_steps: n, ..self }
     }
-    quad_grid_to_mesh(grid)
-}
+
+    pub fn with_polar_steps(&self, n: i64) -> Sphere {
+        Sphere { polar_steps: n, ..self }
+    }
+
+    pub fn to_mesh(&self) -> Result<i64, String> {
+        let a = self.azim_steps
+        let p = self.polar_steps + 1
+        let mut grid = make_grid(a, p)
+        for i in 0..a {
+            let theta = math::PI * i as f64 / (a - 1) as f64
+            for j in 0..p {
+                let phi = 2.0 * math::PI * (j as f64 - 1.0) / (self.polar_steps - 1) as f64
+                let r = surf_mod_call(self.radius, phi, theta)
+                let x = r * math::cos(phi) * math::sin(theta)
+                let y = r * math::sin(phi) * math::sin(theta)
+                let z = r * math::cos(theta)
+                grid[i][j] = frame_point_to_world(self.frame, V(x, y, z))
+            }
+        }
+        quad_grid_to_mesh(grid)
+    }
 
     pub fn to_voxels(&self) -> Result<i64, String> {
         let mesh = self.to_mesh()?
@@ -343,40 +343,40 @@ pub fn new_box_mod(frame: LocalFrame, length: f64, width: LineModulation, depth:
 
 impl Box {
     pub fn to_mesh(&self) -> Result<i64, String> {
-    let nw = self.w_steps
-    let nd = self.d_steps
-    let nl = self.l_steps
-    let mut w: Vec<f64> = Vec::new()
-    for v in arange(nw) { w.push(2.0 * v - 1.0) }
-    let mut d: Vec<f64> = Vec::new()
-    for v in arange(nd) { d.push(2.0 * v - 1.0) }
-    let lr = arange(nl)
-    let smb = new_surface_mesh_builder()
-    // 6 faces (simplified — top, bottom, 4 sides)
-    // Top face
-    let grid_top = self.box_surface_grid(w, d, 1.0)
-    let smb = smb.add(grid_top, true)
-    // Bottom face
-    let grid_bot = self.box_surface_grid(w, d, 0.0)
-    let smb = smb.add(grid_bot, false)
-    // For simplicity, skip the 4 side faces (they're degenerate for a plain box)
-    Ok(smb.build())
-}
-
-fn box_surface_grid(&self, w_r: Vec<f64>, d_r: Vec<f64>, lr_val: f64) -> Vec<Vec<Vec3>> {
-    let r0 = w_r.len()
-    let r1 = d_r.len()
-    let mut grid = make_grid(r0 as i64, r1 as i64)
-    let pos = v_add(self.frame.pos, v_mul(self.frame.local_z, self.length * lr_val))
-    for i in 0..r0 {
-        for j in 0..r1 {
-            let wm = line_mod_call(self.width, lr_val) * 0.5 * w_r[i]
-            let dm = line_mod_call(self.depth, lr_val) * 0.5 * d_r[j]
-            grid[i as i64][j as i64] = v_add(v_add(pos, v_mul(self.frame.local_x, wm)), v_mul(self.frame.local_y, dm))
-        }
+        let nw = self.w_steps
+        let nd = self.d_steps
+        let nl = self.l_steps
+        let mut w: Vec<f64> = Vec::new()
+        for v in arange(nw) { w.push(2.0 * v - 1.0) }
+        let mut d: Vec<f64> = Vec::new()
+        for v in arange(nd) { d.push(2.0 * v - 1.0) }
+        let lr = arange(nl)
+        let smb = new_surface_mesh_builder()
+        // 6 faces (simplified — top, bottom, 4 sides)
+        // Top face
+        let grid_top = self.box_surface_grid(w, d, 1.0)
+        let smb = smb.add(grid_top, true)
+        // Bottom face
+        let grid_bot = self.box_surface_grid(w, d, 0.0)
+        let smb = smb.add(grid_bot, false)
+        // For simplicity, skip the 4 side faces (they're degenerate for a plain box)
+        Ok(smb.build())
     }
-    grid
-}
+
+    fn box_surface_grid(&self, w_r: Vec<f64>, d_r: Vec<f64>, lr_val: f64) -> Vec<Vec<Vec3>> {
+        let r0 = w_r.len()
+        let r1 = d_r.len()
+        let mut grid = make_grid(r0 as i64, r1 as i64)
+        let pos = v_add(self.frame.pos, v_mul(self.frame.local_z, self.length * lr_val))
+        for i in 0..r0 {
+            for j in 0..r1 {
+                let wm = line_mod_call(self.width, lr_val) * 0.5 * w_r[i]
+                let dm = line_mod_call(self.depth, lr_val) * 0.5 * d_r[j]
+                grid[i as i64][j as i64] = v_add(v_add(pos, v_mul(self.frame.local_x, wm)), v_mul(self.frame.local_y, dm))
+            }
+        }
+        grid
+    }
 
     pub fn to_voxels(&self) -> Result<i64, String> {
         let mesh = self.to_mesh()?
@@ -404,47 +404,47 @@ pub fn new_cylinder_const(frame: LocalFrame, length: f64, radius: f64) -> Cylind
 
 impl Cylinder {
     pub fn to_mesh(&self) -> Result<i64, String> {
-    let smb = new_surface_mesh_builder()
-    let nl = self.length_steps
-    let l_ratios = arange(nl + 1)
-    let lx = self.frame.local_x
-    let ly = self.frame.local_y
-    let spine = |lr: f64| v_add(self.frame.pos, v_mul(self.frame.local_z, self.length * lr))
-    // Top cap
-    let mut grid_top = make_grid(self.polar_steps, self.radial_steps + 1)
-    for i in 0..self.polar_steps {
-        let phi = 2.0 * math::PI * i as f64 / (self.polar_steps - 1) as f64
-        for j in 0..(self.radial_steps + 1) {
-            let rr = j as f64 / self.radial_steps as f64
-            let r = rr * surf_mod_call(self.radius, phi, 1.0)
-            grid_top[i][j] = v_add(v_add(spine(1.0), v_mul(lx, r * math::cos(phi))), v_mul(ly, r * math::sin(phi)))
+        let smb = new_surface_mesh_builder()
+        let nl = self.length_steps
+        let l_ratios = arange(nl + 1)
+        let lx = self.frame.local_x
+        let ly = self.frame.local_y
+        let spine = |lr: f64| v_add(self.frame.pos, v_mul(self.frame.local_z, self.length * lr))
+        // Top cap
+        let mut grid_top = make_grid(self.polar_steps, self.radial_steps + 1)
+        for i in 0..self.polar_steps {
+            let phi = 2.0 * math::PI * i as f64 / (self.polar_steps - 1) as f64
+            for j in 0..(self.radial_steps + 1) {
+                let rr = j as f64 / self.radial_steps as f64
+                let r = rr * surf_mod_call(self.radius, phi, 1.0)
+                grid_top[i][j] = v_add(v_add(spine(1.0), v_mul(lx, r * math::cos(phi))), v_mul(ly, r * math::sin(phi)))
+            }
         }
-    }
-    let smb = smb.add(grid_top, false)
-    // Bottom cap
-    let mut grid_bot = make_grid(self.polar_steps, self.radial_steps + 1)
-    for i in 0..self.polar_steps {
-        let phi = 2.0 * math::PI * i as f64 / (self.polar_steps - 1) as f64
-        for j in 0..(self.radial_steps + 1) {
-            let rr = j as f64 / self.radial_steps as f64
-            let r = rr * surf_mod_call(self.radius, phi, 0.0)
-            grid_bot[i][j] = v_add(v_add(spine(0.0), v_mul(lx, r * math::cos(phi))), v_mul(ly, r * math::sin(phi)))
+        let smb = smb.add(grid_top, false)
+        // Bottom cap
+        let mut grid_bot = make_grid(self.polar_steps, self.radial_steps + 1)
+        for i in 0..self.polar_steps {
+            let phi = 2.0 * math::PI * i as f64 / (self.polar_steps - 1) as f64
+            for j in 0..(self.radial_steps + 1) {
+                let rr = j as f64 / self.radial_steps as f64
+                let r = rr * surf_mod_call(self.radius, phi, 0.0)
+                grid_bot[i][j] = v_add(v_add(spine(0.0), v_mul(lx, r * math::cos(phi))), v_mul(ly, r * math::sin(phi)))
+            }
         }
-    }
-    let smb = smb.add(grid_bot, true)
-    // Outer mantle
-    let mut grid_mantle = make_grid(self.polar_steps, nl + 1)
-    for i in 0..self.polar_steps {
-        let phi = 2.0 * math::PI * i as f64 / (self.polar_steps - 1) as f64
-        for j in 0..(nl + 1) {
-            let lr = l_ratios[j as i64]
-            let r = surf_mod_call(self.radius, phi, lr)
-            grid_mantle[i][j as i64] = v_add(v_add(spine(lr), v_mul(lx, r * math::cos(phi))), v_mul(ly, r * math::sin(phi)))
+        let smb = smb.add(grid_bot, true)
+        // Outer mantle
+        let mut grid_mantle = make_grid(self.polar_steps, nl + 1)
+        for i in 0..self.polar_steps {
+            let phi = 2.0 * math::PI * i as f64 / (self.polar_steps - 1) as f64
+            for j in 0..(nl + 1) {
+                let lr = l_ratios[j as i64]
+                let r = surf_mod_call(self.radius, phi, lr)
+                grid_mantle[i][j as i64] = v_add(v_add(spine(lr), v_mul(lx, r * math::cos(phi))), v_mul(ly, r * math::sin(phi)))
+            }
         }
+        let smb = smb.add(grid_mantle, true)
+        Ok(smb.build())
     }
-    let smb = smb.add(grid_mantle, true)
-    Ok(smb.build())
-}
 
     pub fn to_voxels(&self) -> Result<i64, String> {
         let mesh = self.to_mesh()?
@@ -473,25 +473,25 @@ pub fn new_ring(frame: LocalFrame, ring_radius: f64, radius: f64) -> Ring {
 
 impl Ring {
     pub fn to_mesh(&self) -> Result<i64, String> {
-    let n_a = self.radial_steps + 1
-    let n_p = self.polar_steps
-    let mut grid = make_grid(n_a, n_p)
-    for i in 0..n_a {
-        let a = if i == 0 { 1.0 } else { i as f64 / (self.radial_steps - 1) as f64 }
-        let alpha = 2.0 * math::PI * a
-        let spine = v_add(v_add(self.frame.pos, v_mul(self.frame.local_x, self.ring_radius * math::cos(alpha))), v_mul(self.frame.local_y, self.ring_radius * math::sin(alpha)))
-        let local_x = v_safe_normalized(v_sub(spine, self.frame.pos))
-        let local_y = self.frame.local_z
-        for j in 0..n_p {
-            let phi = 2.0 * math::PI * j as f64 / (n_p - 1) as f64
-            let mod_val = surf_mod_call(self.radius, phi, alpha)
-            grid[i][j] = v_add(v_add(spine, v_mul(local_x, mod_val * math::cos(phi))), v_mul(local_y, mod_val * math::sin(phi)))
+        let n_a = self.radial_steps + 1
+        let n_p = self.polar_steps
+        let mut grid = make_grid(n_a, n_p)
+        for i in 0..n_a {
+            let a = if i == 0 { 1.0 } else { i as f64 / (self.radial_steps - 1) as f64 }
+            let alpha = 2.0 * math::PI * a
+            let spine = v_add(v_add(self.frame.pos, v_mul(self.frame.local_x, self.ring_radius * math::cos(alpha))), v_mul(self.frame.local_y, self.ring_radius * math::sin(alpha)))
+            let local_x = v_safe_normalized(v_sub(spine, self.frame.pos))
+            let local_y = self.frame.local_z
+            for j in 0..n_p {
+                let phi = 2.0 * math::PI * j as f64 / (n_p - 1) as f64
+                let mod_val = surf_mod_call(self.radius, phi, alpha)
+                grid[i][j] = v_add(v_add(spine, v_mul(local_x, mod_val * math::cos(phi))), v_mul(local_y, mod_val * math::sin(phi)))
+            }
         }
+        let smb = new_surface_mesh_builder()
+        let smb = smb.add(grid, true)
+        Ok(smb.build())
     }
-    let smb = new_surface_mesh_builder()
-    let smb = smb.add(grid, true)
-    Ok(smb.build())
-}
 
     pub fn to_voxels(&self) -> Result<i64, String> {
         let mesh = self.to_mesh()?
@@ -519,19 +519,19 @@ pub fn new_lattice_pipe(frame: LocalFrame, length: f64, radius: f64) -> LatticeP
 
 impl LatticePipe {
     pub fn to_lattice(&self) -> Result<i64, String> {
-    let lat = new_lattice()?
-    let n = self.l_steps
-    for i in 1..=n {
-        let lr0 = (i - 1) as f64 / n as f64
-        let lr1 = i as f64 / n as f64
-        let p0 = v_add(self.frame.pos, v_mul(self.frame.local_z, self.length * lr0))
-        let p1 = v_add(self.frame.pos, v_mul(self.frame.local_z, self.length * lr1))
-        let r0 = line_mod_call(self.radius, lr0)
-        let r1 = line_mod_call(self.radius, lr1)
-        lattice_add_beam(lat, p0, p1, r0, r1, true)
+        let lat = new_lattice()?
+        let n = self.l_steps
+        for i in 1..=n {
+            let lr0 = (i - 1) as f64 / n as f64
+            let lr1 = i as f64 / n as f64
+            let p0 = v_add(self.frame.pos, v_mul(self.frame.local_z, self.length * lr0))
+            let p1 = v_add(self.frame.pos, v_mul(self.frame.local_z, self.length * lr1))
+            let r0 = line_mod_call(self.radius, lr0)
+            let r1 = line_mod_call(self.radius, lr1)
+            lattice_add_beam(lat, p0, p1, r0, r1, true)
+        }
+        Ok(lat)
     }
-    Ok(lat)
-}
 
     pub fn to_voxels(&self) -> Result<i64, String> {
         let lat = self.to_lattice()?
@@ -569,23 +569,23 @@ pub fn frames_extrude(length: f64, frame: LocalFrame, spacing: f64) -> Frames {
 
 impl Frames {
     pub fn frame_at(&self, lr: f64) -> LocalFrame {
-    let n = self.spine.len()
-    if n == 0 { return new_local_frame(V(0.0, 0.0, 0.0)) }
-    if lr <= 0.0 {
-        return new_local_frame_xyz(self.spine[0], self.local_z[0], self.local_x[0])
-    }
-    if lr >= 1.0 {
-        return new_local_frame_xyz(self.spine[n - 1], self.local_z[n - 1], self.local_x[n - 1])
-    }
-    let t = lr * (n - 1) as f64
-    let i = t as i64
-    let frac = t - i as f64
-    let ii = if i >= n as i64 - 1 { n as i64 - 2 } else { i }
-    let f = if i >= n as i64 - 1 { 1.0 } else { frac }
-    let pos = lerp(self.spine[ii as i64], self.spine[ii as i64 + 1], f)
-    let z = v_normalized(lerp(self.local_z[ii as i64], self.local_z[ii as i64 + 1], f))
-    let x = v_normalized(lerp(self.local_x[ii as i64], self.local_x[ii as i64 + 1], f))
-    new_local_frame_xyz(pos, z, x)
+        let n = self.spine.len()
+        if n == 0 { return new_local_frame(V(0.0, 0.0, 0.0)) }
+        if lr <= 0.0 {
+            return new_local_frame_xyz(self.spine[0], self.local_z[0], self.local_x[0])
+        }
+        if lr >= 1.0 {
+            return new_local_frame_xyz(self.spine[n - 1], self.local_z[n - 1], self.local_x[n - 1])
+        }
+        let t = lr * (n - 1) as f64
+        let i = t as i64
+        let frac = t - i as f64
+        let ii = if i >= n as i64 - 1 { n as i64 - 2 } else { i }
+        let f = if i >= n as i64 - 1 { 1.0 } else { frac }
+        let pos = lerp(self.spine[ii as i64], self.spine[ii as i64 + 1], f)
+        let z = v_normalized(lerp(self.local_z[ii as i64], self.local_z[ii as i64 + 1], f))
+        let x = v_normalized(lerp(self.local_x[ii as i64], self.local_x[ii as i64 + 1], f))
+        new_local_frame_xyz(pos, z, x)
     }
 }
 
@@ -658,31 +658,31 @@ pub fn new_control_point_spline(ctrl: Vec<Vec3>, resolution: i64, closed: bool) 
 
 impl ControlPointSpline {
     pub fn points(&self, n: i64) -> Vec<Vec3> {
-    let mut out: Vec<Vec3> = Vec::new()
-    let m = self.ctrl.len()
-    if m < 2 {
-        for _ in 0..n { out.push(self.ctrl[0]) }
-        return out
-    }
-    let segs = m - 1
-    let per = n / segs as i64
-    for s in 0..segs {
-        let p0 = self.ctrl[if s == 0 { 0 } else { s - 1 }]
-        let p1 = self.ctrl[s]
-        let p2 = self.ctrl[s + 1]
-        let p3 = self.ctrl[if s + 2 >= m { m - 1 } else { s + 2 }]
-        let count = if s == segs - 1 { n - s as i64 * per } else { per }
-        for k in 0..count {
-            let t = k as f64 / count as f64
-            let t2 = t * t
-            let t3 = t2 * t
-            let x = 0.5 * ((2.0 * p1.x) + (-p0.x + p2.x) * t + (2.0 * p0.x - 5.0 * p1.x + 4.0 * p2.x - p3.x) * t2 + (-p0.x + 3.0 * p1.x - 3.0 * p2.x + p3.x) * t3)
-            let y = 0.5 * ((2.0 * p1.y) + (-p0.y + p2.y) * t + (2.0 * p0.y - 5.0 * p1.y + 4.0 * p2.y - p3.y) * t2 + (-p0.y + 3.0 * p1.y - 3.0 * p2.y + p3.y) * t3)
-            let z = 0.5 * ((2.0 * p1.z) + (-p0.z + p2.z) * t + (2.0 * p0.z - 5.0 * p1.z + 4.0 * p2.z - p3.z) * t2 + (-p0.z + 3.0 * p1.z - 3.0 * p2.z + p3.z) * t3)
-            out.push(V(x, y, z))
+        let mut out: Vec<Vec3> = Vec::new()
+        let m = self.ctrl.len()
+        if m < 2 {
+            for _ in 0..n { out.push(self.ctrl[0]) }
+            return out
         }
-    }
-    out
+        let segs = m - 1
+        let per = n / segs as i64
+        for s in 0..segs {
+            let p0 = self.ctrl[if s == 0 { 0 } else { s - 1 }]
+            let p1 = self.ctrl[s]
+            let p2 = self.ctrl[s + 1]
+            let p3 = self.ctrl[if s + 2 >= m { m - 1 } else { s + 2 }]
+            let count = if s == segs - 1 { n - s as i64 * per } else { per }
+            for k in 0..count {
+                let t = k as f64 / count as f64
+                let t2 = t * t
+                let t3 = t2 * t
+                let x = 0.5 * ((2.0 * p1.x) + (-p0.x + p2.x) * t + (2.0 * p0.x - 5.0 * p1.x + 4.0 * p2.x - p3.x) * t2 + (-p0.x + 3.0 * p1.x - 3.0 * p2.x + p3.x) * t3)
+                let y = 0.5 * ((2.0 * p1.y) + (-p0.y + p2.y) * t + (2.0 * p0.y - 5.0 * p1.y + 4.0 * p2.y - p3.y) * t2 + (-p0.y + 3.0 * p1.y - 3.0 * p2.y + p3.y) * t3)
+                let z = 0.5 * ((2.0 * p1.z) + (-p0.z + p2.z) * t + (2.0 * p0.z - 5.0 * p1.z + 4.0 * p2.z - p3.z) * t2 + (-p0.z + 3.0 * p1.z - 3.0 * p2.z + p3.z) * t3)
+                out.push(V(x, y, z))
+            }
+        }
+        out
     }
 }
 
@@ -709,11 +709,11 @@ pub fn new_lens(frame: LocalFrame, height: f64, inner_radius: f64, outer_radius:
     }
 }
 
-    pub fn with_lower(&self, m: SurfaceModulation) -> Lens {
+pub fn with_lower(&self, m: SurfaceModulation) -> Lens {
     Lens { lower: m, radial_steps: 500, ..self }
 }
 
-    pub fn with_upper(&self, m: SurfaceModulation) -> Lens {
+pub fn with_upper(&self, m: SurfaceModulation) -> Lens {
     Lens { upper: m, radial_steps: 500, ..self }
 }
 
@@ -793,7 +793,7 @@ pub fn new_pipe(frame: LocalFrame, length: f64, inner_radius: f64, outer_radius:
     }
 }
 
-    pub fn with_frames(&self, fs: Frames) -> Pipe {
+pub fn with_frames(&self, fs: Frames) -> Pipe {
     Pipe { frames: Some(fs), length_steps: 500, ..self }
 }
 
@@ -898,7 +898,7 @@ pub fn new_lattice_manifold(frame: LocalFrame, length: f64, radius: f64, max_ove
     }
 }
 
-    pub fn with_extend_both_sides(&self, b: bool) -> LatticeManifold {
+pub fn with_extend_both_sides(&self, b: bool) -> LatticeManifold {
     LatticeManifold { extend_both_sides: b, ..self }
 }
 
@@ -972,96 +972,96 @@ pub fn new_color_scale_3d(spectrum: Vec<RGB>, min_value: f64, max_value: f64) ->
 
 impl ColorScale3D {
     pub fn color(&self, value: f64) -> RGB {
-    let mut v = value
-    if v < self.min_value { v = self.min_value }
-    if v > self.max_value { v = self.max_value }
-    let ratio = (v - self.min_value) / (self.max_value - self.min_value)
-    let mut idx = (ratio * (self.rgb_colors.len() - 1) as f64) as i64
-    if idx < 0 { idx = 0 }
-    if idx >= self.rgb_colors.len() as i64 { idx = self.rgb_colors.len() as i64 - 1 }
-    let c = self.rgb_colors[idx]
-    RGB { r: clamp(c.r, 0.0, 1.0), g: clamp(c.g, 0.0, 1.0), b: clamp(c.b, 0.0, 1.0) }
-}
-
-pub fn rainbow_spectrum() -> Vec<RGB> {
-    [
-        RGB { r: 0.0, g: 0.0, b: 1.0 },
-        RGB { r: 0.0, g: 1.0, b: 0.0 },
-        RGB { r: 1.0, g: 1.0, b: 0.0 },
-        RGB { r: 1.0, g: 130.0 / 255.0, b: 0.0 },
-        RGB { r: 1.0, g: 0.0, b: 0.0 },
-    ]
-}
-
-pub fn split_by_overhang_angle(mesh: i64, scale: ColorScale3D, n_classes: i64) -> Vec<SceneGroup> {
-    let mut groups: Vec<SceneGroup> = Vec::new()
-    let nt = mesh_triangle_count(mesh)
-    let mut angles: Vec<f64> = Vec::new()
-    for i in 0..nt {
-        let t = mesh_get_triangle(mesh, i)
-        let a = mesh_get_vertex(mesh, t.a)
-        let b = mesh_get_vertex(mesh, t.b)
-        let c = mesh_get_vertex(mesh, t.c)
-        let nx = (a.y - b.y) * (c.z - b.z) - (a.z - b.z) * (c.y - b.y)
-        let ny = (a.z - b.z) * (c.x - b.x) - (a.x - b.x) * (c.z - b.z)
-        let nz = (a.x - b.x) * (c.y - b.y) - (a.y - b.y) * (c.x - b.x)
-        let nlen = math::sqrt(nx * nx + ny * ny + nz * nz)
-        let mut nxn = nx
-        let mut nyn = ny
-        let mut nzn = nz
-        if nlen > 0.0 {
-            nxn = nx / nlen
-            nyn = ny / nlen
-            nzn = nz / nlen
-        }
-        let dr = math::sqrt(nxn * nxn + nyn * nyn)
-        let dz = nzn.abs()
-        let mut angle = math::atan2(dz, dr) * 180.0 / math::PI
-        if angle > 90.0 { angle = 90.0 }
-        if angle < 0.0 { angle = 0.0 }
-        angles.push(angle)
+        let mut v = value
+        if v < self.min_value { v = self.min_value }
+        if v > self.max_value { v = self.max_value }
+        let ratio = (v - self.min_value) / (self.max_value - self.min_value)
+        let mut idx = (ratio * (self.rgb_colors.len() - 1) as f64) as i64
+        if idx < 0 { idx = 0 }
+        if idx >= self.rgb_colors.len() as i64 { idx = self.rgb_colors.len() as i64 - 1 }
+        let c = self.rgb_colors[idx]
+        RGB { r: clamp(c.r, 0.0, 1.0), g: clamp(c.g, 0.0, 1.0), b: clamp(c.b, 0.0, 1.0) }
     }
-    let lo = scale.min_value
-    let hi = scale.max_value
-    for k in 0..n_classes {
-        let lo_k = lo + k as f64 * (hi - lo) / (n_classes - 1) as f64
-        let hi_k = lo + (k + 1) as f64 * (hi - lo) / (n_classes - 1) as f64
-        let mut sub_mesh_verts: Vec<Vec3> = Vec::new()
-        let mut sub_mesh_tris: Vec<Triangle> = Vec::new()
+
+    pub fn rainbow_spectrum() -> Vec<RGB> {
+        [
+            RGB { r: 0.0, g: 0.0, b: 1.0 },
+            RGB { r: 0.0, g: 1.0, b: 0.0 },
+            RGB { r: 1.0, g: 1.0, b: 0.0 },
+            RGB { r: 1.0, g: 130.0 / 255.0, b: 0.0 },
+            RGB { r: 1.0, g: 0.0, b: 0.0 },
+        ]
+    }
+
+    pub fn split_by_overhang_angle(mesh: i64, scale: ColorScale3D, n_classes: i64) -> Vec<SceneGroup> {
+        let mut groups: Vec<SceneGroup> = Vec::new()
+        let nt = mesh_triangle_count(mesh)
+        let mut angles: Vec<f64> = Vec::new()
         for i in 0..nt {
-            let include = angles[i as i64] >= lo_k && (angles[i as i64] < hi_k || k == n_classes - 1)
-            if include {
-                let t = mesh_get_triangle(mesh, i)
-                let a = mesh_get_vertex(mesh, t.a)
-                let b = mesh_get_vertex(mesh, t.b)
-                let c = mesh_get_vertex(mesh, t.c)
-                let base = sub_mesh_verts.len() as i64
-                sub_mesh_verts.push(a)
-                sub_mesh_verts.push(b)
-                sub_mesh_verts.push(c)
-                sub_mesh_tris.push(Triangle { a: base, b: base + 1, c: base + 2 })
+            let t = mesh_get_triangle(mesh, i)
+            let a = mesh_get_vertex(mesh, t.a)
+            let b = mesh_get_vertex(mesh, t.b)
+            let c = mesh_get_vertex(mesh, t.c)
+            let nx = (a.y - b.y) * (c.z - b.z) - (a.z - b.z) * (c.y - b.y)
+            let ny = (a.z - b.z) * (c.x - b.x) - (a.x - b.x) * (c.z - b.z)
+            let nz = (a.x - b.x) * (c.y - b.y) - (a.y - b.y) * (c.x - b.x)
+            let nlen = math::sqrt(nx * nx + ny * ny + nz * nz)
+            let mut nxn = nx
+            let mut nyn = ny
+            let mut nzn = nz
+            if nlen > 0.0 {
+                nxn = nx / nlen
+                nyn = ny / nlen
+                nzn = nz / nlen
+            }
+            let dr = math::sqrt(nxn * nxn + nyn * nyn)
+            let dz = nzn.abs()
+            let mut angle = math::atan2(dz, dr) * 180.0 / math::PI
+            if angle > 90.0 { angle = 90.0 }
+            if angle < 0.0 { angle = 0.0 }
+            angles.push(angle)
+        }
+        let lo = scale.min_value
+        let hi = scale.max_value
+        for k in 0..n_classes {
+            let lo_k = lo + k as f64 * (hi - lo) / (n_classes - 1) as f64
+            let hi_k = lo + (k + 1) as f64 * (hi - lo) / (n_classes - 1) as f64
+            let mut sub_mesh_verts: Vec<Vec3> = Vec::new()
+            let mut sub_mesh_tris: Vec<Triangle> = Vec::new()
+            for i in 0..nt {
+                let include = angles[i as i64] >= lo_k && (angles[i as i64] < hi_k || k == n_classes - 1)
+                if include {
+                    let t = mesh_get_triangle(mesh, i)
+                    let a = mesh_get_vertex(mesh, t.a)
+                    let b = mesh_get_vertex(mesh, t.b)
+                    let c = mesh_get_vertex(mesh, t.c)
+                    let base = sub_mesh_verts.len() as i64
+                    sub_mesh_verts.push(a)
+                    sub_mesh_verts.push(b)
+                    sub_mesh_verts.push(c)
+                    sub_mesh_tris.push(Triangle { a: base, b: base + 1, c: base + 2 })
+                }
+            }
+            if !sub_mesh_tris.is_empty() {
+                let sub_mesh = match new_mesh() {
+                    Ok(m) => m,
+                    Err(_) => continue
+                }
+                for v in sub_mesh_verts {
+                    mesh_add_vertex(sub_mesh, v)
+                }
+                for tri in sub_mesh_tris {
+                    mesh_add_triangle(sub_mesh, tri.a, tri.b, tri.c)
+                }
+                let color = scale.color(lo_k)
+                let vox = match voxels_from_mesh(sub_mesh) {
+                    Ok(v) => v,
+                    Err(_) => continue
+                }
+                groups.push(SceneGroup { voxels: vox, mesh: sub_mesh, color })
             }
         }
-        if !sub_mesh_tris.is_empty() {
-            let sub_mesh = match new_mesh() {
-                Ok(m) => m,
-                Err(_) => continue
-            }
-            for v in sub_mesh_verts {
-                mesh_add_vertex(sub_mesh, v)
-            }
-            for tri in sub_mesh_tris {
-                mesh_add_triangle(sub_mesh, tri.a, tri.b, tri.c)
-            }
-            let color = scale.color(lo_k)
-            let vox = match voxels_from_mesh(sub_mesh) {
-                Ok(v) => v,
-                Err(_) => continue
-            }
-            groups.push(SceneGroup { voxels: vox, mesh: sub_mesh, color })
-        }
-    }
-    groups
+        groups
     }
 }
 

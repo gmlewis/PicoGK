@@ -10,6 +10,7 @@
 
 use std::os
 use picogkffi::{init, version, shutdown, new_sphere, voxels_bool_subtract,
+
     voxels_shell, voxels_volume, voxels_destroy,
     new_viewer, viewer_add_voxels, viewer_set_group_material,
     viewer_screenshot, viewer_poll, viewer_request_close, viewer_destroy,
