@@ -352,27 +352,68 @@ impl Box {
         for v in arange(nd) { d.push(2.0 * v - 1.0) }
         let lr = arange(nl)
         let smb = new_surface_mesh_builder()
-        // 6 faces (simplified — top, bottom, 4 sides)
-        // Top face
-        let grid_top = self.box_surface_grid(w, d, 1.0)
-        let smb = smb.add(grid_top, true)
-        // Bottom face
-        let grid_bot = self.box_surface_grid(w, d, 0.0)
-        let smb = smb.add(grid_bot, false)
-        // For simplicity, skip the 4 side faces (they're degenerate for a plain box)
+        // Top face: grid (nw, nd), w on axis0, d on axis1, lr=last
+        let smb = smb.add(self.box_surface_grid(w, d, [lr[nl - 1]].to_vec()), true)
+        // Bottom face: grid (nw, nd)
+        let smb = smb.add(self.box_surface_grid(w, d, [lr[0]].to_vec()), false)
+        // Front face (w=-1): grid (nl, nd), lr on axis0, d on axis1, w=first
+        let smb = smb.add(self.box_surface_grid([w[0]].to_vec(), d, lr), true)
+        // Back face (w=+1): grid (nl, nd)
+        let smb = smb.add(self.box_surface_grid([w[nw - 1]].to_vec(), d, lr), false)
+        // Right face (d=+1): grid (nl, nw), lr on axis0, w on axis1, d=last
+        let smb = smb.add(self.box_surface_grid(w, [d[nd - 1]].to_vec(), lr), true)
+        // Left face (d=-1): grid (nl, nw)
+        let smb = smb.add(self.box_surface_grid(w, [d[0]].to_vec(), lr), false)
         Ok(smb.build())
     }
 
-    fn box_surface_grid(&self, w_r: Vec<f64>, d_r: Vec<f64>, lr_val: f64) -> Vec<Vec<Vec3>> {
-        let r0 = w_r.len()
-        let r1 = d_r.len()
-        let mut grid = make_grid(r0 as i64, r1 as i64)
-        let pos = v_add(self.frame.pos, v_mul(self.frame.local_z, self.length * lr_val))
+    fn box_surface_grid(&self, w_r: Vec<f64>, d_r: Vec<f64>, l_r: Vec<f64>) -> Vec<Vec<Vec3>> {
+        // Broadcasting: determine grid shape
+        let mut r0: i64 = 1
+        let mut r1: i64 = 1
+        let nl_len = l_r.len()
+        let nw_len = w_r.len()
+        let nd_len = d_r.len()
+        if nl_len > 1 {
+            r0 = nl_len as i64
+        } else if nw_len > 1 {
+            r0 = nw_len as i64
+        }
+        if nd_len > 1 {
+            r1 = nd_len as i64
+        } else if nw_len > 1 && nl_len > 1 {
+            r1 = nw_len as i64
+        }
+        if nl_len > 1 && nw_len > 1 {
+            r0 = nl_len as i64
+            r1 = nw_len as i64
+        }
+        if nl_len > 1 && nd_len > 1 {
+            r0 = nl_len as i64
+            r1 = nd_len as i64
+        }
+        if nw_len > 1 && nd_len > 1 {
+            r0 = nw_len as i64
+            r1 = nd_len as i64
+        }
+        let mut grid = make_grid(r0, r1)
         for i in 0..r0 {
             for j in 0..r1 {
-                let wm = line_mod_call(self.width, lr_val) * 0.5 * w_r[i]
-                let dm = line_mod_call(self.depth, lr_val) * 0.5 * d_r[j]
-                grid[i as i64][j as i64] = v_add(v_add(pos, v_mul(self.frame.local_x, wm)), v_mul(self.frame.local_y, dm))
+                // Pick the right ratio for each axis
+                let wr = if nw_len == 1 {
+                    w_r[0]
+                } else if nl_len == 1 {
+                    w_r[i]
+                } else {
+                    w_r[j]
+                }
+                let dr = if nd_len == 1 { d_r[0] } else { d_r[j] }
+                let lr_val = if nl_len == 1 { l_r[0] } else { l_r[i] }
+                // Get spine position and local axes at lr
+                let pos = v_add(self.frame.pos, v_mul(self.frame.local_z, self.length * lr_val))
+                let wm = line_mod_call(self.width, lr_val) * 0.5 * wr
+                let dm = line_mod_call(self.depth, lr_val) * 0.5 * dr
+                grid[i][j] = v_add(v_add(pos, v_mul(self.frame.local_x, wm)), v_mul(self.frame.local_y, dm))
             }
         }
         grid
