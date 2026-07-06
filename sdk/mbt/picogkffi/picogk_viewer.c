@@ -346,10 +346,15 @@ void mbt_viewer_autofit(void* viewer) {
 // Take a screenshot (warm-up frames + screenshot + conversion to PNG).
 // This is declared in picogk_png.c but we forward-declare it here.
 extern int picogk_screenshot_png(void* viewer, const char* png_path, int frames);
+extern int picogk_screenshot_png_keep_tga(void* viewer, const char* png_path, int frames, int keep_tga);
 
 int mbt_viewer_screenshot_png(void* viewer, const char* png_path, int frames) {
     // Use picogk_screenshot_png which does warm-up + screenshot + TGA→PNG conversion
     return picogk_screenshot_png(viewer, png_path, frames);
+}
+
+int mbt_viewer_screenshot_png_keep_tga(void* viewer, const char* png_path, int frames, int keep_tga) {
+    return picogk_screenshot_png_keep_tga(viewer, png_path, frames, keep_tga);
 }
 
 // Add voxels to the viewer at a group.

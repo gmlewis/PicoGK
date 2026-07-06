@@ -14,6 +14,11 @@ fn main {
         long="no-viewer",
         about="Save STLs only (no display needed)",
       ),
+      @argparse.FlagArg(
+        "keep-tga",
+        long="keep-tga",
+        about="Keep the raw TGA screenshot files alongside PNGs",
+      ),
     ],
     options=[
       @argparse.OptionArg("out", long="out", about="Output directory", default_values=[
@@ -49,6 +54,10 @@ fn main {
   }
   let voxel_size = parse_double(voxel_size_str).unwrap_or(0.2)
   let no_viewer = match matches.flags.get("no-viewer") {
+    Some(v) => v
+    None => false
+  }
+  let keep_tga = match matches.flags.get("keep-tga") {
     Some(v) => v
     None => false
   }
@@ -170,7 +179,7 @@ fn main {
           }
         }
         let png_path = outdir + "/" + name + ".png"
-        if v.screenshot_png(png_path, 12) {
+        if v.screenshot_png_keep_tga(png_path, 12, keep_tga) {
           println("  -> " + png_path)
         } else {
           println("  ERROR: failed to write PNG")

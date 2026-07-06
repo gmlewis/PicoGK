@@ -555,22 +555,38 @@ pub struct LatticePipe {
     frame: LocalFrame,
     length: f64,
     radius: LineModulation,
+    frames: Option<Frames>,
     l_steps: i64,
 }
 
 pub fn new_lattice_pipe(frame: LocalFrame, length: f64, radius: f64) -> LatticePipe {
-    LatticePipe { frame, length, radius: line_mod_constant(radius), l_steps: 100 }
+    LatticePipe { frame, length, radius: line_mod_constant(radius), frames: None, l_steps: 100 }
+}
+
+pub fn new_lattice_pipe_mod(frame: LocalFrame, length: f64, radius: LineModulation) -> LatticePipe {
+    LatticePipe { frame, length, radius, frames: None, l_steps: 100 }
+}
+
+pub fn with_lattice_pipe_frames(&self, fs: Frames) -> LatticePipe {
+    LatticePipe { frames: Some(fs), l_steps: 500, ..self }
 }
 
 impl LatticePipe {
+    fn spine_point(&self, lr: f64) -> Vec3 {
+        match &self.frames {
+            Some(fs) => fs.frame_at(lr).pos,
+            None => v_add(self.frame.pos, v_mul(self.frame.local_z, self.length * lr)),
+        }
+    }
+
     pub fn to_lattice(&self) -> Result<i64, String> {
         let lat = new_lattice()?
         let n = self.l_steps
         for i in 1..=n {
             let lr0 = (i - 1) as f64 / n as f64
             let lr1 = i as f64 / n as f64
-            let p0 = v_add(self.frame.pos, v_mul(self.frame.local_z, self.length * lr0))
-            let p1 = v_add(self.frame.pos, v_mul(self.frame.local_z, self.length * lr1))
+            let p0 = self.spine_point(lr0)
+            let p1 = self.spine_point(lr1)
             let r0 = line_mod_call(self.radius, lr0)
             let r1 = line_mod_call(self.radius, lr1)
             lattice_add_beam(lat, p0, p1, r0, r1, true)

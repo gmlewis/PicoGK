@@ -1235,6 +1235,12 @@ register_module!(
         unsafe { viewer::Viewer_AddVoxels(get_instance(), v, group as i32, vh) };
     }
 
+    fn viewer_add_mesh(handle: i64, group: i64, mesh_handle: i64) -> () {
+        let v = *VIEWERS.get(handle).unwrap() as *mut std::ffi::c_void;
+        let mh = *MESHES.get(mesh_handle).unwrap();
+        unsafe { viewer::Viewer_AddMesh(get_instance(), v, group as i32, mh) };
+    }
+
     fn viewer_set_group_material(handle: i64, group: i64, r: f64, g: f64, b: f64, a: f64, metallic: f64, roughness: f64) -> () {
         let v = *VIEWERS.get(handle).unwrap() as *mut std::ffi::c_void;
         let color = PKColorFloat { r: r as f32, g: g as f32, b: b as f32, a: a as f32 };

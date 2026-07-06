@@ -499,6 +499,20 @@ pub fn ViewerEx::screenshot_png(
 }
 
 ///|
+/// Take a screenshot to PNG, optionally keeping the raw TGA file.
+/// Returns true on success.
+pub fn ViewerEx::screenshot_png_keep_tga(
+  self : ViewerEx,
+  path : String,
+  frames : Int,
+  keep_tga : Bool,
+) -> Bool {
+  let kt : Int = if keep_tga { 1 } else { 0 }
+  let result = mbt_viewer_screenshot_png_keep_tga(self.h, cstr(path), frames, kt)
+  result == 0
+}
+
+///|
 /// Run the viewer event loop until closed.
 pub fn ViewerEx::run(self : ViewerEx) -> Unit {
   while self.poll() {
@@ -548,3 +562,12 @@ extern "C" fn mbt_viewer_screenshot_png(
   png_path : FixedArray[Byte],
   frames : Int,
 ) -> Int = "mbt_viewer_screenshot_png"
+
+///|
+#borrow(png_path)
+extern "C" fn mbt_viewer_screenshot_png_keep_tga(
+  viewer : Int64,
+  png_path : FixedArray[Byte],
+  frames : Int,
+  keep_tga : Int,
+) -> Int = "mbt_viewer_screenshot_png_keep_tga"
