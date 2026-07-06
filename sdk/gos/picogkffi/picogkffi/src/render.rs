@@ -157,8 +157,13 @@ pub fn render_mesh_to_png(
     }
 }
 
-// Convert a TGA file to PNG format.
+// Convert a TGA file to PNG format. Removes the TGA file after conversion.
 pub fn convert_tga_to_png(tga_path: &str, png_path: &str) {
+    convert_tga_to_png_keep(tga_path, png_path, false)
+}
+
+// Convert a TGA file to PNG format. If keep_tga is true, the TGA file is kept.
+pub fn convert_tga_to_png_keep(tga_path: &str, png_path: &str, keep_tga: bool) {
     let data = match std::fs::read(tga_path) { Ok(d) => d, Err(_) => return };
     if data.len() < 18 { return; }
 
@@ -215,6 +220,8 @@ pub fn convert_tga_to_png(tga_path: &str, png_path: &str) {
             let _ = writer.write_image_data(&pixels);
         }
     }
-    let _ = std::fs::remove_file(tga_path);
+    if !keep_tga {
+        let _ = std::fs::remove_file(tga_path);
+    }
 }
 

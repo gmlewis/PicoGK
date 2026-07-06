@@ -337,7 +337,7 @@ pub fn new_box_mod(frame: LocalFrame, length: f64, width: LineModulation, depth:
         frame, length,
         width: width,
         depth: depth,
-        w_steps: 500, d_steps: 500, l_steps: 500,
+        w_steps: 5, d_steps: 5, l_steps: 5,
     }
 }
 
@@ -510,6 +510,10 @@ pub struct Ring {
 
 pub fn new_ring(frame: LocalFrame, ring_radius: f64, radius: f64) -> Ring {
     Ring { frame, ring_radius, radius: surf_mod_constant(radius), radial_steps: 360, polar_steps: 360 }
+}
+
+pub fn new_ring_mod(frame: LocalFrame, ring_radius: f64, radius: SurfaceModulation) -> Ring {
+    Ring { frame, ring_radius, radius: radius, radial_steps: 360, polar_steps: 360 }
 }
 
 impl Ring {

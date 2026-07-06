@@ -161,7 +161,7 @@ fn cross3(a: &[f32; 3], b: &[f32; 3]) -> [f32; 3] {
 }
 
 fn normalize3(v: &mut [f32; 3]) {
-    let l = (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]).sqrt();
+    let l = ((v[0] as f64 * v[0] as f64 + v[1] as f64 * v[1] as f64 + v[2] as f64 * v[2] as f64).sqrt()) as f32;
     if l < 1e-12 { *v = [0.0; 3]; return; }
     v[0] /= l; v[1] /= l; v[2] /= l;
 }
@@ -201,7 +201,7 @@ fn look_at(eye: &[f32; 3], target: &[f32; 3], up: &[f32; 3]) -> [f32; 16] {
 }
 
 fn perspective(fovy: f32, aspect: f32, near_z: f32, far_z: f32) -> [f32; 16] {
-    let ys = 1.0 / (fovy * 0.5).tan();
+    let ys = (1.0 / ((fovy as f64 * 0.5).tan())) as f32;
     let xs = ys / aspect.max(1e-6);
     [
         xs, 0.0, 0.0, 0.0,
@@ -225,7 +225,7 @@ fn camera_basis(cam: &CameraState) -> ([f32; 3], [f32; 3], [f32; 3]) {
 }
 
 fn camera_distance(cam: &CameraState) -> f32 {
-    cam.radius / (FOV_Y / 2.0).sin() * 1.1 * cam.zoom
+    (cam.radius as f64 / ((FOV_Y as f64 / 2.0).sin()) * 1.1 * cam.zoom as f64) as f32
 }
 
 // C callbacks
@@ -263,7 +263,7 @@ pub unsafe extern "C" fn viewer_update_cb(
                 let dx = hi[0] - lo[0];
                 let dy = hi[1] - lo[1];
                 let dz = hi[2] - lo[2];
-                let diag = (dx * dx + dy * dy + dz * dz).sqrt();
+                let diag = ((dx as f64 * dx as f64 + dy as f64 * dy as f64 + dz as f64 * dz as f64).sqrt()) as f32;
                 if diag > 1e-3 {
                     cam.radius = diag * 0.5;
                 }
@@ -356,7 +356,7 @@ pub fn load_ibl_lighting(viewer: *mut std::ffi::c_void) -> bool {
     let candidates = [
         std::env::var("PICOGK_ASSETS").ok(),
         Some("_assets".to_string()),
-        Some("/Users/glenn/src/github.com/gmlewis/PicoGK/sdk/go/picogkffi/_assets".to_string()),
+        Some(format!("{}/_assets", env!("CARGO_MANIFEST_DIR")))
     ];
     for base in candidates.iter().flatten() {
         let diffuse_path = format!("{}/Diffuse.dds", base);

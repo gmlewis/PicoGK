@@ -263,7 +263,15 @@ func (v *ViewerEx) SetBackground(r, g, b, a float32) {
 
 // Screenshot takes a screenshot by polling frames.
 // The native viewer writes TGA; we convert to PNG if needed.
+// The intermediate TGA file is removed after conversion.
 func (v *ViewerEx) Screenshot(path string, frames int) {
+	v.ScreenshotKeepTGA(path, frames)
+	os.Remove(path + ".tga")
+}
+
+// ScreenshotKeepTGA takes a screenshot and keeps the raw TGA file at path+".tga".
+// Useful for debugging pixel-perfect comparisons against other SDKs.
+func (v *ViewerEx) ScreenshotKeepTGA(path string, frames int) {
 	activeViewer = v
 	// Pump frames to ensure scene is rendered
 	for range frames {
@@ -303,7 +311,6 @@ func (v *ViewerEx) Screenshot(path string, frames int) {
 		}
 		// Convert TGA to target format using Go's image package
 		convertTGA(tgaPath, path)
-		os.Remove(tgaPath)
 	}
 }
 

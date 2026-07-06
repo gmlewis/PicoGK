@@ -1225,6 +1225,7 @@ register_module!(
             return Err("Viewer_hCreate returned null (no display?)".into());
         }
         *viewer::ACTIVE_VIEWER.lock().unwrap() = Some(v as usize);
+        viewer::load_ibl_lighting(v);
         Ok(VIEWERS.insert(v as u64))
     }
 
@@ -1241,20 +1242,35 @@ register_module!(
     }
 
     fn viewer_screenshot(handle: i64, path: String) -> () {
+        viewer_screenshot_with_frames(handle, path, 12, false)
+    }
+
+    fn viewer_screenshot_keep_tga(handle: i64, path: String) -> () {
+        viewer_screenshot_with_frames(handle, path, 12, true)
+    }
+
+    fn viewer_screenshot_with_frames(handle: i64, path: String, frames: i64, keep_tga: bool) -> () {
         let v = *VIEWERS.get(handle).unwrap() as *mut std::ffi::c_void;
-        // The Viewer saves screenshots as TGA format. Save to a temp .tga file,
-        // then convert to PNG at the requested path.
+        // Pump frames to ensure scene is rendered (matching Go's Screenshot)
+        unsafe {
+            for _ in 0..frames {
+                viewer::Viewer_RequestUpdate(v);
+                if !viewer::Viewer_bPoll(v) { break; }
+            }
+        }
+        // Take screenshot (Viewer saves as TGA)
         let tga_path = path.clone() + ".tga";
         let c_tga_path = std::ffi::CString::new(tga_path.clone()).unwrap();
         unsafe {
             viewer::Viewer_RequestScreenShot(v, c_tga_path.as_ptr());
-            viewer::Viewer_RequestUpdate(v);
-            for _ in 0..12 {
+            // Poll frames to let the screenshot complete (matching Go)
+            for _ in 0..frames {
+                viewer::Viewer_RequestUpdate(v);
                 if !viewer::Viewer_bPoll(v) { break; }
             }
         }
-        // Convert TGA to PNG
-        render::convert_tga_to_png(&tga_path, &path);
+        // Convert TGA to PNG (keep_tga controls whether TGA is removed)
+        render::convert_tga_to_png_keep(&tga_path, &path, keep_tga);
     }
 
     fn viewer_poll(handle: i64) -> bool {
