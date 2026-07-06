@@ -22,7 +22,9 @@ use std::encoding::json
 use std::env
 use std::flag
 use std::os
+use std::errors
 use std::strings
+use "github.com/gmlewis/picogk/blender-gos" as blender
 
 fn truncate(s: String, n: i64) -> String {
     let s = strings::trim(s)
@@ -58,13 +60,13 @@ fn main() -> Result<(), flag::Error> {
     println!("  Connected to Blender MCP server")
 
     // Helper closures for calling tools with varying verbosity.
-    let do_print = |result: Result<String, blender::Error>, label: String| {
+    let do_print = |result: Result<String, errors::Error>, label: String| {
         match result {
             Ok(text) => println!("  OK: {} -> {}", label, truncate(text, 120)),
             Err(e) => println!("  FAIL: {} -> {}", label, e)
         }
     }
-    let do = |result: Result<String, blender::Error>, label: String| {
+    let do = |result: Result<String, errors::Error>, label: String| {
         if *verbose {
             do_print(result, label)
         } else {

@@ -1,0 +1,205 @@
+// Fields, metadata, VDB persistence, and mesh round-trip via the native FFI binding.
+//
+// This is the Gossamer FFI counterpart to the fields-and-io example (a port of
+// the PicoPie Python example fields_and_io.py). It uses the picogkffi package,
+// which binds directly to the native PicoGK C++ runtime — no MCP server
+// required. The FFI binding exposes ScalarField and VDB metadata directly,
+// so the full fields_and_io workflow is reproduced: voxel persistence to
+// OpenVDB, scalar-field extraction, STL round-trip, and re-voxelization.
+//
+// Run:  gos run .
+
+use std::os
+use picogkffi::{
+
+    init, shutdown, version,
+    new_sphere, new_mesh, new_voxels,
+    voxels_bool_subtract, voxels_volume,
+    voxels_to_mesh, voxels_from_mesh, voxels_offset,
+    mesh_vertex_count, mesh_triangle_count,
+    mesh_destroy, voxels_destroy,
+    new_vdb_file, vdb_file_from_file, vdb_file_save, vdb_file_destroy,
+    vdb_file_add_voxels, vdb_file_get_voxels,
+    vdb_file_field_count, vdb_file_get_field_name, vdb_file_field_type,
+    scalar_field_from_voxels, scalar_field_set_value, scalar_field_get_value,
+    scalar_field_destroy,
+    metadata_from_voxels, metadata_set_string, metadata_set_float, metadata_set_vector,
+    metadata_get_string, metadata_get_float, metadata_get_vector,
+    metadata_count, metadata_remove, metadata_destroy,
+    save_mesh_as_stl, load_stl_as_mesh,
+    total_memory_usage,
+    Vec3,
+}
+
+fn main() {
+    let outdir = "/tmp/gos-picogkffi-fields"
+    os::mkdir_all(outdir)
+
+    println!("=== Fields & I/O (Gossamer FFI) ===")
+    println!("Output dir: {}\n", outdir)
+
+    match init(0.3) {
+        Ok(_) => {}
+        Err(e) => { eprintln!("init: {}", e); return }
+    }
+    defer shutdown()
+
+    println!("PicoGK {}", version())
+
+    // --- Build a part via boolean subtraction ---
+    println!("--- Build part ---")
+    let body = match new_sphere(Vec3 { x: 0.0, y: 0.0, z: 0.0 }, 10.0) {
+        Ok(h) => h,
+        Err(e) => { eprintln!("new_sphere: {}", e); return }
+    }
+    defer voxels_destroy(body)
+
+    let hole = match new_sphere(Vec3 { x: 6.0, y: 0.0, z: 0.0 }, 6.0) {
+        Ok(h) => h,
+        Err(e) => { eprintln!("new_sphere: {}", e); return }
+    }
+    defer voxels_destroy(hole)
+
+    voxels_bool_subtract(body, hole)
+    println!("  part volume: {:.1} mm³", voxels_volume(body))
+
+    // --- Persist to VDB, then reload ---
+    println!("\n--- VDB persistence ---")
+    let vdb_path = outdir + "/part.vdb"
+
+    let vdb = match new_vdb_file() {
+        Ok(h) => h,
+        Err(e) => { eprintln!("new_vdb_file: {}", e); return }
+    }
+    defer vdb_file_destroy(vdb)
+
+    vdb_file_add_voxels(vdb, "body", body)
+    if !vdb_file_save(vdb, vdb_path) {
+        eprintln!("VDB save failed")
+        return
+    }
+    println!("  -> {}", vdb_path)
+
+    // List fields in the saved VDB.
+    let loaded = match vdb_file_from_file(vdb_path) {
+        Ok(h) => h,
+        Err(e) => { eprintln!("vdb_file_from_file: {}", e); return }
+    }
+    defer vdb_file_destroy(loaded)
+
+    let n = vdb_file_field_count(loaded)
+    println!("  VDB fields: {}", n)
+    // List field info (unrolled — the Gossamer JIT has a bug calling
+    // FFI functions that return strings inside loops; since VDB files
+    // typically have a known small number of fields, we unroll here).
+    if n > 0 {
+        let name = vdb_file_get_field_name(loaded, 0)
+        let ftype = vdb_file_field_type(loaded, 0)
+        let type_name = match ftype {
+            0 => "voxels",
+            1 => "scalar",
+            2 => "vector",
+            _ => "unknown",
+        }
+        println!("    [0] {} ({})", name, type_name)
+    }
+
+    let loaded_part = match vdb_file_get_voxels(loaded, 0) {
+        Ok(h) => h,
+        Err(e) => { eprintln!("vdb_file_get_voxels: {}", e); return }
+    }
+    defer voxels_destroy(loaded_part)
+    println!("  loaded part volume: {:.1} mm³", voxels_volume(loaded_part))
+
+    // --- Scalar field extraction (FFI-only — not available via MCP) ---
+    println!("\n--- Scalar field ---")
+    let sf = match scalar_field_from_voxels(loaded_part) {
+        Ok(h) => h,
+        Err(e) => { eprintln!("scalar_field_from_voxels: {}", e); return }
+    }
+    defer scalar_field_destroy(sf)
+
+    // Set and get a value
+    scalar_field_set_value(sf, Vec3 { x: 0.0, y: 0.0, z: 0.0 }, 42.0)
+    let val = scalar_field_get_value(sf, Vec3 { x: 0.0, y: 0.0, z: 0.0 })
+    println!("  scalar field value at origin: {}", val)
+
+    // --- Metadata (FFI-only — not available via MCP) ---
+    println!("\n--- Metadata ---")
+    let meta = match metadata_from_voxels(loaded_part) {
+        Ok(h) => h,
+        Err(e) => { eprintln!("metadata_from_voxels: {}", e); return }
+    }
+    defer metadata_destroy(meta)
+
+    metadata_set_string(meta, "material", "Ti-6Al-4V")
+    metadata_set_float(meta, "density", 4.43)
+    metadata_set_vector(meta, "bbox_min", Vec3 { x: -10.0, y: -10.0, z: -10.0 })
+
+    let mat = metadata_get_string(meta, "material")
+    let density = metadata_get_float(meta, "density")
+    let bbox_min = metadata_get_vector(meta, "bbox_min")
+    let count = metadata_count(meta)
+    println!("  metadata count: {}", count)
+    println!("  material: {}", mat)
+    println!("  density: {:.2}", density)
+    println!("  bbox_min: ({:.1}, {:.1}, {:.1})", bbox_min.x, bbox_min.y, bbox_min.z)
+
+    // Remove a key
+    metadata_remove(meta, "density")
+    let count_after = metadata_count(meta)
+    println!("  after remove 'density': {} entries", count_after)
+
+    // --- Export mesh, re-import, re-voxelize (round trip) ---
+    println!("\n--- STL round trip ---")
+    let stl_path = outdir + "/part.stl"
+
+    let part_mesh = match voxels_to_mesh(loaded_part) {
+        Ok(h) => h,
+        Err(e) => { eprintln!("voxels_to_mesh: {}", e); return }
+    }
+    defer mesh_destroy(part_mesh)
+
+    if save_mesh_as_stl(part_mesh, stl_path) {
+        println!("  -> {}  ({} verts, {} tris)", stl_path,
+            mesh_vertex_count(part_mesh), mesh_triangle_count(part_mesh))
+    } else {
+        eprintln!("  STL save failed")
+        return
+    }
+
+    // Re-import the STL as a mesh, then re-voxelize.
+    let reimported_mesh = match load_stl_as_mesh(stl_path) {
+        Ok(h) => h,
+        Err(e) => { eprintln!("load STL: {}", e); return }
+    }
+    defer mesh_destroy(reimported_mesh)
+    println!("  re-imported mesh: {} verts, {} tris",
+        mesh_vertex_count(reimported_mesh), mesh_triangle_count(reimported_mesh))
+
+    let revox = match voxels_from_mesh(reimported_mesh) {
+        Ok(h) => h,
+        Err(e) => { eprintln!("voxels_from_mesh: {}", e); return }
+    }
+    defer voxels_destroy(revox)
+
+    // Offset (thicken) the re-voxelized part by 0.5 mm.
+    voxels_offset(revox, 0.5)
+    println!("  re-voxelized + offset volume: {:.1} mm³", voxels_volume(revox))
+
+    let revox_mesh = match voxels_to_mesh(revox) {
+        Ok(h) => h,
+        Err(e) => { eprintln!("voxels_to_mesh: {}", e); return }
+    }
+    defer mesh_destroy(revox_mesh)
+
+    let offset_path = outdir + "/part_reimported_offset.stl"
+    if save_mesh_as_stl(revox_mesh, offset_path) {
+        println!("  -> {}", offset_path)
+    } else {
+        eprintln!("  STL save failed")
+    }
+
+    println!("\nNative memory: {:.1} MB", total_memory_usage() as f64 / 1e6)
+    println!("done.")
+}

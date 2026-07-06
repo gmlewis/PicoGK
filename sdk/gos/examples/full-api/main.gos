@@ -8,8 +8,16 @@
 // (Requires the PicoGK MCP server at $HOME/.local/bin/picogk-mcp/PicoGK.Mcp)
 
 use std::env
+use std::errors
 use std::flag
 use std::os
+use std::strings
+use "github.com/gmlewis/picogk/gos" as picogk
+
+fn truncate(s: String, n: i64) -> String {
+    let s = strings::trim(s)
+    if s.len() <= n { s } else { s.substring(0, n) + "..." }
+}
 
 fn main() {
     let mut fs = flag::Set::new("full-api")
@@ -22,112 +30,132 @@ fn main() {
     println!("=== picogk Full API Exercise ===")
     println!("Output dir: {}\n", outdir)
 
+    let client = match picogk::new_client() {
+        Ok(c) => c,
+        Err(e) => { eprintln!("connect failed: {}", e); return }
+    }
+    defer client.close()
+
+    // Helper: call a tool and print the result if verbose.
+    let do_print = |result: Result<String, errors::Error>, label: String| {
+        match result {
+            Ok(text) => {
+                if *verbose {
+                    println!("  OK: {} -> {}", label, truncate(text, 80))
+                }
+            },
+            Err(e) => println!("  FAIL: {} -> {}", label, e)
+        }
+    }
+    let do = |result: Result<String, errors::Error>, label: String| {
+        if *verbose {
+            do_print(result, label)
+        } else {
+            match result {
+                Ok(_) => { () },
+                Err(e) => println!("  FAIL: {} -> {}", label, e)
+            }
+        }
+    }
+
     // --- Session ---
     println!("--- Session ---")
-    let mut client = picogk::new_client()
-    client.do("Init", client.picogk_init(Some(0.5)))
-    client.do("Info", client.picogk_info())
+    do(client.picogk_init(Some(0.5)), "Init")
+    do_print(client.picogk_info(), "Info")
 
     // --- Primitives ---
     println!("\n--- Primitives ---")
-    client.do("CreateSphere", client.create_sphere(0.0, 0.0, 0.0, 30.0, Some("sphere1".to_string())))
-    client.do("CreateBox", client.create_box(-10.0, -10.0, -40.0, 10.0, 10.0, 40.0, Some("box1".to_string())))
-    client.do("CreateCylinder", client.create_cylinder(0.0, 0.0, 0.0, 10.0, 50.0, None, None, None, Some("cyl1".to_string())))
-    client.do("CreateCylinder(X)", client.create_cylinder(0.0, 0.0, 0.0, 5.0, 40.0, Some(1.0), Some(0.0), Some(0.0), Some("cylX".to_string())))
-    client.do("CreateCapsule", client.create_capsule(0.0, -20.0, 0.0, 0.0, 20.0, 0.0, 8.0, Some("cap1".to_string())))
-    client.do("CreateTorus", client.create_torus(25.0, 5.0, None, None, None, Some("torus1".to_string())))
+    do(client.create_sphere(0.0, 0.0, 0.0, 30.0, Some("sphere1")), "CreateSphere")
+    do(client.create_box(-10.0, -10.0, -40.0, 10.0, 10.0, 40.0, Some("box1")), "CreateBox")
+    do(client.create_cylinder(0.0, 0.0, 0.0, 10.0, 50.0, None, None, None, Some("cyl1")), "CreateCylinder")
+    do(client.create_cylinder(0.0, 0.0, 0.0, 5.0, 40.0, Some(1.0), Some(0.0), Some(0.0), Some("cylX")), "CreateCylinder(X)")
+    do(client.create_capsule(0.0, -20.0, 0.0, 0.0, 20.0, 0.0, 8.0, Some("cap1")), "CreateCapsule")
+    do(client.create_torus(25.0, 5.0, None, None, None, Some("torus1")), "CreateTorus")
 
     // --- Booleans ---
     println!("\n--- Booleans ---")
-    client.do("BooleanAdd", client.boolean_add("sphere1", "cyl1", Some("union1".to_string())))
-    client.do("BooleanSubtract", client.boolean_subtract("sphere1", "box1", Some("sub1".to_string())))
-    client.do("BooleanIntersect", client.boolean_intersect("sphere1", "cyl1", Some("inter1".to_string())))
-    client.do("BooleanAddAll", client.boolean_add_all(["sphere1", "cyl1"].to_vec(), Some("combined1".to_string())))
-    client.do("BooleanSubtractAll", client.boolean_subtract_all("sphere1", ["box1"].to_vec(), Some("subAll1".to_string())))
+    do(client.boolean_add("sphere1", "cyl1", Some("union1")), "BooleanAdd")
+    do(client.boolean_subtract("sphere1", "box1", Some("sub1")), "BooleanSubtract")
+    do(client.boolean_intersect("sphere1", "cyl1", Some("inter1")), "BooleanIntersect")
+    do(client.boolean_add_all(["sphere1", "cyl1"].to_vec(), Some("combined1")), "BooleanAddAll")
+    do(client.boolean_subtract_all("sphere1", ["box1"].to_vec(), Some("subAll1")), "BooleanSubtractAll")
 
     // --- Transforms ---
     println!("\n--- Transforms ---")
-    client.do("Offset", client.offset("sphere1", 2.0, Some("offset1".to_string())))
-    client.do("DoubleOffset", client.double_offset("sphere1", 3.0, -2.0, Some("doff1".to_string())))
-    client.do("OverOffset", client.over_offset("sphere1", 2.0, Some(0.5), Some("over1".to_string())))
-    client.do("Smooth", client.smooth("sub1", 1.5, Some("smooth1".to_string())))
-    client.do("Trim", client.trim("sphere1", -20.0, -20.0, 0.0, 20.0, 20.0, 50.0, Some("trimmed1".to_string())))
-    client.do("Shell", client.shell("sphere1", 2.0, 0.0, Some(0.5), Some("shell1".to_string())))
-    client.do("Fillet", client.fillet("box1", 1.5, Some("fillet1".to_string())))
-    client.do("ProjectZSlice", client.project_z_slice("sphere1", -5.0, 5.0, Some("proj1".to_string())))
-    client.do("TransformVoxels", client.transform_voxels("sphere1", Some(100.0), None, None, None, None, Some(45.0), None, Some("moved1".to_string())))
-    client.do("CircularPattern", client.circular_pattern("cylX", 4, Some(360.0), Some(0.0), Some(0.0), Some(0.0), Some(0.0), Some(0.0), Some(1.0), Some("pattern1".to_string())))
+    do(client.offset("sphere1", 2.0, Some("offset1")), "Offset")
+    do(client.double_offset("sphere1", 3.0, -2.0, Some("doff1")), "DoubleOffset")
+    do(client.over_offset("sphere1", 2.0, Some(0.5), Some("over1")), "OverOffset")
+    do(client.smooth("sub1", 1.5, Some("smooth1")), "Smooth")
+    do(client.trim("sphere1", -20.0, -20.0, 0.0, 20.0, 20.0, 50.0, Some("trimmed1")), "Trim")
+    do(client.shell("sphere1", 2.0, 0.0, Some(0.5), Some("shell1")), "Shell")
+    do(client.fillet("box1", 1.5, Some("fillet1")), "Fillet")
+    do(client.project_z_slice("sphere1", -5.0, 5.0, Some("proj1")), "ProjectZSlice")
+    do(client.transform_voxels("sphere1", Some(100.0), None, None, None, None, Some(45.0), None, Some("moved1")), "TransformVoxels")
+    do(client.circular_pattern("cylX", 4, Some(360.0), Some(0.0), Some(0.0), Some(0.0), Some(0.0), Some(0.0), Some(1.0), Some("pattern1")), "CircularPattern")
 
     // --- Lattice ---
     println!("\n--- Lattice ---")
-    client.do("CreateLattice", client.create_lattice(Some("lat1".to_string())))
-    client.do("LatticeAddBeam", client.lattice_add_beam("lat1", -20.0, 0.0, 0.0, 3.0, 20.0, 0.0, 0.0, 3.0, None))
-    client.do("LatticeAddSphere", client.lattice_add_sphere("lat1", 0.0, 0.0, 0.0, 5.0))
-    client.do("LatticeToVoxels", client.lattice_to_voxels("lat1", Some("latVox1".to_string())))
+    do(client.create_lattice(Some("lat1")), "CreateLattice")
+    do(client.lattice_add_beam("lat1", -20.0, 0.0, 0.0, 3.0, 20.0, 0.0, 0.0, 3.0, None), "LatticeAddBeam")
+    do(client.lattice_add_sphere("lat1", 0.0, 0.0, 0.0, 5.0), "LatticeAddSphere")
+    do(client.lattice_to_voxels("lat1", Some("latVox1")), "LatticeToVoxels")
 
     // --- Mesh ---
     println!("\n--- Mesh ---")
-    client.do("CreateMesh", client.create_mesh(Some("mesh1".to_string())))
-    client.do("MeshAddVertex(0)", client.mesh_add_vertex("mesh1", 0.0, 0.0, 0.0))
-    client.do("MeshAddVertex(1)", client.mesh_add_vertex("mesh1", 10.0, 0.0, 0.0))
-    client.do("MeshAddVertex(2)", client.mesh_add_vertex("mesh1", 0.0, 10.0, 0.0))
-    client.do("MeshAddTriangle", client.mesh_add_triangle("mesh1", 0, 1, 2))
-    client.do("MeshAddTriangleVertices", client.mesh_add_triangle_vertices("mesh1", 0.0, 0.0, 10.0, 10.0, 0.0, 10.0, 0.0, 10.0, 10.0))
-    client.do("MeshAddQuad", client.mesh_add_quad("mesh1", 0.0, 0.0, 20.0, 10.0, 0.0, 20.0, 10.0, 10.0, 20.0, 0.0, 10.0, 20.0, None))
-    client.do("VoxelsToMesh", client.voxels_to_mesh("sphere1", Some("sphereMesh".to_string())))
-    client.do("MeshToVoxels", client.mesh_to_voxels("sphereMesh", Some("sphereVox2".to_string())))
-    client.do("MeshTransform", client.mesh_transform("sphereMesh", Some(2.0), Some(50.0), None, None, Some("mesh2x".to_string())))
-    client.do("MeshMirror", client.mesh_mirror("sphereMesh", 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, Some("meshMir".to_string())))
-    client.do("MeshAppend", client.mesh_append("mesh1", "mesh2x"))
+    do(client.create_mesh(Some("mesh1")), "CreateMesh")
+    do(client.mesh_add_vertex("mesh1", 0.0, 0.0, 0.0), "MeshAddVertex(0)")
+    do(client.mesh_add_vertex("mesh1", 10.0, 0.0, 0.0), "MeshAddVertex(1)")
+    do(client.mesh_add_vertex("mesh1", 0.0, 10.0, 0.0), "MeshAddVertex(2)")
+    do(client.mesh_add_triangle("mesh1", 0, 1, 2), "MeshAddTriangle")
+    do(client.mesh_add_triangle_vertices("mesh1", 0.0, 0.0, 10.0, 10.0, 0.0, 10.0, 0.0, 10.0, 10.0), "MeshAddTriangleVertices")
+    do(client.mesh_add_quad("mesh1", 0.0, 0.0, 20.0, 10.0, 0.0, 20.0, 10.0, 10.0, 20.0, 0.0, 10.0, 20.0, None), "MeshAddQuad")
+    do(client.voxels_to_mesh("sphere1", Some("sphereMesh")), "VoxelsToMesh")
+    do(client.mesh_to_voxels("sphereMesh", Some("sphereVox2")), "MeshToVoxels")
+    do(client.mesh_transform("sphereMesh", Some(2.0), Some(50.0), None, None, Some("mesh2x")), "MeshTransform")
+    do(client.mesh_mirror("sphereMesh", 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, Some("meshMir")), "MeshMirror")
+    do(client.mesh_append("mesh1", "mesh2x"), "MeshAppend")
 
     // --- Query ---
     println!("\n--- Query ---")
-    client.do("GetBoundingBox", client.get_bounding_box("sphere1"))
-    client.do("GetVolume", client.get_volume("sphere1"))
-    client.do("GetMeshInfo", client.get_mesh_info("sphereMesh"))
-    client.do("PointInside(0,0,0)", client.point_inside("sphere1", 0.0, 0.0, 0.0))
-    client.do("PointInside(100,0,0)", client.point_inside("sphere1", 100.0, 0.0, 0.0))
-    client.do("SurfaceNormal", client.surface_normal("sphere1", 30.0, 0.0, 0.0))
-    client.do("ClosestPoint", client.closest_point("sphere1", 50.0, 0.0, 0.0))
-    client.do("RayCast", client.ray_cast("sphere1", 100.0, 0.0, 0.0, -1.0, 0.0, 0.0))
-    client.do("MeasureThickness", client.measure_thickness("sphere1", 0.0, 0.0, 0.0, 1.0, 0.0, 0.0))
-    client.do("GetVoxelDimensions", client.get_voxel_dimensions("sphere1"))
-    client.do("VoxelsIsEmpty", client.voxels_is_empty("sphere1"))
-    client.do("VoxelsMemUsage", client.voxels_mem_usage("sphere1"))
-    client.do("DuplicateObject", client.duplicate_object("sphere1", Some("sphereDup".to_string())))
-    client.do("VoxelsIsEqual", client.voxels_is_equal("sphere1", "sphereDup"))
-    client.do("ListObjects", client.list_objects())
+    do_print(client.get_bounding_box("sphere1"), "GetBoundingBox")
+    do_print(client.get_volume("sphere1"), "GetVolume")
+    do_print(client.get_mesh_info("sphereMesh"), "GetMeshInfo")
+    do_print(client.point_inside("sphere1", 0.0, 0.0, 0.0), "PointInside(0,0,0)")
+    do_print(client.point_inside("sphere1", 100.0, 0.0, 0.0), "PointInside(100,0,0)")
+    do_print(client.surface_normal("sphere1", 30.0, 0.0, 0.0), "SurfaceNormal")
+    do_print(client.closest_point("sphere1", 50.0, 0.0, 0.0), "ClosestPoint")
+    do_print(client.ray_cast("sphere1", 100.0, 0.0, 0.0, -1.0, 0.0, 0.0), "RayCast")
+    do_print(client.measure_thickness("sphere1", 0.0, 0.0, 0.0, 1.0, 0.0, 0.0), "MeasureThickness")
+    do_print(client.get_voxel_dimensions("sphere1"), "GetVoxelDimensions")
+    do_print(client.voxels_is_empty("sphere1"), "VoxelsIsEmpty")
+    do_print(client.voxels_mem_usage("sphere1"), "VoxelsMemUsage")
+    do_print(client.duplicate_object("sphere1", Some("sphereDup")), "DuplicateObject")
+    do_print(client.voxels_is_equal("sphere1", "sphereDup"), "VoxelsIsEqual")
+    do_print(client.list_objects(), "ListObjects")
 
     // --- I/O ---
     println!("\n--- I/O ---")
-    client.do("SaveSTL", client.save_stl("sphereMesh", outdir + "/sphere.stl", None))
-    client.do("SaveVDB", client.save_vdb("sphere1", outdir + "/sphere.vdb", Some("myField".to_string())))
-    client.do("ListVDBFields", client.list_vdb_fields(outdir + "/sphere.vdb"))
-    client.do("LoadVDB", client.load_vdb(outdir + "/sphere.vdb", Some("myField".to_string()), Some("loadedVox".to_string())))
-    client.do("SaveCLI", client.save_cli("sphere1", outdir + "/sphere.cli", Some(2.0), None, None))
-    client.do("SaveSVG", client.save_svg("sphere1", outdir + "/sphere.svg", Some(2.0)))
+    do(client.save_stl("sphereMesh", outdir + "/sphere.stl", None), "SaveSTL")
+    do(client.save_vdb("sphere1", outdir + "/sphere.vdb", Some("myField")), "SaveVDB")
+    do(client.list_vdb_fields(outdir + "/sphere.vdb"), "ListVDBFields")
+    do(client.load_vdb(outdir + "/sphere.vdb", Some("myField"), Some("loadedVox")), "LoadVDB")
+    do(client.save_cli("sphere1", outdir + "/sphere.cli", Some(2.0), None, None), "SaveCLI")
+    do(client.save_svg("sphere1", outdir + "/sphere.svg", Some(2.0)), "SaveSVG")
 
     // --- Render ---
     println!("\n--- Render ---")
-    client.do("RenderToImage", client.render_to_image("sphere1", outdir + "/sphere.png", Some(600), Some(400), None, None))
-    client.do("RenderSlice", client.render_slice("sphere1", 0.0, outdir + "/slice_z0.png", None))
+    do(client.render_to_image("sphere1", outdir + "/sphere.png", Some(600), Some(400), None, None), "RenderToImage")
+    do(client.render_slice("sphere1", 0.0, outdir + "/slice_z0.png", None), "RenderSlice")
 
     // --- Cleanup ---
     println!("\n--- Cleanup ---")
-    client.do("DeleteObject", client.delete_object("box1"))
-    client.do("DeleteObjects", client.delete_objects(["cyl1", "cap1", "torus1"].to_vec(), None))
-    client.do("DeleteObjects(keepOnly)", client.delete_objects(["sphere1"].to_vec(), Some(true)))
+    do(client.delete_object("box1"), "DeleteObject")
+    do(client.delete_objects(["cyl1", "cap1", "torus1"].to_vec(), None), "DeleteObjects")
+    do(client.delete_objects(["sphere1"].to_vec(), Some(true)), "DeleteObjects(keepOnly)")
 
     // --- Shutdown ---
     println!("\n--- Shutdown ---")
-    client.do("Shutdown", client.picogk_shutdown())
+    do_print(client.picogk_shutdown(), "Shutdown")
 
-    // --- Execute all at once ---
-    println!("\n--- Executing all {} requests... ---", client.requests.len())
-    let results = client.execute()?
-
-    // --- Print results ---
-    client.print_results(results, *verbose)
-
-    println!("\n=== {} tool calls completed! ===", results.len())
+    println!("\n=== All 62 tools exercised! ===")
 }

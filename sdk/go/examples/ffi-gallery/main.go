@@ -29,6 +29,7 @@ var (
 	voxelSize = flag.Float64("voxel-size", 0.2, "kernel voxel size in mm")
 	noViewer  = flag.Bool("no-viewer", false, "Use render_to_image instead of Viewer (no display needed)")
 	sceneOnly = flag.String("scene", "", "render only this scene (empty = all)")
+	keepTGA   = flag.Bool("keep-tga", false, "Keep the raw TGA screenshot files alongside PNGs")
 )
 
 // SceneGroup is re-exported from picogkshapes.
@@ -101,7 +102,11 @@ func main() {
 				v.SetGroupMaterial(i, g.Color.ToFFI(), 0.1, 0.5)
 			}
 			pngPath := filepath.Join(*outDir, name+".png")
-			v.Screenshot(pngPath, 12)
+			if *keepTGA {
+				v.ScreenshotKeepTGA(pngPath, 12)
+			} else {
+				v.Screenshot(pngPath, 12)
+			}
 			v.RequestClose()
 			v.Destroy()
 			fmt.Printf("  -> %s\n", pngPath)

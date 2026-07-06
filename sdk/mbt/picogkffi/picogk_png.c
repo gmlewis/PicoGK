@@ -51,7 +51,15 @@ int picogk_write_png(const char* path, int width, int height,
 // Returns 0 on success, -1 on error.
 // This is a convenience function that reads the TGA file, converts it to PNG,
 // and removes the TGA file.
+int picogk_screenshot_png_keep_tga(void* viewer, const char* png_path, int frames, int keep_tga);
+
 int picogk_screenshot_png(void* viewer, const char* png_path, int frames) {
+    return picogk_screenshot_png_keep_tga(viewer, png_path, frames, 0);
+}
+
+// Same as picogk_screenshot_png but optionally keeps the TGA file.
+// keep_tga: non-zero to keep the TGA file, zero to remove it.
+int picogk_screenshot_png_keep_tga(void* viewer, const char* png_path, int frames, int keep_tga) {
     // Pump warm-up frames to ensure the scene is fully rendered
     for (int i = 0; i < frames; i++) {
         Viewer_RequestUpdate(viewer);
@@ -102,8 +110,10 @@ int picogk_screenshot_png(void* viewer, const char* png_path, int frames) {
     int result = picogk_write_png(png_path, width, height, pixels,
                                   stride, bytes_per_pixel, top_origin);
     free(tga_data);
-    // Remove the TGA file
-    remove(tga_path);
+    // Remove the TGA file unless keep_tga is requested
+    if (!keep_tga) {
+        remove(tga_path);
+    }
     return result;
 }
 

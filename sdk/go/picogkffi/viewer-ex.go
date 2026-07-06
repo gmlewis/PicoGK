@@ -27,6 +27,7 @@ import (
 	"image"
 	"image/color"
 	"image/png"
+	"log"
 	"math"
 	"os"
 	"path/filepath"
@@ -81,6 +82,7 @@ var activeViewer *ViewerEx
 
 // NewViewerEx creates a viewer with full callback support.
 // Must be called on the main OS thread (use runtime.LockOSThread).
+// Calls log.Fatalf if the viewer cannot be created or IBL lighting assets cannot be loaded.
 func NewViewerEx(title string, width, height int, cam CameraState) *ViewerEx {
 	mustInit()
 	cTitle := C.CString(title)
@@ -92,12 +94,17 @@ func NewViewerEx(title string, width, height int, cam CameraState) *ViewerEx {
 
 	h := C.createViewer(cTitle, &cSize)
 	if h == nil {
-		panic("picogkffi: Viewer_hCreate returned null (no display?)")
+		log.Fatalf("picogkffi: Viewer_hCreate returned null (no display?)")
 	}
 	v.h = h
 
-	// Load IBL lighting if available
-	loadLightSetup(v.h)
+	// Load IBL lighting — essential for PBR rendering. Hard-fail if missing.
+	if !loadLightSetup(v.h) {
+		C.Viewer_Destroy(v.h)
+		v.h = nil
+		activeViewer = nil
+		log.Fatalf("picogkffi: failed to load IBL lighting assets (_assets/Diffuse.dds, _assets/Specular.dds)")
+	}
 
 	return v
 }
@@ -263,7 +270,15 @@ func (v *ViewerEx) SetBackground(r, g, b, a float32) {
 
 // Screenshot takes a screenshot by polling frames.
 // The native viewer writes TGA; we convert to PNG if needed.
+// The intermediate TGA file is removed after conversion.
 func (v *ViewerEx) Screenshot(path string, frames int) {
+	v.ScreenshotKeepTGA(path, frames)
+	os.Remove(path + ".tga")
+}
+
+// ScreenshotKeepTGA takes a screenshot and keeps the raw TGA file at path+".tga".
+// Useful for debugging pixel-perfect comparisons against other SDKs.
+func (v *ViewerEx) ScreenshotKeepTGA(path string, frames int) {
 	activeViewer = v
 	// Pump frames to ensure scene is rendered
 	for range frames {
@@ -303,7 +318,6 @@ func (v *ViewerEx) Screenshot(path string, frames int) {
 		}
 		// Convert TGA to target format using Go's image package
 		convertTGA(tgaPath, path)
-		os.Remove(tgaPath)
 	}
 }
 
@@ -395,25 +409,27 @@ func (v *ViewerEx) Run() {
 }
 
 // loadLightSetup loads the IBL lighting from the package's bundled assets.
-func loadLightSetup(viewer C.PKVIEWER) {
+// Returns true on success, false if the assets could not be loaded.
+func loadLightSetup(viewer C.PKVIEWER) bool {
 	_, src, _, ok := runtime.Caller(0)
 	if !ok {
-		return
+		return false
 	}
 	dir := filepath.Dir(src)
 
 	diffuse, err := os.ReadFile(filepath.Join(dir, "_assets", "Diffuse.dds"))
 	if err != nil {
-		return
+		return false
 	}
 	specular, err := os.ReadFile(filepath.Join(dir, "_assets", "Specular.dds"))
 	if err != nil {
-		return
+		return false
 	}
 
-	C.Viewer_bLoadLightSetup(viewer,
+	ok = bool(C.Viewer_bLoadLightSetup(viewer,
 		(*C.char)(unsafe.Pointer(&diffuse[0])), C.int32_t(len(diffuse)),
-		(*C.char)(unsafe.Pointer(&specular[0])), C.int32_t(len(specular)))
+		(*C.char)(unsafe.Pointer(&specular[0])), C.int32_t(len(specular))))
+	return ok
 }
 
 // --- Camera math (ported from PicoPie viewer.py) ---

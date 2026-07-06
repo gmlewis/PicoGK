@@ -1,0 +1,43 @@
+// Web viewer demo stub — requires the OpenGL Viewer + picogkshapes library.
+//
+// The Go FFI web-demo builds a scene (box, sphere, gyroid-filled sphere) using
+// the picogkshapes parametric shape library and renders it via the native
+// OpenGL Viewer, then exports a self-contained HTML file with inline three.js
+// geometry.
+//
+// Neither the picogkshapes shape library nor the OpenGL Viewer is available
+// via the Gossamer FFI binding:
+//   - picogkshapes is a Go-native package with no Gossamer FFI counterpart.
+//   - The Viewer requires C function-pointer callbacks (see ffi-viewer-demo).
+//
+// See ffi-hello-picogk for a working headless FFI example that builds
+// geometry and exports STL without the Viewer or picogkshapes.
+//
+// Run:  gos run .
+
+use picogkffi::{init, version, shutdown}
+
+fn main() {
+    println!("=== Web Viewer Demo (Gossamer FFI) ===")
+    println!()
+    println!("This example is a stub: it requires the picogkshapes parametric")
+    println!("shape library and the OpenGL Viewer, neither of which is")
+    println!("available via the Gossamer FFI binding.")
+    println!()
+    println!("picogkshapes provides parametric shapes (Box, Sphere, Cylinder,")
+    println!("Ring, Lens, Pipe, LatticePipe, ImplicitGyroid, etc.) with Go-native")
+    println!("implementations. There is no Gossamer FFI binding for this library.")
+    println!()
+    println!("The OpenGL Viewer requires C function-pointer callbacks that")
+    println!("cannot be provided from .gos source (see ffi-viewer-demo for details).")
+    println!()
+    println!("For a working headless FFI example, see ffi-hello-picogk which")
+    println!("builds geometry using the low-level FFI primitives and exports STL.")
+
+    match init(0.5) {
+        Ok(_) => println!("\nPicoGK {}", version()),
+        Err(e) => { eprintln!("init failed: {}", e); return }
+    }
+    shutdown()
+    println!("done.")
+}
