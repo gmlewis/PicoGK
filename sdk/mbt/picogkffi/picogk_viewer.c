@@ -255,38 +255,72 @@ static unsigned char* read_file(const char* path, long* out_size) {
 }
 
 // Try to load IBL lighting from extracted DDS files.
-// Looks for _assets/Diffuse.dds and _assets/Specular.dds relative to
-// the picogkffi package directory, or via the PICOGK_ASSETS env var.
+// Looks for _assets/Diffuse.dds and _assets/Specular.dds in several
+// candidate directories: PICOGK_ASSETS env var, relative to CWD,
+// and relative to this source file's directory (via __FILE__).
 // Returns 1 if loaded, 0 if not.
 static int load_ibl_lighting(void* viewer) {
     const char* env_assets = getenv("PICOGK_ASSETS");
     char diffuse_path[4096];
     char specular_path[4096];
 
-    if (env_assets) {
-        snprintf(diffuse_path, sizeof(diffuse_path), "%s/Diffuse.dds", env_assets);
-        snprintf(specular_path, sizeof(specular_path), "%s/Specular.dds", env_assets);
-    } else {
-        // Default: look relative to the executable / current directory
-        const char* base = "_assets";
-        snprintf(diffuse_path, sizeof(diffuse_path), "%s/Diffuse.dds", base);
-        snprintf(specular_path, sizeof(specular_path), "%s/Specular.dds", base);
+    // Derive the _assets directory from __FILE__ (this source file's path).
+    // __FILE__ is the compile-time path to picogk_viewer.c, so _assets
+    // is in the same directory.
+    char file_assets_path[4096];
+    {
+        const char* file_path = __FILE__;
+        // Find last '/' and replace filename with "_assets"
+        const char* last_slash = strrchr(file_path, '/');
+        if (last_slash) {
+            size_t dir_len = (size_t)(last_slash - file_path);
+            if (dir_len + 8 < sizeof(file_assets_path)) {
+                memcpy(file_assets_path, file_path, dir_len);
+                memcpy(file_assets_path + dir_len, "/_assets", 8);
+                file_assets_path[dir_len + 8] = '\0';
+            } else {
+                strcpy(file_assets_path, "_assets");
+            }
+        } else {
+            strcpy(file_assets_path, "_assets");
+        }
     }
 
-    long diffuse_size = 0, specular_size = 0;
-    unsigned char* diffuse = read_file(diffuse_path, &diffuse_size);
-    unsigned char* specular = read_file(specular_path, &specular_size);
+    // Try each candidate base directory
+    const char* candidates[8];
+    int n_candidates = 0;
 
-    if (diffuse && specular && diffuse_size > 0 && specular_size > 0) {
-        bool ok = Viewer_bLoadLightSetup(viewer,
-            (const char*)diffuse, (int32_t)diffuse_size,
-            (const char*)specular, (int32_t)specular_size);
+    if (env_assets) {
+        candidates[n_candidates++] = env_assets;
+    }
+    // Relative to CWD
+    candidates[n_candidates++] = "_assets";
+    // Relative to CWD — common paths when running from example dirs
+    candidates[n_candidates++] = "../picogkffi/_assets";
+    candidates[n_candidates++] = "../../picogkffi/_assets";
+    candidates[n_candidates++] = "../../../picogkffi/_assets";
+    // Path derived from __FILE__ (same directory as this C source)
+    candidates[n_candidates++] = file_assets_path;
+
+    for (int i = 0; i < n_candidates; i++) {
+        snprintf(diffuse_path, sizeof(diffuse_path), "%s/Diffuse.dds", candidates[i]);
+        snprintf(specular_path, sizeof(specular_path), "%s/Specular.dds", candidates[i]);
+
+        long diffuse_size = 0, specular_size = 0;
+        unsigned char* diffuse = read_file(diffuse_path, &diffuse_size);
+        unsigned char* specular = read_file(specular_path, &specular_size);
+
+        if (diffuse && specular && diffuse_size > 0 && specular_size > 0) {
+            bool ok = Viewer_bLoadLightSetup(viewer,
+                (const char*)diffuse, (int32_t)diffuse_size,
+                (const char*)specular, (int32_t)specular_size);
+            free(diffuse);
+            free(specular);
+            return ok ? 1 : 0;
+        }
         free(diffuse);
         free(specular);
-        return ok ? 1 : 0;
     }
-    free(diffuse);
-    free(specular);
     return 0;
 }
 
@@ -317,9 +351,15 @@ void* mbt_viewer_create(const char* title, float width, float height,
         mbt_mouse_move_cb, mbt_mouse_button_cb, mbt_scroll_cb, mbt_window_size_cb);
     g_active_viewer = v;
 
-    // Load IBL lighting if available (essential for PBR rendering)
+    // Load IBL lighting — essential for PBR rendering. Hard-fail if missing.
     if (v) {
-        load_ibl_lighting(v);
+        if (!load_ibl_lighting(v)) {
+            fprintf(stderr, "FATAL: Failed to load IBL lighting assets (Diffuse.dds / Specular.dds).\n");
+            fprintf(stderr, "  Tried: PICOGK_ASSETS env var, _assets/, ../picogkffi/_assets/, ../../picogkffi/_assets/, ../../../picogkffi/_assets/, and path relative to %s\n", __FILE__);
+            Viewer_Destroy(v);
+            g_active_viewer = NULL;
+            return NULL;
+        }
     }
 
     return v;

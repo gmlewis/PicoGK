@@ -1225,7 +1225,11 @@ register_module!(
             return Err("Viewer_hCreate returned null (no display?)".into());
         }
         *viewer::ACTIVE_VIEWER.lock().unwrap() = Some(v as usize);
-        viewer::load_ibl_lighting(v);
+        if !viewer::load_ibl_lighting(v) {
+            unsafe { viewer::Viewer_Destroy(v); }
+            *viewer::ACTIVE_VIEWER.lock().unwrap() = None;
+            return Err("Failed to load IBL lighting assets (_assets/Diffuse.dds, _assets/Specular.dds). Tried PICOGK_ASSETS env var, _assets/ relative to CWD, and CARGO_MANIFEST_DIR/_assets".into());
+        }
         Ok(VIEWERS.insert(v as u64))
     }
 

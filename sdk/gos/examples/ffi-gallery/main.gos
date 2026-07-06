@@ -15,8 +15,10 @@ use picogkffi::{init, version, shutdown, new_lattice, lattice_add_sphere, lattic
 use shapes::{
     V, new_local_frame, new_local_frame_xyz,
     new_sphere_shape, new_sphere_shape_const, new_box, new_box_mod, new_cylinder, new_cylinder_const,
-    new_ring, new_ring_mod, new_lens, with_lower, with_upper, new_pipe, with_frames,
-    new_lattice_pipe, with_lattice_pipe_frames, new_lattice_manifold, with_extend_both_sides,
+    new_ring, new_ring_mod, new_lens, with_lower, with_upper, new_pipe, new_pipe_mod, new_pipe_mod_f,
+    with_frames, with_pipe_transform, new_pipe_segment, new_pipe_segment_const,
+    new_lattice_pipe, new_lattice_pipe_mod, with_lattice_pipe_frames,
+    new_lattice_manifold, with_extend_both_sides,
     new_control_point_spline, frames_aligned_to_x,
     surf_mod_fn, line_mod_fn, line_mod_constant, to_voxels,
     new_color_scale_3d, rainbow_spectrum, split_by_overhang_angle,
@@ -33,11 +35,11 @@ fn spline_points() -> Vec<Vec3> {
 }
 
 fn safe_voxels(r: Result<i64, String>) -> i64 {
-    match r { Ok(h) => h, Err(e) => { eprintln!("  error: {}", e); 0 } }
+    match r { Ok(h) => h, Err(e) => { eprintln!("  FATAL: {}", e); return 0 } }
 }
 
 fn safe_mesh(r: Result<i64, String>) -> i64 {
-    match r { Ok(h) => h, Err(e) => { eprintln!("  error: {}", e); 0 } }
+    match r { Ok(h) => h, Err(e) => { eprintln!("  FATAL: {}", e); return 0 } }
 }
 
 fn render_scene(name: String, groups: Vec<shapes::SceneGroup>, keep_tga: bool) {
@@ -65,7 +67,10 @@ fn render_scene(name: String, groups: Vec<shapes::SceneGroup>, keep_tga: bool) {
             viewer_destroy(v)
             println!("  -> {}", png_path)
         },
-        Err(e) => println!("  viewer error: {}", e)
+        Err(e) => {
+            eprintln!("  FATAL: viewer error: {}", e)
+            return
+        }
     }
     let mut ci = 0
     while ci < groups.len() {
@@ -129,14 +134,44 @@ fn build_lens() -> Vec<shapes::SceneGroup> {
 
 fn build_pipe() -> Vec<shapes::SceneGroup> {
     let p1 = safe_voxels(new_pipe(new_local_frame(V(-50.0, 0.0, 0.0)), 60.0, 10.0, 20.0).to_voxels())
-    let p2 = safe_voxels(new_pipe(new_local_frame(V(0.0, 0.0, 0.0)), 60.0, 10.0, 20.0).to_voxels())
-    let p3 = safe_voxels(new_pipe(new_local_frame(V(50.0, -50.0, 0.0)), 60.0, 6.0, line_mod_fn(line1)).to_voxels())
+    // Pipe 2: green pipe with vertex transform (creates a skewed/vase shape)
+    let trafo = |pts: Vec<Vec3>| {
+        let mut result: Vec<Vec3> = Vec::new()
+        for p in pts {
+            result.push(V(p.y + 0.2 * p.z - 50.0, 0.5 * p.z + 50.0, 0.5 * p.x))
+        }
+        result
+    }
+    let p2 = safe_voxels(with_pipe_transform(new_pipe(new_local_frame(V(0.0, 0.0, 0.0)), 60.0, 10.0, 20.0), trafo).to_voxels())
+    // Pipe 3: lemongrass pipe with modulated outer radius
+    let p3 = safe_voxels(new_pipe_mod_f(new_local_frame(V(50.0, -50.0, 0.0)), 60.0, 6.0, surf_mod_fn(|_p, lr| line1(lr))).to_voxels())
+    // Pipe 4: orchid pipe with modulated radii along a spline spine
     let spine = frames_aligned_to_x(spline_points(), V(0.0, 1.0, 0.0))
-    let p4 = safe_voxels(with_frames(new_pipe(new_local_frame(V(0.0, 0.0, 0.0)), 60.0, 6.0, 6.0), spine).to_voxels())
+    let p4 = safe_voxels(with_frames(new_pipe_mod(new_local_frame(V(0.0, 0.0, 0.0)), 60.0, surf_mod_fn(surf3), surf_mod_fn(surf1)), spine).to_voxels())
     [shapes::SceneGroup { voxels: p1, mesh: 0, color: shapes::COLOR_BLUE },
      shapes::SceneGroup { voxels: p2, mesh: 0, color: shapes::COLOR_GREEN },
      shapes::SceneGroup { voxels: p3, mesh: 0, color: shapes::COLOR_LEMONGRASS },
      shapes::SceneGroup { voxels: p4, mesh: 0, color: shapes::COLOR_ORCHID }].to_vec()
+}
+
+fn build_pipe_segment() -> Vec<shapes::SceneGroup> {
+    let p1 = safe_voxels(new_pipe_segment_const(
+        new_local_frame(V(-50.0, 0.0, 0.0)), 60.0, 20.0, 40.0,
+        math::PI, 0.5 * math::PI, "mid_range".to_string(), 360).to_voxels())
+    let p2 = safe_voxels(new_pipe_segment(
+        new_local_frame(V(50.0, 0.0, 0.0)), 60.0,
+        surf_mod_fn(surf3), surf_mod_fn(surf1),
+        line_mod_fn(|lr| -math::PI * lr), line_mod_constant(1.75 * math::PI),
+        "mid_range".to_string(), 360).to_voxels())
+    let spine = frames_aligned_to_x(spline_points(), V(0.0, 1.0, 0.0))
+    let p3 = safe_voxels(with_frames(new_pipe_segment(
+        new_local_frame(V(0.0, 0.0, 0.0)), 60.0,
+        surf_mod_fn(surf3), surf_mod_fn(surf1),
+        line_mod_fn(|lr| 4.0 * math::PI * lr), line_mod_constant(1.5 * math::PI),
+        "mid_range".to_string(), 360), spine).to_voxels())
+    [shapes::SceneGroup { voxels: p1, mesh: 0, color: shapes::COLOR_BLUE },
+     shapes::SceneGroup { voxels: p2, mesh: 0, color: shapes::COLOR_RUBY },
+     shapes::SceneGroup { voxels: p3, mesh: 0, color: shapes::COLOR_RACINGGREEN }].to_vec()
 }
 
 fn build_basic_lattices() -> Vec<shapes::SceneGroup> {
@@ -150,9 +185,9 @@ fn build_basic_lattices() -> Vec<shapes::SceneGroup> {
 
 fn build_lattice_pipe() -> Vec<shapes::SceneGroup> {
     let lp1 = safe_voxels(new_lattice_pipe(new_local_frame(V(-50.0, 0.0, 0.0)), 60.0, 10.0).to_voxels())
-    let lp2 = safe_voxels(new_lattice_pipe_mod(new_local_frame(V(50.0, -50.0, 0.0)), 60.0, line_mod_fn(line1)).to_voxels())
+    let lp2 = safe_voxels(new_lattice_pipe_mod(new_local_frame(V(50.0, -50.0, 0.0)), 60.0, line_mod_fn(|lr| line1(lr))).to_voxels())
     let spine = frames_aligned_to_x(spline_points(), V(0.0, 1.0, 0.0))
-    let lp3 = safe_voxels(with_lattice_pipe_frames(new_lattice_pipe(new_local_frame(V(0.0, 0.0, 0.0)), 60.0, line_mod_fn(line1)), spine).to_voxels())
+    let lp3 = safe_voxels(with_lattice_pipe_frames(new_lattice_pipe_mod(new_local_frame(V(0.0, 0.0, 0.0)), 60.0, line_mod_fn(|lr| line1(lr))), spine).to_voxels())
     [shapes::SceneGroup { voxels: lp1, mesh: 0, color: shapes::COLOR_YELLOW },
      shapes::SceneGroup { voxels: lp2, mesh: 0, color: shapes::COLOR_FROZEN },
      shapes::SceneGroup { voxels: lp3, mesh: 0, color: shapes::COLOR_RACINGGREEN }].to_vec()
@@ -202,14 +237,6 @@ fn translate_voxels(v: i64, centre: Vec3, color: shapes::RGB) -> shapes::SceneGr
     let mesh = safe_mesh(voxels_to_mesh(v))
     voxels_destroy(v)
     let nv = mesh_vertex_count(mesh)
-    let mut i = 0
-    while i < nv {
-        let p = mesh_get_vertex(mesh, i)
-        let _ = mesh_add_vertex(mesh, V(p.x + centre.x, p.y + centre.y, p.z + centre.z))
-        i += 1
-    }
-    // Now build a new mesh with translated vertices by round-tripping through arrays
-    // Actually, the Go approach reads all vertices and triangles, translates, creates new mesh
     let nt = mesh_triangle_count(mesh)
     let mut verts: Vec<f32> = [].to_vec()
     let mut tris: Vec<i32> = [].to_vec()
@@ -231,16 +258,14 @@ fn translate_voxels(v: i64, centre: Vec3, color: shapes::RGB) -> shapes::SceneGr
     }
     mesh_destroy(mesh)
     let new_mesh = safe_mesh(new_mesh())
-    let mut idx_map: Vec<i64> = [].to_vec()
     let mut k = 0
     while k < verts.len() {
         let _ = mesh_add_vertex(new_mesh, V(verts[k] as f64, verts[k + 1] as f64, verts[k + 2] as f64))
-        idx_map.push((k / 3) as i64)
         k += 3
     }
     let mut tj = 0
     while tj < tris.len() {
-        let _ = mesh_add_triangle(new_mesh, idx_map[tris[tj] as i64], idx_map[tris[tj + 1] as i64], idx_map[tris[tj + 2] as i64])
+        let _ = mesh_add_triangle(new_mesh, tris[tj] as i64, tris[tj + 1] as i64, tris[tj + 2] as i64)
         tj += 3
     }
     let new_vox = safe_voxels(voxels_from_mesh(new_mesh))
@@ -347,7 +372,7 @@ fn main() {
     }
     println!("=== FFI Gallery (Gossamer) ===")
     println!("Output dir: {}", outdir)
-    match init(0.2) { Ok(_) => (), Err(e) => { eprintln!("init: {}", e); return } }
+    match init(0.2) { Ok(_) => (), Err(e) => { eprintln!("FATAL: init: {}", e); return } }
     defer shutdown()
     println!("PicoGK {}", version())
 
@@ -358,6 +383,7 @@ fn main() {
         ("ring".to_string(), || build_ring()),
         ("lens".to_string(), || build_lens()),
         ("pipe".to_string(), || build_pipe()),
+        ("pipe_segment".to_string(), || build_pipe_segment()),
         ("basic_lattices".to_string(), || build_basic_lattices()),
         ("lattice_pipe".to_string(), || build_lattice_pipe()),
         ("lattice_manifold".to_string(), || build_lattice_manifold()),

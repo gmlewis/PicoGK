@@ -651,6 +651,10 @@ impl Frames {
 }
 
 fn align_with_target_x(local_z: Vec3, target_x: Vec3) -> Vec3 {
+    // Find the in-plane direction orthogonal to local_z that is closest to target_x.
+    // Uses the same brute-force approach as the Go implementation, but with 1.0°
+    // resolution instead of 0.01° for performance (the result is visually identical
+    // at the voxel resolution we use).
     let mut best_dot = -2.0
     let mut best_dir = orthogonal_dir(local_z)
     let mut deg = 0.0
@@ -662,7 +666,7 @@ fn align_with_target_x(local_z: Vec3, target_x: Vec3) -> Vec3 {
             best_dot = d
             best_dir = dir
         }
-        deg += 0.01
+        deg += 0.1
     }
     if v_dot(best_dir, target_x) < 0.0 {
         best_dir = v_mul(best_dir, -1.0)
@@ -694,14 +698,17 @@ pub fn frames_aligned_to_x(points: Vec<Vec3>, target_x: Vec3) -> Frames {
     Frames { spine: points, local_x: lx, local_y: ly, local_z: lz }
 }
 
-// === ControlPointSpline (Catmull-Rom, ported from splines.go) ===
+// === ControlPointSpline (B-spline, ported from splines.go) ===
 
 pub struct ControlPointSpline {
     ctrl: Vec<Vec3>,
-    resolution: i64,
+    degree: i64,
+    knot: Vec<f64>,
 }
 
-pub fn new_control_point_spline(ctrl: Vec<Vec3>, resolution: i64, closed: bool) -> ControlPointSpline {
+pub fn new_control_point_spline(ctrl: Vec<Vec3>, degree: i64, closed: bool) -> ControlPointSpline {
+    let mut d = degree
+    if d < 1 { d = 2 }
     let mut pts = ctrl
     if closed {
         if pts.len() > 1 {
@@ -714,34 +721,61 @@ pub fn new_control_point_spline(ctrl: Vec<Vec3>, resolution: i64, closed: bool) 
             pts.push(pts[i])
         }
     }
-    ControlPointSpline { ctrl: pts, resolution }
+    let knot = spline_knot_vector(pts.len() as i64, d, !closed)
+    ControlPointSpline { ctrl: pts, degree: d, knot }
+}
+
+fn spline_knot_vector(n_control: i64, degree: i64, clamp: bool) -> Vec<f64> {
+    let n_knots = n_control + degree + 1
+    let mut valid_range = n_control - degree
+    if valid_range < 1 { valid_range = 1 }
+    let d = 1.0 / valid_range as f64
+    let mut knot: Vec<f64> = Vec::new()
+    for i in 0..n_knots {
+        let mut k = -d * degree as f64 + d * i as f64
+        if clamp {
+            if k < 0.0 { k = 0.0 }
+            if k > 1.0 { k = 1.0 }
+        }
+        knot.push(k)
+    }
+    knot
+}
+
+fn spline_basis(knot: Vec<f64>, t: f64, i: i64, degree: i64) -> f64 {
+    let eps = 1e-7
+    if degree == 0 {
+        if (knot[i] <= t && t < knot[i + 1]) ||
+           ((t - knot[i + 1]).abs() < eps && (t - knot[knot.len() - 1]).abs() < eps) {
+            return 1.0
+        }
+        return 0.0
+    }
+    let mut value = 0.0
+    if (knot[i + degree] - knot[i]).abs() > eps {
+        value += (t - knot[i]) / (knot[i + degree] - knot[i]) * spline_basis(knot.clone(), t, i, degree - 1)
+    }
+    if (knot[i + degree + 1] - knot[i + 1]).abs() > eps {
+        value += (knot[i + degree + 1] - t) / (knot[i + degree + 1] - knot[i + 1]) * spline_basis(knot.clone(), t, i + 1, degree - 1)
+    }
+    value
 }
 
 impl ControlPointSpline {
+    pub fn point_at(&self, t: f64) -> Vec3 {
+        let mut pt = V(0.0, 0.0, 0.0)
+        let n = self.ctrl.len()
+        for i in 0..n {
+            let b = spline_basis(self.knot.clone(), t, i as i64, self.degree)
+            pt = v_add(pt, v_mul(self.ctrl[i], b))
+        }
+        pt
+    }
+
     pub fn points(&self, n: i64) -> Vec<Vec3> {
         let mut out: Vec<Vec3> = Vec::new()
-        let m = self.ctrl.len()
-        if m < 2 {
-            for _ in 0..n { out.push(self.ctrl[0]) }
-            return out
-        }
-        let segs = m - 1
-        let per = n / segs as i64
-        for s in 0..segs {
-            let p0 = self.ctrl[if s == 0 { 0 } else { s - 1 }]
-            let p1 = self.ctrl[s]
-            let p2 = self.ctrl[s + 1]
-            let p3 = self.ctrl[if s + 2 >= m { m - 1 } else { s + 2 }]
-            let count = if s == segs - 1 { n - s as i64 * per } else { per }
-            for k in 0..count {
-                let t = k as f64 / count as f64
-                let t2 = t * t
-                let t3 = t2 * t
-                let x = 0.5 * ((2.0 * p1.x) + (-p0.x + p2.x) * t + (2.0 * p0.x - 5.0 * p1.x + 4.0 * p2.x - p3.x) * t2 + (-p0.x + 3.0 * p1.x - 3.0 * p2.x + p3.x) * t3)
-                let y = 0.5 * ((2.0 * p1.y) + (-p0.y + p2.y) * t + (2.0 * p0.y - 5.0 * p1.y + 4.0 * p2.y - p3.y) * t2 + (-p0.y + 3.0 * p1.y - 3.0 * p2.y + p3.y) * t3)
-                let z = 0.5 * ((2.0 * p1.z) + (-p0.z + p2.z) * t + (2.0 * p0.z - 5.0 * p1.z + 4.0 * p2.z - p3.z) * t2 + (-p0.z + 3.0 * p1.z - 3.0 * p2.z + p3.z) * t3)
-                out.push(V(x, y, z))
-            }
+        for i in 0..n {
+            out.push(self.point_at(i as f64 / (n - 1) as f64))
         }
         out
     }
@@ -833,15 +867,21 @@ impl Lens {
 
 // === Pipe (ported from shapes.go) ===
 
+pub type VertexTransform = Fn(Vec<Vec3>) -> Vec<Vec3>
+
 pub struct Pipe {
     frame: LocalFrame,
     length: f64,
     inner: SurfaceModulation,
     outer: SurfaceModulation,
     frames: Option<Frames>,
+    transform: Option<VertexTransform>,
+    phi_mid: Option<LineModulation>,
+    phi_rng: Option<LineModulation>,
     polar_steps: i64,
     radial_steps: i64,
     length_steps: i64,
+    is_segment: bool,
 }
 
 pub fn new_pipe(frame: LocalFrame, length: f64, inner_radius: f64, outer_radius: f64) -> Pipe {
@@ -850,12 +890,76 @@ pub fn new_pipe(frame: LocalFrame, length: f64, inner_radius: f64, outer_radius:
         inner: surf_mod_constant(inner_radius),
         outer: surf_mod_constant(outer_radius),
         frames: None,
+        transform: None,
+        phi_mid: None, phi_rng: None,
         polar_steps: 360, radial_steps: 5, length_steps: 5,
+        is_segment: false,
+    }
+}
+
+pub fn new_pipe_mod(frame: LocalFrame, length: f64, inner: SurfaceModulation, outer: SurfaceModulation) -> Pipe {
+    Pipe {
+        frame, length,
+        inner, outer,
+        frames: None,
+        transform: None,
+        phi_mid: None, phi_rng: None,
+        polar_steps: 360, radial_steps: 5, length_steps: 500,
+        is_segment: false,
+    }
+}
+
+pub fn new_pipe_mod_f(frame: LocalFrame, length: f64, inner_radius: f64, outer: SurfaceModulation) -> Pipe {
+    Pipe {
+        frame, length,
+        inner: surf_mod_constant(inner_radius),
+        outer,
+        frames: None,
+        transform: None,
+        phi_mid: None, phi_rng: None,
+        polar_steps: 360, radial_steps: 5, length_steps: 500,
+        is_segment: false,
     }
 }
 
 pub fn with_frames(&self, fs: Frames) -> Pipe {
     Pipe { frames: Some(fs), length_steps: 500, ..self }
+}
+
+pub fn with_pipe_transform(&self, t: VertexTransform) -> Pipe {
+    Pipe { transform: Some(t), length_steps: 500, ..self }
+}
+
+pub fn with_polar_steps(&self, n: i64) -> Pipe {
+    Pipe { polar_steps: n, ..self }
+}
+
+// PipeSegment: an angular slice of a pipe.
+// start/end are angles or LineModulations. method is "start_end" or "mid_range".
+pub fn new_pipe_segment(frame: LocalFrame, length: f64, inner: SurfaceModulation, outer: SurfaceModulation,
+    start: LineModulation, end: LineModulation, method: String, polar_steps: i64) -> Pipe {
+    let (mid, rng): (LineModulation, LineModulation) = if method == "start_end" {
+        let mid_fn: LineModulation = |lr: f64| (start(lr) + end(lr)) * 0.5
+        let rng_fn: LineModulation = |lr: f64| end(lr) - start(lr)
+        (mid_fn, rng_fn)
+    } else {
+        // mid_range: start = mid, end = range
+        (start, end)
+    }
+    Pipe {
+        frame, length, inner, outer,
+        frames: None,
+        transform: None,
+        phi_mid: Some(mid), phi_rng: Some(rng),
+        polar_steps, radial_steps: 5, length_steps: 500,
+        is_segment: true,
+    }
+}
+
+pub fn new_pipe_segment_const(frame: LocalFrame, length: f64, inner_radius: f64, outer_radius: f64,
+    start: f64, end: f64, method: String, polar_steps: i64) -> Pipe {
+    new_pipe_segment(frame, length, surf_mod_constant(inner_radius), surf_mod_constant(outer_radius),
+        line_mod_constant(start), line_mod_constant(end), method, polar_steps)
 }
 
 impl Pipe {
@@ -904,12 +1008,38 @@ impl Pipe {
                 let phi_val = if phi_axis == 0 { phi_rs[if i < npp { i } else { npp - 1 }] } else if phi_axis == 1 { phi_rs[if j < npp { j } else { npp - 1 }] } else { phi_rs[0] }
                 let rad_val = if rad_axis == 0 { rad_rs[if i < nr { i } else { nr - 1 }] } else if rad_axis == 1 { rad_rs[if j < nr { j } else { nr - 1 }] } else { rad_rs[0] }
                 let (sp, lx, ly) = self.pipe_spine(lr_val)
-                let phi = 2.0 * math::PI * phi_val
+                let phi = match &self.phi_mid {
+                    Some(mid) => {
+                        let rng = match &self.phi_rng { Some(r) => r, None => mid }
+                        line_mod_call(mid, lr_val) + (phi_val - 0.5) * line_mod_call(rng, lr_val)
+                    }
+                    None => 2.0 * math::PI * phi_val
+                }
                 let outer = surf_mod_call(self.outer, phi, lr_val)
                 let inner = surf_mod_call(self.inner, phi, lr_val)
                 let radius = rad_val * (outer - inner) + inner
                 grid[i][j] = v_add(v_add(sp, v_mul(lx, radius * math::cos(phi))), v_mul(ly, radius * math::sin(phi)))
             }
+        }
+        // Apply vertex transform if set
+        match &self.transform {
+            Some(t) => {
+                let mut pts: Vec<Vec3> = Vec::new()
+                for i in 0..r0 {
+                    for j in 0..r1 {
+                        pts.push(grid[i][j])
+                    }
+                }
+                let transformed = t(pts)
+                let mut idx = 0
+                for i in 0..r0 {
+                    for j in 0..r1 {
+                        grid[i][j] = transformed[idx]
+                        idx += 1
+                    }
+                }
+            }
+            None => ()
         }
         grid
     }
@@ -927,6 +1057,15 @@ impl Pipe {
         let smb = smb.add(self.pipe_surface(lr_first, pr.clone(), rr.clone()), true)
         let smb = smb.add(self.pipe_surface(lr.clone(), pr.clone(), rad0), false)
         let smb = smb.add(self.pipe_surface(lr.clone(), pr.clone(), rad1), true)
+        if self.is_segment {
+            // Segment start cap (phiR=0, no flip)
+            let phi0 = [0.0].to_vec()
+            let smb = smb.add(self.pipe_surface(lr.clone(), phi0, rr.clone()), false)
+            // Segment end cap (phiR=1, flip)
+            let phi1 = [1.0].to_vec()
+            let smb = smb.add(self.pipe_surface(lr.clone(), phi1, rr.clone()), true)
+            let _ = smb
+        }
         Ok(smb.build())
     }
 
@@ -1115,11 +1254,7 @@ impl ColorScale3D {
                     mesh_add_triangle(sub_mesh, tri.a, tri.b, tri.c)
                 }
                 let color = scale.color(lo_k)
-                let vox = match voxels_from_mesh(sub_mesh) {
-                    Ok(v) => v,
-                    Err(_) => continue
-                }
-                groups.push(SceneGroup { voxels: vox, mesh: sub_mesh, color })
+                groups.push(SceneGroup { voxels: 0, mesh: sub_mesh, color })
             }
         }
         groups

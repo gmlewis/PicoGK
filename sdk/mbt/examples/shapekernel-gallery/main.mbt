@@ -182,31 +182,16 @@ fn main {
         if v.screenshot_png_keep_tga(png_path, 12, keep_tga) {
           println("  -> " + png_path)
         } else {
-          println("  ERROR: failed to write PNG")
+          println("  FATAL: failed to write PNG for " + name)
+          v.destroy()
+          return
         }
         v.request_close()
         v.destroy()
       } else {
-        // No display — fall back to STL.
-        println("  (Viewer not available — saving STLs only)")
-        for idx, g in groups {
-          match g.voxels {
-            Some(vox) => {
-              let mesh = vox.to_mesh()
-              let stl_path = outdir +
-                "/" +
-                name +
-                "_" +
-                idx.to_string() +
-                ".stl"
-              if mesh.save_stl(stl_path) {
-                println("  -> " + stl_path)
-              }
-              mesh.destroy()
-            }
-            None => ()
-          }
-        }
+        // Viewer not available (no display, or IBL assets missing) — hard fail.
+        println("  FATAL: Viewer not available for " + name)
+        return
       }
     }
 
