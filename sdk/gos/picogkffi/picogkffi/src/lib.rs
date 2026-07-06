@@ -1211,32 +1211,14 @@ register_module!(
         }
         let c_title = std::ffi::CString::new(title).unwrap();
         let v = {
-            let args = viewer::ViewerCreateArgs {
-                title: c_title.as_ptr(),
-                width: width as f32, height: height as f32,
-                bg_r: bg_r as f32, bg_g: bg_g as f32, bg_b: bg_b as f32, bg_a: bg_a as f32,
-            };
-            #[cfg(target_os = "macos")]
-            {
-                let result = unsafe {
-                    viewer::dispatch_run_on_main(
-                        viewer::dispatch_viewer_create,
-                        &args as *const viewer::ViewerCreateArgs as *mut std::ffi::c_void,
-                    )
-                };
-                result
-            }
-            #[cfg(not(target_os = "macos"))]
-            {
-                let size = PKVector2 { x: width as f32, y: height as f32 };
-                unsafe {
-                    viewer::Viewer_hCreate(
-                        c_title.as_ptr(), &size,
-                        viewer::viewer_info_cb, viewer::viewer_update_cb, viewer::viewer_key_cb,
-                        viewer::viewer_mouse_move_cb, viewer::viewer_mouse_button_cb,
-                        viewer::viewer_scroll_cb, viewer::viewer_window_size_cb,
-                    ) as *mut std::ffi::c_void
-                }
+            let size = PKVector2 { x: width as f32, y: height as f32 };
+            unsafe {
+                viewer::Viewer_hCreate(
+                    c_title.as_ptr(), &size,
+                    viewer::viewer_info_cb, viewer::viewer_update_cb, viewer::viewer_key_cb,
+                    viewer::viewer_mouse_move_cb, viewer::viewer_mouse_button_cb,
+                    viewer::viewer_scroll_cb, viewer::viewer_window_size_cb,
+                ) as *mut std::ffi::c_void
             }
         };
         if v.is_null() {
@@ -1260,24 +1242,19 @@ register_module!(
 
     fn viewer_screenshot(handle: i64, path: String) -> () {
         let v = *VIEWERS.get(handle).unwrap() as *mut std::ffi::c_void;
-        let c_path = std::ffi::CString::new(path).unwrap();
-        let args = viewer::ScreenshotArgs { viewer: v, path: c_path.as_ptr(), frames: 15 };
-        #[cfg(target_os = "macos")]
-        {
-            unsafe {
-                viewer::dispatch_run_on_main(
-                    viewer::dispatch_viewer_screenshot,
-                    &args as *const viewer::ScreenshotArgs as *mut std::ffi::c_void,
-                );
+        // The Viewer saves screenshots as TGA format. Save to a temp .tga file,
+        // then convert to PNG at the requested path.
+        let tga_path = path.clone() + ".tga";
+        let c_tga_path = std::ffi::CString::new(tga_path.clone()).unwrap();
+        unsafe {
+            viewer::Viewer_RequestScreenShot(v, c_tga_path.as_ptr());
+            viewer::Viewer_RequestUpdate(v);
+            for _ in 0..12 {
+                if !viewer::Viewer_bPoll(v) { break; }
             }
         }
-        #[cfg(not(target_os = "macos"))]
-        {
-            unsafe {
-                viewer::Viewer_RequestScreenShot(v, c_path.as_ptr());
-                viewer::Viewer_RequestUpdate(v);
-            }
-        }
+        // Convert TGA to PNG
+        render::convert_tga_to_png(&tga_path, &path);
     }
 
     fn viewer_poll(handle: i64) -> bool {
@@ -1288,21 +1265,9 @@ register_module!(
     fn viewer_request_close(handle: i64) -> () {
         let v = *VIEWERS.get(handle).unwrap() as *mut std::ffi::c_void;
         let args = viewer::CloseArgs { viewer: v };
-        #[cfg(target_os = "macos")]
-        {
-            unsafe {
-                viewer::dispatch_run_on_main(
-                    viewer::dispatch_viewer_close,
-                    &args as *const viewer::CloseArgs as *mut std::ffi::c_void,
-                );
-            }
-        }
-        #[cfg(not(target_os = "macos"))]
-        {
-            unsafe {
-                viewer::Viewer_RequestClose(v);
-                viewer::Viewer_Destroy(v);
-            }
+        unsafe {
+            viewer::Viewer_RequestClose(v);
+            viewer::Viewer_Destroy(v);
         }
     }
 
@@ -1374,4 +1339,5 @@ fn c_buf_to_string(buf: &[i8]) -> String {
 pub fn __bindings_force_link() {
     __gos_picogkffi::force_link();
 }
+
 

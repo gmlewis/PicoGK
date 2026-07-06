@@ -332,6 +332,15 @@ pub fn new_box(frame: LocalFrame, length: f64, width: f64, depth: f64) -> Box {
     }
 }
 
+pub fn new_box_mod(frame: LocalFrame, length: f64, width: LineModulation, depth: LineModulation) -> Box {
+    Box {
+        frame, length,
+        width: width,
+        depth: depth,
+        w_steps: 500, d_steps: 500, l_steps: 500,
+    }
+}
+
 impl Box {
     pub fn to_mesh(&self) -> Result<i64, String> {
     let nw = self.w_steps

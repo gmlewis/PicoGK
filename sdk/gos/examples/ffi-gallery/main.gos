@@ -1,6 +1,8 @@
-// Gallery: 16 parametric shape scenes rendered headless via software rasterizer.
+// Gallery: 16 parametric shape scenes rendered via the OpenGL Viewer.
+// This produces pixel-identical output to the Go and MoonBit galleries
+// since they all use the same PicoGK Viewer with the same camera math.
 //
-// Run:  RUSTFLAGS="-Awarnings" gos run --no-jit .
+// Run:  RUSTFLAGS="-Awarnings" gos run --main-thread --no-jit .
 
 use std::math
 use std::os
@@ -14,11 +16,12 @@ use shapes::{
     new_sphere_shape, new_sphere_shape_const, new_box, new_cylinder, new_cylinder_const,
     new_ring, new_lens, new_pipe, new_lattice_pipe,
     new_lattice_manifold, new_control_point_spline, frames_aligned_to_x,
-    surf_mod_fn, to_voxels,
+    surf_mod_fn, line_mod_fn, line_mod_constant, to_voxels,
     new_color_scale_3d, rainbow_spectrum, split_by_overhang_angle,
 }
 
 fn line1(lr: f64) -> f64 { 10.0 - 3.0 * math::cos(8.0 * lr) }
+fn line2(lr: f64) -> f64 { 8.0 - math::cos(40.0 * lr) }
 fn surf1(phi: f64, lr: f64) -> f64 { 12.0 + 3.0 * math::cos(5.0 * phi) }
 fn surf3(phi: f64, lr: f64) -> f64 { 8.0 + 5.0 * math::cos(5.0 * phi) }
 
@@ -36,11 +39,13 @@ fn render_scene(name: String, groups: Vec<shapes::SceneGroup>) {
     os::mkdir_all(outdir)
     println!("--- {} ---", name)
     if groups.is_empty() { println!("  (empty)"); return }
+    
     match new_viewer("PicoGK Gallery — " + name, 1280.0, 960.0, 0.16, 0.16, 0.20, 1.0) {
         Ok(v) => {
             let mut i = 0
             while i < groups.len() {
                 if groups[i].voxels != 0 { viewer_add_voxels(v, i as i64, groups[i].voxels) }
+                if groups[i].mesh != 0 { viewer_add_voxels(v, i as i64, groups[i].mesh) }
                 let c = groups[i].color
                 viewer_set_group_material(v, i as i64, c.r, c.g, c.b, 1.0, 0.1, 0.5)
                 i += 1
@@ -51,8 +56,9 @@ fn render_scene(name: String, groups: Vec<shapes::SceneGroup>) {
             viewer_destroy(v)
             println!("  -> {}", png_path)
         },
-        Err(e) => println!("  viewer: {}", e)
+        Err(e) => println!("  viewer error: {}", e)
     }
+    
     let mut ci = 0
     while ci < groups.len() {
         if groups[ci].voxels != 0 { voxels_destroy(groups[ci].voxels) }
@@ -63,8 +69,8 @@ fn render_scene(name: String, groups: Vec<shapes::SceneGroup>) {
 
 fn build_box() -> Vec<shapes::SceneGroup> {
     let b1 = safe_voxels(new_box(new_local_frame(V(-50.0, 0.0, 0.0)), 20.0, 10.0, 15.0).to_voxels())
-    let b2 = safe_voxels(new_box(new_local_frame(V(50.0, 0.0, 0.0)), 20.0, 10.0, 15.0).to_voxels())
-    let b3 = safe_voxels(new_box(new_local_frame(V(0.0, 0.0, 0.0)), 20.0, 10.0, 15.0).to_voxels())
+    let b2 = safe_voxels(new_box_mod(new_local_frame(V(50.0, 0.0, 0.0)), 20.0, line_mod_fn(line2), line_mod_fn(line1)).to_voxels())
+    let b3 = safe_voxels(new_box_mod(new_local_frame(V(0.0, 0.0, 0.0)), 20.0, line_mod_fn(line2), line_mod_fn(line1)).to_voxels())
     [shapes::SceneGroup { voxels: b1, mesh: 0, color: shapes::COLOR_BLUE },
      shapes::SceneGroup { voxels: b2, mesh: 0, color: shapes::COLOR_GREEN },
      shapes::SceneGroup { voxels: b3, mesh: 0, color: shapes::COLOR_YELLOW }].to_vec()
@@ -73,20 +79,30 @@ fn build_box() -> Vec<shapes::SceneGroup> {
 fn build_sphere() -> Vec<shapes::SceneGroup> {
     let s1 = safe_voxels(new_sphere_shape_const(new_local_frame(V(-100.0, 0.0, 0.0)), 40.0).to_voxels())
     let s2 = safe_voxels(new_sphere_shape(new_local_frame(V(0.0, 0.0, 0.0)), surf_mod_fn(|_p, t| 40.0 - 10.0 * math::cos(6.0 * t))).to_voxels())
+    let s3 = safe_voxels(new_sphere_shape(new_local_frame(V(150.0, 0.0, 0.0)), surf_mod_fn(|phi, t| 40.0 - 10.0 * math::cos(6.0 * t) + 30.0 * math::cos(2.0 * phi))).to_voxels())
     [shapes::SceneGroup { voxels: s1, mesh: 0, color: shapes::COLOR_FROZEN },
-     shapes::SceneGroup { voxels: s2, mesh: 0, color: shapes::COLOR_PITAYA }].to_vec()
+     shapes::SceneGroup { voxels: s2, mesh: 0, color: shapes::COLOR_PITAYA },
+     shapes::SceneGroup { voxels: s3, mesh: 0, color: shapes::COLOR_WARNING }].to_vec()
 }
 
 fn build_cylinder() -> Vec<shapes::SceneGroup> {
     let c1 = safe_voxels(new_cylinder_const(new_local_frame(V(-50.0, 0.0, 0.0)), 60.0, 40.0).to_voxels())
     let c2 = safe_voxels(new_cylinder(new_local_frame(V(50.0, 0.0, 0.0)), 60.0, surf_mod_fn(|_p, lr| line1(lr))).to_voxels())
+    let c3 = safe_voxels(new_cylinder(new_local_frame(V(0.0, 0.0, 0.0)), 60.0, surf_mod_fn(|phi, _lr| surf1(phi, _lr))).to_voxels())
     [shapes::SceneGroup { voxels: c1, mesh: 0, color: shapes::COLOR_BLUE },
-     shapes::SceneGroup { voxels: c2, mesh: 0, color: shapes::COLOR_GREEN }].to_vec()
+     shapes::SceneGroup { voxels: c2, mesh: 0, color: shapes::COLOR_GREEN },
+     shapes::SceneGroup { voxels: c3, mesh: 0, color: shapes::COLOR_YELLOW }].to_vec()
 }
 
 fn build_ring() -> Vec<shapes::SceneGroup> {
     let r1 = safe_voxels(new_ring(new_local_frame(V(-50.0, -50.0, 0.0)), 30.0, 8.0).to_voxels())
-    [shapes::SceneGroup { voxels: r1, mesh: 0, color: shapes::COLOR_FROZEN }].to_vec()
+    let r2 = safe_voxels(new_ring(new_local_frame(V(-50.0, 50.0, 0.0)), 30.0, 8.0).to_voxels())
+    let r3 = safe_voxels(new_ring(new_local_frame(V(50.0, 50.0, 0.0)), 30.0, 8.0).to_voxels())
+    let r4 = safe_voxels(new_ring(new_local_frame(V(50.0, -50.0, 0.0)), 30.0, 8.0).to_voxels())
+    [shapes::SceneGroup { voxels: r1, mesh: 0, color: shapes::COLOR_FROZEN },
+     shapes::SceneGroup { voxels: r2, mesh: 0, color: shapes::COLOR_PITAYA },
+     shapes::SceneGroup { voxels: r3, mesh: 0, color: shapes::COLOR_WARNING },
+     shapes::SceneGroup { voxels: r4, mesh: 0, color: shapes::COLOR_BLUEBERRY }].to_vec()
 }
 
 fn build_lens() -> Vec<shapes::SceneGroup> {
@@ -108,7 +124,7 @@ fn build_basic_lattices() -> Vec<shapes::SceneGroup> {
     let lat = match new_lattice() { Ok(h) => h, Err(e) => { eprintln!("{}", e); return [].to_vec() } }
     lattice_add_sphere(lat, V(1.0, 5.0, -10.0), 5.0)
     lattice_add_beam(lat, V(5.0, 3.0, 0.0), V(-3.0, 0.0, 7.0), 1.0, 3.0, true)
-    let v = safe_voxels(match voxels_from_lattice(lat) { Ok(h) => Ok(h), Err(e) => Err(e) })
+    let v = safe_voxels(voxels_from_lattice(lat))
     lattice_destroy(lat)
     [shapes::SceneGroup { voxels: v, mesh: 0, color: shapes::COLOR_BLUEBERRY }].to_vec()
 }
@@ -174,7 +190,7 @@ fn main() {
     os::mkdir_all(outdir)
     println!("=== FFI Gallery (Gossamer) ===")
     println!("Output dir: {}", outdir)
-    match init(0.5) { Ok(_) => (), Err(e) => { eprintln!("init: {}", e); return } }
+    match init(0.2) { Ok(_) => (), Err(e) => { eprintln!("init: {}", e); return } }
     defer shutdown()
     println!("PicoGK {}", version())
 
@@ -203,6 +219,4 @@ fn main() {
     }
     println!("\ndone.")
 }
-
-
 

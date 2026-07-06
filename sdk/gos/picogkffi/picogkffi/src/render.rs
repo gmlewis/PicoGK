@@ -156,3 +156,65 @@ pub fn render_mesh_to_png(
         }
     }
 }
+
+// Convert a TGA file to PNG format.
+pub fn convert_tga_to_png(tga_path: &str, png_path: &str) {
+    let data = match std::fs::read(tga_path) { Ok(d) => d, Err(_) => return };
+    if data.len() < 18 { return; }
+
+    let id_len = data[0] as usize;
+    let color_map_type = data[1];
+    let image_type = data[2];
+    let width = (data[12] as usize) | ((data[13] as usize) << 8);
+    let height = (data[14] as usize) | ((data[15] as usize) << 8);
+    let bpp = data[16] as usize;
+    let descriptor = data[17];
+
+    let mut offset = 18 + id_len;
+    if color_map_type == 1 {
+        let map_len = (data[5] as usize) | ((data[6] as usize) << 8);
+        let map_entry_size = data[7] as usize;
+        offset += map_len * (map_entry_size / 8);
+    }
+
+    if image_type != 2 { return; } // Only uncompressed true-color
+
+    let pixel_data = &data[offset..];
+    let stride = width * (bpp / 8);
+    let top_origin = (descriptor & 0x20) != 0;
+
+    let mut pixels: Vec<u8> = vec![0u8; width * height * 4];
+
+    for y in 0..height {
+        let row_offset = y * stride;
+        if row_offset + stride > pixel_data.len() { break; }
+        let dst_y = if top_origin { y } else { height - 1 - y };
+        for x in 0..width {
+            let src_idx = row_offset + x * (bpp / 8);
+            let dst_idx = (dst_y * width + x) * 4;
+            if bpp == 32 {
+                pixels[dst_idx]     = pixel_data[src_idx + 2]; // R
+                pixels[dst_idx + 1] = pixel_data[src_idx + 1]; // G
+                pixels[dst_idx + 2] = pixel_data[src_idx + 0]; // B
+                pixels[dst_idx + 3] = pixel_data[src_idx + 3]; // A
+            } else if bpp == 24 {
+                pixels[dst_idx]     = pixel_data[src_idx + 2]; // R
+                pixels[dst_idx + 1] = pixel_data[src_idx + 1]; // G
+                pixels[dst_idx + 2] = pixel_data[src_idx + 0]; // B
+                pixels[dst_idx + 3] = 255;                     // A
+            }
+        }
+    }
+
+    if let Ok(file) = std::fs::File::create(png_path) {
+        let w = std::io::BufWriter::new(file);
+        let mut encoder = png::Encoder::new(w, width as u32, height as u32);
+        encoder.set_color(png::ColorType::Rgba);
+        encoder.set_depth(png::BitDepth::Eight);
+        if let Ok(mut writer) = encoder.write_header() {
+            let _ = writer.write_image_data(&pixels);
+        }
+    }
+    let _ = std::fs::remove_file(tga_path);
+}
+

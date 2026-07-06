@@ -294,9 +294,9 @@ def main():
         gos_env = os.environ.copy()
         gos_env["RUSTFLAGS"] = "-Awarnings"
         ok = run(
-            ["gos", "run", "--no-jit", "."],
+            ["gos", "run", "--main-thread", "--no-jit", "."],
             cwd=GOS_GALLERY_DIR,
-            label="Gossamer: ffi-gallery (16 scenes, headless PNG)",
+            label="Gossamer: ffi-gallery (16 scenes, Viewer PNG)",
             timeout=900,
             verbose=args.verbose,
             env=gos_env,

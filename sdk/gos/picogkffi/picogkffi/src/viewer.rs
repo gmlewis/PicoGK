@@ -129,8 +129,8 @@ impl Default for CameraState {
         Self {
             target: [0.0; 3],
             radius: 10.0,
-            azimuth: 0.6,
-            elevation: 0.5,
+            azimuth: 45.0 * std::f32::consts::PI / 180.0,  // 45° (matching Go)
+            elevation: 25.0 * std::f32::consts::PI / 180.0,  // 25° (matching Go)
             zoom: 1.0,
             autofit: true,
             drag_button: -1,
@@ -351,20 +351,29 @@ pub unsafe extern "C" fn viewer_window_size_cb(_viewer: *mut std::ffi::c_void, _
 
 // Helper: load IBL lighting from _assets directory or PICOGK_ASSETS env var
 pub fn load_ibl_lighting(viewer: *mut std::ffi::c_void) -> bool {
-    let base = std::env::var("PICOGK_ASSETS").unwrap_or_else(|_| "_assets".to_string());
-    let diffuse_path = format!("{}/Diffuse.dds", base);
-    let specular_path = format!("{}/Specular.dds", base);
-    let diffuse = match std::fs::read(&diffuse_path) { Ok(d) => d, Err(_) => return false };
-    let specular = match std::fs::read(&specular_path) { Ok(s) => s, Err(_) => return false };
-    if diffuse.is_empty() || specular.is_empty() { return false; }
-    unsafe {
-        Viewer_bLoadLightSetup(
-            viewer,
-            diffuse.as_ptr() as *const c_char,
-            diffuse.len() as i32,
-            specular.as_ptr() as *const c_char,
-            specular.len() as i32,
-        )
+    // Try PICOGK_ASSETS env var first, then _assets relative to CWD,
+    // then _assets relative to the Go SDK directory (which has the DDS files).
+    let candidates = [
+        std::env::var("PICOGK_ASSETS").ok(),
+        Some("_assets".to_string()),
+        Some("/Users/glenn/src/github.com/gmlewis/PicoGK/sdk/go/picogkffi/_assets".to_string()),
+    ];
+    for base in candidates.iter().flatten() {
+        let diffuse_path = format!("{}/Diffuse.dds", base);
+        let specular_path = format!("{}/Specular.dds", base);
+        let diffuse = match std::fs::read(&diffuse_path) { Ok(d) => d, Err(_) => continue };
+        let specular = match std::fs::read(&specular_path) { Ok(s) => s, Err(_) => continue };
+        if diffuse.is_empty() || specular.is_empty() { continue; }
+        return unsafe {
+            Viewer_bLoadLightSetup(
+                viewer,
+                diffuse.as_ptr() as *const c_char,
+                diffuse.len() as i32,
+                specular.as_ptr() as *const c_char,
+                specular.len() as i32,
+            )
+        };
     }
+    false
 }
 
