@@ -1,12 +1,12 @@
 # Welcome to PicoGK
 
-**PicoGK** (“peacock”) is a compact, open-source geometry kernel developed by [LEAP 71](https://leap71.com/).
+**PicoGK** ("peacock") is a compact, open-source geometry kernel developed by [LEAP 71](https://leap71.com/).
 
-It serves as the foundation of a broader technology stack for [Computational Engineering](https://leap71.com/computationalengineering/), a new paradigm pioneered by LEAP 71.
+It serves as the foundation of a broader technology stack for [Computational Engineering](https://leap71.com/computationalengineering/), a new paradigm pioneered by LEAP 71.
 
 The name stands for **Pico** (tiny) **G**eometry **K**ernel, and the library offers [a deliberately reduced](https://jlk.ae/2023/12/06/the-power-of-reduced-instruction-sets/) yet powerful instruction set designed to create computational geometry for engineering applications.
 
-“PicoGK” is also a nod to the peacocks that roam the streets of Dubai — our home city and the birthplace of this technology.
+"PicoGK" is also a nod to the peacocks that roam the streets of Dubai — our home city and the birthplace of this technology.
 
 While it may appear minimal on the surface, PicoGK is used to generate some of the most advanced physical components imaginable: from electric motors and heat exchangers to [3D-printed rocket engines](https://leap71.com/rp/) and bio-inspired structures.
 
@@ -65,13 +65,13 @@ Replace `osx-arm64` with your platform identifier:
 - Windows: `win-x64`
 - Linux: `linux-x64`
 
-## Available Tools (62)
+## Available Tools (63)
 
 The MCP server exposes these tool categories:
 
 | Category | Tools |
 |----------|-------|
-| **Session** | `picogk_init`, `picogk_info`, `picogk_shutdown` |
+| **Session** | `version`, `picogk_init`, `picogk_info`, `picogk_shutdown` |
 | **Primitives** | `create_sphere`, `create_box`, `create_cylinder` (arbitrary axis), `create_capsule`, `create_torus` |
 | **Booleans** | `boolean_add`, `boolean_subtract`, `boolean_intersect`, `boolean_add_all`, `boolean_subtract_all` |
 | **Transforms** | `offset`, `double_offset`, `over_offset`, `smooth`, `trim`, `shell`, `fillet`, `project_z_slice`, `transform_voxels` (translate/rotate/scale via SDF), `circular_pattern` (polar array) |
@@ -183,7 +183,9 @@ Once configured, an agent can build geometry like this:
 
 ## Running Tests
 
-A comprehensive Python-based end-to-end test is included in `PicoGK.Mcp/Tests/e2e_test.py`. It exercises all 62 tools and validates output files, error guards, and query correctness.
+### MCP Server Tests
+
+A comprehensive Python-based end-to-end test is included in `PicoGK.Mcp/Tests/e2e_test.py`. It exercises all 63 tools and validates output files, error guards, and query correctness.
 
 ```bash
 # Build, install, and test in one step
@@ -203,18 +205,41 @@ The original C# E2E test is also available:
 dotnet run --project PicoGK.Mcp/Tests/PicoGK.Mcp.Tests.csproj -c Release -- /path/to/PicoGK
 ```
 
+### SDK Tests
+
+Run all SDK unit tests across Go, MoonBit, and Gossamer:
+
+```bash
+# Run all tests (auto-detects native library)
+./scripts/test-all.sh
+
+# Skip tests requiring native library (for CI or quick checks)
+./scripts/test-all.sh --quick
+```
+
 ---
 
-# SDKs for Other Programming Languages
+# SDKs
 
-The PicoGK MCP server speaks standard JSON-RPC over stdio, so any programming
-language can connect to it. To make this easy, two auto-generated SDKs are
-included in this repo. Both are generated from the C# tool definitions by
-scripts, so they stay in sync when the MCP API is updated.
+PicoGK provides SDKs for three languages: **Go**, **MoonBit**, and **Gossamer**. Each language has:
 
-## picogk — Go SDK
+- **MCP Client SDK** — launches the MCP server as a subprocess, communicates via JSON-RPC
+- **FFI SDK** (Go and MoonBit only) — binds directly to the native C++ runtime (no server needed)
+- **Blender SDK** — MCP client for Blender integration
+- **picogkshapes** — Higher-level shape construction helpers
 
-A fully typed, idiomatic Go SDK with builder-pattern request structs.
+All packages share a single semver version (e.g., `0.2.0`). See [Versioning](#versioning) below.
+
+## Go SDKs
+
+| Package | Description | Requires |
+|---------|-------------|----------|
+| [`picogk`](sdk/go/picogk/) | MCP client SDK with typed request structs | MCP server |
+| [`picogkffi`](sdk/go/picogkffi/) | Direct FFI binding via cgo | Native library |
+| [`blender`](sdk/go/blender/) | MCP client for Blender | Blender MCP server |
+| [`picogkshapes`](sdk/go/picogkshapes/) | Higher-level shape helpers | picogkffi |
+
+### Quick Start (Go MCP SDK)
 
 ```bash
 go get github.com/gmlewis/PicoGK/sdk/go/picogk
@@ -222,39 +247,84 @@ go get github.com/gmlewis/PicoGK/sdk/go/picogk
 
 ```go
 client, _ := picogk.NewClient(ctx, "") // default: $HOME/.local/bin/picogk-mcp/PicoGK.Mcp
-defer client.Close(ctx)
-client.PicogkInit(ctx, picogk.PicogkInitRequest{VoxelSizeMM: pFloat(0.5)})
-client.CreateSphere(ctx, picogk.CreateSphereRequest{X: 0, Y: 0, Z: 0, Radius: 30, Id: pStr("body")})
-client.BooleanSubtract(ctx, picogk.BooleanSubtractRequest{A: "body", B: "cutout", Id: pStr("result")})
-client.SaveStl(ctx, picogk.SaveStlRequest{MeshId: "mesh", Path: "/tmp/part.stl"})
+defer client.Close()
+client.Must(picogk.Init{VoxelSizeMM: picogk.Ptr(0.5)})
+client.Must(picogk.CreateSphere{X: 0, Y: 0, Z: 0, Radius: 30, ID: "body"})
+client.Must(picogk.SaveSTL{MeshID: "mesh", Path: "/tmp/part.stl"})
 ```
 
-See `sdk/go/picogk/README.md` for full documentation.
+### Quick Start (Go FFI SDK)
 
-## picogk — MoonBit SDK
+```go
+picogkffi.InitWithSize(0.5)
+defer picogkffi.Shutdown()
 
-A fully typed MoonBit SDK with async method functions and `Option[T]` for optional params. Uses `moonbitlang/async` for subprocess management.
-
-```bash
-moon add gmlewis/picogk
+body := picogkffi.NewSphere(picogkffi.Vec3{0, 0, 0}, 30)
+defer body.Destroy()
+mesh := body.ToMesh()
+defer mesh.Destroy()
+mesh.SaveSTL("/tmp/part.stl")
 ```
+
+> **macOS note:** After cloning, run `./scripts/fix-dylib-install-name.sh` to fix the native library for `go run .`.
+
+See `sdk/go/picogk/README.md` and `sdk/go/picogkffi/README.md` for full documentation.
+
+## MoonBit SDKs
+
+| Package | Description | Requires |
+|---------|-------------|----------|
+| [`picogk`](sdk/mbt/picogk/) | MCP client SDK with async methods | MCP server |
+| [`picogkffi`](sdk/mbt/picogkffi/) | FFI binding via native FFI | Native library |
+| [`blender`](sdk/mbt/blender/) | MCP client for Blender | Blender MCP server |
+| [`picogkshapes`](sdk/mbt/picogkshapes/) | Higher-level shape helpers | picogkffi |
+
+### Quick Start (MoonBit MCP SDK)
 
 ```moonbit
 @async.run() {
-  let client = @picogk.new_client("").await!() // default: $HOME/.local/bin/picogk-mcp/PicoGK.Mcp
+  let client = @picogk.new_client("").await!()
   client.picogk_init(0.5).await!()
   client.create_sphere(0.0, 0.0, 0.0, 30.0, Some("body")).await!()
-  client.boolean_subtract("body", "cutout", Some("result")).await!()
   client.save_stl("mesh", "/tmp/part.stl").await!()
   client.close()
 }
 ```
 
-See `sdk/mbt/picogk/README.md` for full documentation.
+### Quick Start (MoonBit FFI SDK)
 
-## Regenerating the SDKs
+```moonbit
+@picogkffi.init_with_size(0.5)
+let body = @picogkffi.new_sphere(@picogkffi.Vec3::new(0.0, 0.0, 0.0), 30.0)
+let mesh = body.to_mesh()
+mesh.save_stl("/tmp/part.stl")
+```
 
-When the MCP tools change (new tools added, params modified), regenerate both SDKs:
+See `sdk/mbt/picogk/README.md` and `sdk/mbt/picogkffi/README.md` for full documentation.
+
+## Gossamer SDKs
+
+| Package | Description | Requires |
+|---------|-------------|----------|
+| [`picogk`](sdk/gos/picogk/) | MCP client SDK | MCP server |
+| [`blender`](sdk/gos/blender/) | MCP client for Blender | Blender MCP server |
+| [`picogkshapes`](sdk/gos/picogkshapes/) | Higher-level shape helpers | picogkffi (via Rust bindings) |
+
+### Quick Start (Gossamer MCP SDK)
+
+```gos
+let client = picogk::new_client()?
+defer client.close()
+client.picogk_init(Some(0.5))?
+client.create_sphere(0.0, 0.0, 0.0, 30.0, Some("body"))?
+client.save_stl("mesh", "/tmp/part.stl")?
+```
+
+See `sdk/gos/picogk/README.md` for full documentation.
+
+## Regenerating the MCP SDKs
+
+When the MCP tools change (new tools added, params modified), regenerate the Go and MoonBit MCP SDKs:
 
 ```bash
 ./scripts/generate-go-picogk-sdk.py --verbose
@@ -264,6 +334,34 @@ When the MCP tools change (new tools added, params modified), regenerate both SD
 Both scripts parse `PicoGK.Mcp/Tools/*.cs` to extract tool names, parameter types,
 and descriptions, then emit idiomatic code. The generated files include a
 `DO NOT EDIT` header — always edit the C# source and regenerate.
+
+---
+
+# Versioning
+
+All packages in this repo share a single semver version. The master version is defined in `sdk/go/picogk/version.go` and propagated to all other packages by the bump script.
+
+## Bumping the Version
+
+```bash
+# Auto-bump minor version (0.1.0 -> 0.2.0)
+./scripts/bump-minor-version.py
+
+# Set to specific version (idempotent)
+./scripts/bump-minor-version.py 0.5.3
+```
+
+This updates version constants across all SDKs:
+
+| Language | Files updated |
+|----------|---------------|
+| Go | `version.go`, `go.mod` |
+| MoonBit | `moon.mod`, `client.mbt` (VERSION constant + clientInfo) |
+| Gossamer | `project.toml`, `lib.gos` (VERSION constant + clientInfo) |
+| C# | `SessionTools.cs` (version tool return value) |
+| Cargo | `Cargo.toml` |
+
+MoonBit import versions (e.g., `gmlewis/picogkffi@0.2.0`) are also updated automatically. Third-party dependencies (e.g., `moonbitlang/async@0.19.2`) are not modified.
 
 ---
 
@@ -292,4 +390,3 @@ This rewrites the dylib's `install_name` to an absolute path and re-signs it
 with an ad-hoc code signature (required because `install_name_tool` invalidates
 the existing signature, and macOS AMFI kills binaries that load tampered-with
 signed libraries).
-
