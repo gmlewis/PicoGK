@@ -13,6 +13,7 @@ use std::process
 use std::strings
 use std::sync
 
+const VERSION: String = "0.2.0"
 const PROTOCOL_VERSION: String = "2024-11-05"
 const DEFAULT_SERVER_BIN: String = "~/.local/bin/picogk-mcp/PicoGK.Mcp"
 
@@ -152,7 +153,7 @@ fn init_params() -> json::Value {
         ("capabilities", json::Value::object([])),
         ("clientInfo", json::Value::object([
             ("name", json::Value::String("picogk-gos-sdk")),
-            ("version", json::Value::String("1.0.0")),
+            ("version", json::Value::String(VERSION)),
         ])),
     ])
 }
@@ -173,5 +174,37 @@ pub fn resolve_path(path: String) -> String {
     } else {
         let cwd = env::current_dir().unwrap_or(".".to_string())
         cwd + "/" + expanded
+    }
+}
+
+// === Unit tests ===
+
+#[cfg(test)]
+mod picogk_tests {
+    use std::testing
+
+    #[test]
+    fn expand_path_tilde() {
+        let p = expand_path("~/foo".to_string())
+        testing::check(p.contains("foo"), "tilde should expand, got: {}", p)
+    }
+
+    #[test]
+    fn expand_path_no_tilde() {
+        let p = expand_path("/abs/path".to_string())
+        testing::check_eq(p, "/abs/path", "absolute path unchanged")
+    }
+
+    #[test]
+    fn resolve_path_absolute() {
+        let p = resolve_path("/absolute/path".to_string())
+        testing::check_eq(p, "/absolute/path", "absolute path returned as-is")
+    }
+
+    #[test]
+    fn resolve_path_relative() {
+        let p = resolve_path("relative/path".to_string())
+        testing::check(p.starts_with("/"), "relative path should be resolved to absolute, got: {}", p)
+        testing::check(p.contains("relative/path"), "resolved path should contain original, got: {}", p)
     }
 }

@@ -14,16 +14,20 @@ pub fn get_instance() -> Int64 {
 ///|
 fn do_init(vs : Double) -> Result[Unit, String] {
   // Try to find the PicoGK shared library.
-  // Check environment variable PICOGK_LIB first, then fall back to
-  // a path relative to this package's source directory.
-  let default_path = "../../../native/osx-arm64/picogk.26.2.dylib"
-  let lib_path = @env.get_env_var("PICOGK_LIB").unwrap_or(
-    default_path,
-  )
-  let path_bytes = cstr(lib_path)
+  // 1. Check environment variable PICOGK_LIB first
+  // 2. Try multiple relative paths to handle different working directories
+  match @env.get_env_var("PICOGK_LIB") {
+    Some(path) => load_library(path, vs)
+    None => try_load_library(vs)
+  }
+}
+
+///|
+fn load_library(path : String, vs : Double) -> Result[Unit, String] {
+  let path_bytes = cstr(path)
   let result = picogk_dlopen(path_bytes)
   if result != 0 {
-    return Err("failed to load PicoGK library at: " + lib_path)
+    return Err("failed to load PicoGK library at: " + path)
   }
   let inst = library_h_create_instance(Float::from_double(vs))
   if inst == 0L {
@@ -31,6 +35,41 @@ fn do_init(vs : Double) -> Result[Unit, String] {
   }
   instance.val = inst
   Ok(())
+}
+
+///|
+fn try_load_library(vs : Double) -> Result[Unit, String] {
+  // Try multiple candidate paths relative to different working directories.
+  // The tests may run from sdk/mbt/picogkffi/test/, sdk/mbt/, or the repo root.
+  let candidates = [
+    // macOS - from sdk/mbt/picogkffi/test/ (4 levels up to repo root)
+    "../../../../native/osx-arm64/picogk.26.2.dylib",
+    // macOS - from sdk/mbt/ (2 levels up to repo root)
+    "../../native/osx-arm64/picogk.26.2.dylib",
+    // macOS - from repo root
+    "native/osx-arm64/picogk.26.2.dylib",
+    // Linux - from sdk/mbt/picogkffi/test/ (4 levels up to repo root)
+    "../../../../native/linux-x64/libpicogk.so",
+    // Linux - from sdk/mbt/ (2 levels up to repo root)
+    "../../native/linux-x64/libpicogk.so",
+    // Linux - from repo root
+    "native/linux-x64/libpicogk.so",
+  ]
+  // Try each candidate
+  for candidate in candidates {
+    let path_bytes = cstr(candidate)
+    let result = picogk_dlopen(path_bytes)
+    if result == 0 {
+      let inst = library_h_create_instance(Float::from_double(vs))
+      if inst == 0L {
+        return Err("Library_hCreateInstance returned null handle")
+      }
+      instance.val = inst
+      return Ok(())
+    }
+  }
+  // Fall back to error with helpful message
+  Err("failed to load PicoGK library. Set PICOGK_LIB environment variable to the library path.")
 }
 
 ///|

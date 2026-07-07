@@ -1,5 +1,5 @@
 [project]
 id      = "github.com/gmlewis/picogk/blender-gos"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Glenn Lewis"]
 license = "Apache-2.0"

@@ -26,6 +26,11 @@ pub struct Client {
 let default_server_bin : String = "uv"
 
 ///|
+/// VERSION is the semver version of this package.
+///
+const VERSION : String = "0.2.0"
+
+///|
 /// default_server_args returns the default arguments for the Blender MCP server.
 ///
 let default_server_args : Array[String] = [
@@ -197,7 +202,7 @@ async fn Client::initialize(self : Client) -> Unit {
               Json::object(
                 Map([
                   ("name", Json::string("blender")),
-                  ("version", Json::string("0.1.0")),
+                  ("version", Json::string(VERSION)),
                 ]),
               ),
             ),

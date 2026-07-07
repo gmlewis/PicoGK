@@ -2,7 +2,7 @@
 
 name = "gmlewis/picogk-hello-picogk-example"
 
-version = "0.1.0"
+version = "0.2.0"
 
 license = "Apache-2.0"
 
@@ -13,5 +13,5 @@ preferred_target = "native"
 supported_targets = "+native"
 
 import {
-  "gmlewis/picogkffi@0.1.0",
+  "gmlewis/picogkffi@0.2.0",
 }

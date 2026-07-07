@@ -27,6 +27,13 @@ namespace PicoGK.Mcp.Tools;
 public static class SessionTools
 {
     [McpServerTool]
+    [Description("Return the semver version of this MCP server (e.g. \"0.1.0\").")]
+    public static string Version()
+    {
+        return "0.2.0";
+    }
+
+    [McpServerTool]
     [Description("Initialize the PicoGK geometry kernel. Must be called before any other tool. " +
         "Sets the voxel resolution in millimeters. Smaller values = higher resolution but more memory. " +
         "Typical range: 0.1mm (fine) to 5.0mm (coarse).")]

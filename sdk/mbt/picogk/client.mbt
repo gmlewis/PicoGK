@@ -29,6 +29,11 @@ pub struct Client {
 let default_server_bin : String = "~/.local/bin/picogk-mcp/PicoGK.Mcp"
 
 ///|
+/// VERSION is the semver version of this package.
+///
+const VERSION : String = "0.2.0"
+
+///|
 /// new_client launches the PicoGK MCP server binary and returns a Client.
 /// If server_bin is empty, uses default_server_bin.
 /// Must be called within an async function.
@@ -207,7 +212,7 @@ async fn Client::initialize(self : Client) -> Unit {
               Json::object(
                 Map([
                   ("name", Json::string("picogk")),
-                  ("version", Json::string("0.1.0")),
+                  ("version", Json::string(VERSION)),
                 ]),
               ),
             ),
