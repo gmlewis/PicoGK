@@ -45,15 +45,15 @@ fn try_load_library(vs : Double) -> Result[Unit, String] {
     // macOS - from sdk/mbt/picogkffi/test/ (4 levels up to repo root)
     "../../../../native/osx-arm64/picogk.26.2.dylib",
     // macOS - from sdk/mbt/ (2 levels up to repo root)
-    "../../native/osx-arm64/picogk.26.2.dylib",
+     "../../native/osx-arm64/picogk.26.2.dylib",
     // macOS - from repo root
-    "native/osx-arm64/picogk.26.2.dylib",
+     "native/osx-arm64/picogk.26.2.dylib",
     // Linux - from sdk/mbt/picogkffi/test/ (4 levels up to repo root)
-    "../../../../native/linux-x64/libpicogk.so",
+     "../../../../native/linux-x64/libpicogk.so",
     // Linux - from sdk/mbt/ (2 levels up to repo root)
-    "../../native/linux-x64/libpicogk.so",
+     "../../native/linux-x64/libpicogk.so",
     // Linux - from repo root
-    "native/linux-x64/libpicogk.so",
+     "native/linux-x64/libpicogk.so",
   ]
   // Try each candidate
   for candidate in candidates {
@@ -69,7 +69,9 @@ fn try_load_library(vs : Double) -> Result[Unit, String] {
     }
   }
   // Fall back to error with helpful message
-  Err("failed to load PicoGK library. Set PICOGK_LIB environment variable to the library path.")
+  Err(
+    "failed to load PicoGK library. Set PICOGK_LIB environment variable to the library path.",
+  )
 }
 
 ///|

@@ -508,7 +508,12 @@ pub fn ViewerEx::screenshot_png_keep_tga(
   keep_tga : Bool,
 ) -> Bool {
   let kt : Int = if keep_tga { 1 } else { 0 }
-  let result = mbt_viewer_screenshot_png_keep_tga(self.h, cstr(path), frames, kt)
+  let result = mbt_viewer_screenshot_png_keep_tga(
+    self.h,
+    cstr(path),
+    frames,
+    kt,
+  )
   result == 0
 }
 

@@ -746,7 +746,7 @@ fn spline_basis(knot: Vec<f64>, t: f64, i: i64, degree: i64) -> f64 {
     let eps = 1e-7
     if degree == 0 {
         if (knot[i] <= t && t < knot[i + 1]) ||
-           ((t - knot[i + 1]).abs() < eps && (t - knot[knot.len() - 1]).abs() < eps) {
+            ((t - knot[i + 1]).abs() < eps && (t - knot[knot.len() - 1]).abs() < eps) {
             return 1.0
         }
         return 0.0
@@ -869,7 +869,7 @@ impl Lens {
 
 pub type VertexTransform = Fn(Vec<Vec3>) -> Vec<Vec3>
 
-pub struct Pipe {
+    pub struct Pipe {
     frame: LocalFrame,
     length: f64,
     inner: SurfaceModulation,

@@ -5,6 +5,7 @@ use std::math
 use std::os
 use std::env
 use picogkffi::{init, version, shutdown, new_lattice, lattice_add_sphere, lattice_add_beam,
+
     lattice_destroy, voxels_destroy, mesh_destroy, voxels_bool_add, voxels_double_offset,
     new_voxels, render_gyroid, render_gyroid_genus, render_superellipsoid,
     new_viewer, viewer_add_voxels, viewer_add_mesh, viewer_set_group_material,
@@ -13,6 +14,7 @@ use picogkffi::{init, version, shutdown, new_lattice, lattice_add_sphere, lattic
     new_mesh, mesh_add_vertex, mesh_add_triangle, mesh_vertex_count, mesh_triangle_count,
     mesh_get_vertex, mesh_get_triangle, Vec3, Triangle}
 use shapes::{
+
     V, new_local_frame, new_local_frame_xyz,
     new_sphere_shape, new_sphere_shape_const, new_box, new_box_mod, new_cylinder, new_cylinder_const,
     new_ring, new_ring_mod, new_lens, with_lower, with_upper, new_pipe, new_pipe_mod, new_pipe_mod_f,
@@ -85,8 +87,8 @@ fn build_box() -> Vec<shapes::SceneGroup> {
     let b2 = safe_voxels(new_box_mod(new_local_frame(V(50.0, 0.0, 0.0)), 20.0, line_mod_fn(line2), line_mod_fn(line1)).to_voxels())
     let b3 = safe_voxels(new_box_mod(new_local_frame(V(0.0, 0.0, 0.0)), 20.0, line_mod_fn(line2), line_mod_fn(line1)).to_voxels())
     [shapes::SceneGroup { voxels: b1, mesh: 0, color: shapes::COLOR_BLUE },
-     shapes::SceneGroup { voxels: b2, mesh: 0, color: shapes::COLOR_GREEN },
-     shapes::SceneGroup { voxels: b3, mesh: 0, color: shapes::COLOR_YELLOW }].to_vec()
+        shapes::SceneGroup { voxels: b2, mesh: 0, color: shapes::COLOR_GREEN },
+        shapes::SceneGroup { voxels: b3, mesh: 0, color: shapes::COLOR_YELLOW }].to_vec()
 }
 
 fn build_sphere() -> Vec<shapes::SceneGroup> {
@@ -94,8 +96,8 @@ fn build_sphere() -> Vec<shapes::SceneGroup> {
     let s2 = safe_voxels(new_sphere_shape(new_local_frame(V(0.0, 0.0, 0.0)), surf_mod_fn(|_p, t| 40.0 - 10.0 * math::cos(6.0 * t))).to_voxels())
     let s3 = safe_voxels(new_sphere_shape(new_local_frame(V(150.0, 0.0, 0.0)), surf_mod_fn(|phi, t| 40.0 - 10.0 * math::cos(6.0 * t) + 30.0 * math::cos(2.0 * phi))).to_voxels())
     [shapes::SceneGroup { voxels: s1, mesh: 0, color: shapes::COLOR_FROZEN },
-     shapes::SceneGroup { voxels: s2, mesh: 0, color: shapes::COLOR_PITAYA },
-     shapes::SceneGroup { voxels: s3, mesh: 0, color: shapes::COLOR_WARNING }].to_vec()
+        shapes::SceneGroup { voxels: s2, mesh: 0, color: shapes::COLOR_PITAYA },
+        shapes::SceneGroup { voxels: s3, mesh: 0, color: shapes::COLOR_WARNING }].to_vec()
 }
 
 fn build_cylinder() -> Vec<shapes::SceneGroup> {
@@ -103,8 +105,8 @@ fn build_cylinder() -> Vec<shapes::SceneGroup> {
     let c2 = safe_voxels(new_cylinder(new_local_frame(V(50.0, 0.0, 0.0)), 60.0, surf_mod_fn(|_p, lr| line1(lr))).to_voxels())
     let c3 = safe_voxels(new_cylinder(new_local_frame(V(0.0, 0.0, 0.0)), 60.0, surf_mod_fn(|phi, lr| surf1(phi, lr))).to_voxels())
     [shapes::SceneGroup { voxels: c1, mesh: 0, color: shapes::COLOR_BLUE },
-     shapes::SceneGroup { voxels: c2, mesh: 0, color: shapes::COLOR_GREEN },
-     shapes::SceneGroup { voxels: c3, mesh: 0, color: shapes::COLOR_YELLOW }].to_vec()
+        shapes::SceneGroup { voxels: c2, mesh: 0, color: shapes::COLOR_GREEN },
+        shapes::SceneGroup { voxels: c3, mesh: 0, color: shapes::COLOR_YELLOW }].to_vec()
 }
 
 fn build_ring() -> Vec<shapes::SceneGroup> {
@@ -113,9 +115,9 @@ fn build_ring() -> Vec<shapes::SceneGroup> {
     let r3 = safe_voxels(new_ring_mod(new_local_frame(V(50.0, 50.0, 0.0)), 30.0, surf_mod_fn(|_p, alpha| 10.0 + 3.0 * math::cos(5.0 * alpha))).to_voxels())
     let r4 = safe_voxels(new_ring_mod(new_local_frame(V(50.0, -50.0, 0.0)), 30.0, surf_mod_fn(|phi, alpha| 10.0 - 2.0 * math::cos(5.0 * (phi + alpha)) + 3.0 * math::cos(5.0 * alpha))).to_voxels())
     [shapes::SceneGroup { voxels: r1, mesh: 0, color: shapes::COLOR_FROZEN },
-     shapes::SceneGroup { voxels: r2, mesh: 0, color: shapes::COLOR_PITAYA },
-     shapes::SceneGroup { voxels: r3, mesh: 0, color: shapes::COLOR_WARNING },
-     shapes::SceneGroup { voxels: r4, mesh: 0, color: shapes::COLOR_BLUEBERRY }].to_vec()
+        shapes::SceneGroup { voxels: r2, mesh: 0, color: shapes::COLOR_PITAYA },
+        shapes::SceneGroup { voxels: r3, mesh: 0, color: shapes::COLOR_WARNING },
+        shapes::SceneGroup { voxels: r4, mesh: 0, color: shapes::COLOR_BLUEBERRY }].to_vec()
 }
 
 fn build_lens() -> Vec<shapes::SceneGroup> {
@@ -128,8 +130,8 @@ fn build_lens() -> Vec<shapes::SceneGroup> {
         surf_mod_fn(|phi, rr| 5.0 - surf(phi, rr))),
         surf_mod_fn(|phi, rr| 5.0 + math::cos(6.0 * (phi + 0.3 * math::PI * rr)) + 3.0 * math::cos(20.0 * rr))).to_voxels())
     [shapes::SceneGroup { voxels: l1, mesh: 0, color: shapes::COLOR_FROZEN },
-     shapes::SceneGroup { voxels: l2, mesh: 0, color: shapes::COLOR_PITAYA },
-     shapes::SceneGroup { voxels: l3, mesh: 0, color: shapes::COLOR_WARNING }].to_vec()
+        shapes::SceneGroup { voxels: l2, mesh: 0, color: shapes::COLOR_PITAYA },
+        shapes::SceneGroup { voxels: l3, mesh: 0, color: shapes::COLOR_WARNING }].to_vec()
 }
 
 fn build_pipe() -> Vec<shapes::SceneGroup> {
@@ -149,9 +151,9 @@ fn build_pipe() -> Vec<shapes::SceneGroup> {
     let spine = frames_aligned_to_x(spline_points(), V(0.0, 1.0, 0.0))
     let p4 = safe_voxels(with_frames(new_pipe_mod(new_local_frame(V(0.0, 0.0, 0.0)), 60.0, surf_mod_fn(surf3), surf_mod_fn(surf1)), spine).to_voxels())
     [shapes::SceneGroup { voxels: p1, mesh: 0, color: shapes::COLOR_BLUE },
-     shapes::SceneGroup { voxels: p2, mesh: 0, color: shapes::COLOR_GREEN },
-     shapes::SceneGroup { voxels: p3, mesh: 0, color: shapes::COLOR_LEMONGRASS },
-     shapes::SceneGroup { voxels: p4, mesh: 0, color: shapes::COLOR_ORCHID }].to_vec()
+        shapes::SceneGroup { voxels: p2, mesh: 0, color: shapes::COLOR_GREEN },
+        shapes::SceneGroup { voxels: p3, mesh: 0, color: shapes::COLOR_LEMONGRASS },
+        shapes::SceneGroup { voxels: p4, mesh: 0, color: shapes::COLOR_ORCHID }].to_vec()
 }
 
 fn build_pipe_segment() -> Vec<shapes::SceneGroup> {
@@ -170,8 +172,8 @@ fn build_pipe_segment() -> Vec<shapes::SceneGroup> {
         line_mod_fn(|lr| 4.0 * math::PI * lr), line_mod_constant(1.5 * math::PI),
         "mid_range".to_string(), 360), spine).to_voxels())
     [shapes::SceneGroup { voxels: p1, mesh: 0, color: shapes::COLOR_BLUE },
-     shapes::SceneGroup { voxels: p2, mesh: 0, color: shapes::COLOR_RUBY },
-     shapes::SceneGroup { voxels: p3, mesh: 0, color: shapes::COLOR_RACINGGREEN }].to_vec()
+        shapes::SceneGroup { voxels: p2, mesh: 0, color: shapes::COLOR_RUBY },
+        shapes::SceneGroup { voxels: p3, mesh: 0, color: shapes::COLOR_RACINGGREEN }].to_vec()
 }
 
 fn build_basic_lattices() -> Vec<shapes::SceneGroup> {
@@ -189,8 +191,8 @@ fn build_lattice_pipe() -> Vec<shapes::SceneGroup> {
     let spine = frames_aligned_to_x(spline_points(), V(0.0, 1.0, 0.0))
     let lp3 = safe_voxels(with_lattice_pipe_frames(new_lattice_pipe_mod(new_local_frame(V(0.0, 0.0, 0.0)), 60.0, line_mod_fn(|lr| line1(lr))), spine).to_voxels())
     [shapes::SceneGroup { voxels: lp1, mesh: 0, color: shapes::COLOR_YELLOW },
-     shapes::SceneGroup { voxels: lp2, mesh: 0, color: shapes::COLOR_FROZEN },
-     shapes::SceneGroup { voxels: lp3, mesh: 0, color: shapes::COLOR_RACINGGREEN }].to_vec()
+        shapes::SceneGroup { voxels: lp2, mesh: 0, color: shapes::COLOR_FROZEN },
+        shapes::SceneGroup { voxels: lp3, mesh: 0, color: shapes::COLOR_RACINGGREEN }].to_vec()
 }
 
 fn build_lattice_manifold() -> Vec<shapes::SceneGroup> {
@@ -198,8 +200,8 @@ fn build_lattice_manifold() -> Vec<shapes::SceneGroup> {
     let lm2 = safe_voxels(with_extend_both_sides(new_lattice_manifold(new_local_frame_xyz(V(0.0, 0.0, 0.0), V(0.0, 1.0, 0.0), V(1.0, 0.0, 0.0)), 50.0, 10.0, 30.0), true).to_voxels())
     let lm3 = safe_voxels(with_extend_both_sides(new_lattice_manifold(new_local_frame_xyz(V(50.0, 0.0, 0.0), V(0.0, 1.0, 0.0), V(1.0, 0.0, 0.0)), 50.0, 5.0, 60.0), true).to_voxels())
     [shapes::SceneGroup { voxels: lm1, mesh: 0, color: shapes::COLOR_YELLOW },
-     shapes::SceneGroup { voxels: lm2, mesh: 0, color: shapes::COLOR_CRYSTAL },
-     shapes::SceneGroup { voxels: lm3, mesh: 0, color: shapes::COLOR_GREEN }].to_vec()
+        shapes::SceneGroup { voxels: lm2, mesh: 0, color: shapes::COLOR_CRYSTAL },
+        shapes::SceneGroup { voxels: lm3, mesh: 0, color: shapes::COLOR_GREEN }].to_vec()
 }
 
 fn build_gyroid_sphere() -> Vec<shapes::SceneGroup> {
@@ -324,7 +326,7 @@ fn build_mesh_trafo() -> Vec<shapes::SceneGroup> {
     mesh_destroy(rot_mesh)
     let original_box = safe_voxels(new_box(new_local_frame(V(0.0, 0.0, 0.0)), 40.0, 30.0, 20.0).to_voxels())
     [shapes::SceneGroup { voxels: original_box, mesh: 0, color: shapes::COLOR_GRAY },
-     shapes::SceneGroup { voxels: rot_vox, mesh: 0, color: shapes::COLOR_ORCHID }].to_vec()
+        shapes::SceneGroup { voxels: rot_vox, mesh: 0, color: shapes::COLOR_ORCHID }].to_vec()
 }
 
 fn build_over_offset() -> Vec<shapes::SceneGroup> {
