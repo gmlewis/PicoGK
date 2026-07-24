@@ -10,7 +10,7 @@ pub async fn Client::execute_blender_code(
   self : Client,
   code : String,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("code", Json::string(code))
   self.call_tool("execute_blender_code", args)
 }
@@ -24,7 +24,7 @@ pub async fn Client::execute_blender_code_for_cli(
   blendFile : String,
   code : String,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("blend_file", Json::string(blendFile))
   args.set("code", Json::string(code))
   self.call_tool("execute_blender_code_for_cli", args)
@@ -37,7 +37,7 @@ pub async fn Client::execute_blender_code_for_cli(
 /// Return a summary of the blend file: data-block counts, active workspace, and render engine.
 ///
 pub async fn Client::get_blendfile_summary_datablocks(self : Client) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   self.call_tool("get_blendfile_summary_datablocks", args)
 }
 
@@ -49,7 +49,7 @@ pub async fn Client::get_blendfile_summary_datablocks_for_cli(
   self : Client,
   blendFile : String,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("blend_file", Json::string(blendFile))
   self.call_tool("get_blendfile_summary_datablocks_for_cli", args)
 }
@@ -61,7 +61,7 @@ pub async fn Client::get_blendfile_summary_datablocks_for_cli(
 pub async fn Client::get_blendfile_summary_missing_files(
   self : Client,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   self.call_tool("get_blendfile_summary_missing_files", args)
 }
 
@@ -73,7 +73,7 @@ pub async fn Client::get_blendfile_summary_missing_files_for_cli(
   self : Client,
   blendFile : String,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("blend_file", Json::string(blendFile))
   self.call_tool("get_blendfile_summary_missing_files_for_cli", args)
 }
@@ -85,7 +85,7 @@ pub async fn Client::get_blendfile_summary_missing_files_for_cli(
 pub async fn Client::get_blendfile_summary_of_linked_libraries(
   self : Client,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   self.call_tool("get_blendfile_summary_of_linked_libraries", args)
 }
 
@@ -97,7 +97,7 @@ pub async fn Client::get_blendfile_summary_of_linked_libraries_for_cli(
   self : Client,
   blendFile : String,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("blend_file", Json::string(blendFile))
   self.call_tool("get_blendfile_summary_of_linked_libraries_for_cli", args)
 }
@@ -107,7 +107,7 @@ pub async fn Client::get_blendfile_summary_of_linked_libraries_for_cli(
 /// Simple/fast access to the blend file's path, save status, age, and backups.
 ///
 pub async fn Client::get_blendfile_summary_path_info(self : Client) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   self.call_tool("get_blendfile_summary_path_info", args)
 }
 
@@ -119,7 +119,7 @@ pub async fn Client::get_blendfile_summary_path_info_for_cli(
   self : Client,
   blendFile : String,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("blend_file", Json::string(blendFile))
   self.call_tool("get_blendfile_summary_path_info_for_cli", args)
 }
@@ -129,7 +129,7 @@ pub async fn Client::get_blendfile_summary_path_info_for_cli(
 /// Guess the primary use-cases of the current blend file (scored 0-100 with certainty).
 ///
 pub async fn Client::get_blendfile_summary_usage_guess(self : Client) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   self.call_tool("get_blendfile_summary_usage_guess", args)
 }
 
@@ -141,7 +141,7 @@ pub async fn Client::get_blendfile_summary_usage_guess_for_cli(
   self : Client,
   blendFile : String,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("blend_file", Json::string(blendFile))
   self.call_tool("get_blendfile_summary_usage_guess_for_cli", args)
 }
@@ -156,7 +156,7 @@ pub async fn Client::get_object_detail_summary(
   self : Client,
   name : String,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("name", Json::string(name))
   self.call_tool("get_object_detail_summary", args)
 }
@@ -166,7 +166,7 @@ pub async fn Client::get_object_detail_summary(
 /// Return the scene's collection hierarchy and their objects. Each collection lists its objects (name, type, parent, data name, selection, visibility) and nested child collections.
 ///
 pub async fn Client::get_objects_summary(self : Client) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   self.call_tool("get_objects_summary", args)
 }
 
@@ -180,7 +180,7 @@ pub async fn Client::get_python_api_docs(
   self : Client,
   identifier : String,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("identifier", Json::string(identifier))
   self.call_tool("get_python_api_docs", args)
 }
@@ -196,7 +196,7 @@ pub async fn Client::search_api_docs(
   context : Int?,
   index : Int?,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("query", Json::string(query))
   match maxResults {
     Some(v) => args.set("max_results", Json::number(v.to_double()))
@@ -224,7 +224,7 @@ pub async fn Client::get_screenshot_of_area_as_image(
   areaUiType : String,
   sizeLimitInBytes : Int?,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("area_ui_type", Json::string(areaUiType))
   match sizeLimitInBytes {
     Some(v) => args.set("size_limit_in_bytes", Json::number(v.to_double()))
@@ -241,7 +241,7 @@ pub async fn Client::get_screenshot_of_window_as_image(
   self : Client,
   sizeLimitInBytes : Int?,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   match sizeLimitInBytes {
     Some(v) => args.set("size_limit_in_bytes", Json::number(v.to_double()))
     None => ()
@@ -254,7 +254,7 @@ pub async fn Client::get_screenshot_of_window_as_image(
 /// Return a JSON description of the Blender window layout, areas, active object, and selection.
 ///
 pub async fn Client::get_screenshot_of_window_as_json(self : Client) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   self.call_tool("get_screenshot_of_window_as_json", args)
 }
 
@@ -268,7 +268,7 @@ pub async fn Client::jump_to_tab_by_name(
   self : Client,
   name : String,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("name", Json::string(name))
   self.call_tool("jump_to_tab_by_name", args)
 }
@@ -282,7 +282,7 @@ pub async fn Client::jump_to_tab_by_space_type(
   spaceType : String,
   allowEdits : Bool?,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("space_type", Json::string(spaceType))
   match allowEdits {
     Some(v) => args.set("allow_edits", Json::boolean(v))
@@ -302,7 +302,7 @@ pub async fn Client::jump_to_view3d_object_by_name(
   name : String,
   allowEdits : Bool?,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("name", Json::string(name))
   match allowEdits {
     Some(v) => args.set("allow_edits", Json::boolean(v))
@@ -320,7 +320,7 @@ pub async fn Client::jump_to_view3d_object_data_by_name(
   name : String,
   allowEdits : Bool?,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("name", Json::string(name))
   match allowEdits {
     Some(v) => args.set("allow_edits", Json::boolean(v))
@@ -339,7 +339,7 @@ pub async fn Client::render_thumbnail_to_path(
   self : Client,
   outputPath : String,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("output_path", Json::string(outputPath))
   self.call_tool("render_thumbnail_to_path", args)
 }
@@ -352,7 +352,7 @@ pub async fn Client::render_viewport_to_path(
   self : Client,
   outputPath : String,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("output_path", Json::string(outputPath))
   self.call_tool("render_viewport_to_path", args)
 }
@@ -370,7 +370,7 @@ pub async fn Client::search_manual_docs(
   context : Int?,
   index : Int?,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("query", Json::string(query))
   match maxResults {
     Some(v) => args.set("max_results", Json::number(v.to_double()))

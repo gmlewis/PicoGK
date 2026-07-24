@@ -140,7 +140,7 @@ pub fn RGB::to_ffi(self : RGB) -> @picogkffi.ColorFloat {
 
 ///|
 pub let palette : Map[String, RGB] = {
-  let m : Map[String, RGB] = {}
+  let m : Map[String, RGB] = Map([])
   m["blue"] = RGB::{ r: 0.258824, g: 0.529412, b: 0.960784 }
   m["frozen"] = RGB::{ r: 0.427451, g: 0.886275, b: 0.988235 }
   m["pitaya"] = RGB::{ r: 0.980392, g: 0.164706, b: 0.533333 }

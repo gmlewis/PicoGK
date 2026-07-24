@@ -186,12 +186,12 @@ mod blender_tests {
     #[test]
     fn expand_path_tilde() {
         let p = expand_path("~/foo".to_string())
-        testing::check(p.contains("foo"), "tilde should expand, got: {}", p)
+        let _ = testing::check(p.contains("foo"), "tilde should expand")
     }
 
     #[test]
     fn expand_path_no_tilde() {
         let p = expand_path("/abs/path".to_string())
-        testing::check_eq(p, "/abs/path", "absolute path unchanged")
+        let _ = testing::check_eq(p, "/abs/path", "absolute path unchanged")
     }
 }

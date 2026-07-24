@@ -17,7 +17,7 @@ pub async fn Client::boolean_add(
   b : String,
   id : String?,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("a", Json::string(a))
   args.set("b", Json::string(b))
   match id {
@@ -42,7 +42,7 @@ pub async fn Client::boolean_subtract(
   b : String,
   id : String?,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("a", Json::string(a))
   args.set("b", Json::string(b))
   match id {
@@ -67,7 +67,7 @@ pub async fn Client::boolean_intersect(
   b : String,
   id : String?,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("a", Json::string(a))
   args.set("b", Json::string(b))
   match id {
@@ -90,7 +90,7 @@ pub async fn Client::boolean_add_all(
   objectIds : Array[String],
   id : String?,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("objectIds", Json::array(objectIds.map(fn(s) { Json::string(s) })))
   match id {
     Some(v) => args.set("id", Json::string(v))
@@ -114,7 +114,7 @@ pub async fn Client::boolean_subtract_all(
   subtractIds : Array[String],
   id : String?,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("a", Json::string(a))
   args.set(
     "subtractIds",
@@ -144,7 +144,7 @@ pub async fn Client::save_stl(
   path : String,
   units : String?,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("meshId", Json::string(meshId))
   args.set("path", Json::string(resolve_path(path)))
   match units {
@@ -169,7 +169,7 @@ pub async fn Client::save_vdb(
   path : String,
   fieldName : String?,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("voxelsId", Json::string(voxelsId))
   args.set("path", Json::string(resolve_path(path)))
   match fieldName {
@@ -194,7 +194,7 @@ pub async fn Client::load_vdb(
   fieldName : String?,
   id : String?,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("path", Json::string(resolve_path(path)))
   match fieldName {
     Some(v) => args.set("fieldName", Json::string(v))
@@ -215,7 +215,7 @@ pub async fn Client::load_vdb(
 ///   - path : String (required) — Full path to the VDB file
 ///
 pub async fn Client::list_vdb_fields(self : Client, path : String) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("path", Json::string(resolve_path(path)))
   self.call_tool("list_vdb_fields", args)
 }
@@ -235,7 +235,7 @@ pub async fn Client::save_svg(
   path : String,
   layerHeight : Double?,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("voxelsId", Json::string(voxelsId))
   args.set("path", Json::string(resolve_path(path)))
   match layerHeight {
@@ -264,7 +264,7 @@ pub async fn Client::save_cli(
   format : String?,
   useAbsXYOrigin : Bool?,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("voxelsId", Json::string(voxelsId))
   args.set("path", Json::string(resolve_path(path)))
   match layerHeight {
@@ -292,7 +292,7 @@ pub async fn Client::save_cli(
 ///   - id : String? (optional) — Optional ID to assign
 ///
 pub async fn Client::create_lattice(self : Client, id : String?) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   match id {
     Some(v) => args.set("id", Json::string(v))
     None => ()
@@ -329,7 +329,7 @@ pub async fn Client::lattice_add_beam(
   radius2 : Double,
   roundCap : Bool?,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("latticeId", Json::string(latticeId))
   args.set("x1", Json::number(x1))
   args.set("y1", Json::number(y1))
@@ -365,7 +365,7 @@ pub async fn Client::lattice_add_sphere(
   z : Double,
   radius : Double,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("latticeId", Json::string(latticeId))
   args.set("x", Json::number(x))
   args.set("y", Json::number(y))
@@ -387,7 +387,7 @@ pub async fn Client::lattice_to_voxels(
   latticeId : String,
   id : String?,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("latticeId", Json::string(latticeId))
   match id {
     Some(v) => args.set("id", Json::string(v))
@@ -406,7 +406,7 @@ pub async fn Client::lattice_to_voxels(
 ///   - id : String? (optional) — Optional ID to assign
 ///
 pub async fn Client::create_mesh(self : Client, id : String?) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   match id {
     Some(v) => args.set("id", Json::string(v))
     None => ()
@@ -431,7 +431,7 @@ pub async fn Client::mesh_add_vertex(
   y : Double,
   z : Double,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("meshId", Json::string(meshId))
   args.set("x", Json::number(x))
   args.set("y", Json::number(y))
@@ -456,7 +456,7 @@ pub async fn Client::mesh_add_triangle(
   b : Int,
   c : Int,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("meshId", Json::string(meshId))
   args.set("a", Json::number(a.to_double()))
   args.set("b", Json::number(b.to_double()))
@@ -493,7 +493,7 @@ pub async fn Client::mesh_add_triangle_vertices(
   y3 : Double,
   z3 : Double,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("meshId", Json::string(meshId))
   args.set("x1", Json::number(x1))
   args.set("y1", Json::number(y1))
@@ -544,7 +544,7 @@ pub async fn Client::mesh_add_quad(
   z3 : Double,
   flipped : Bool?,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("meshId", Json::string(meshId))
   args.set("x0", Json::number(x0))
   args.set("y0", Json::number(y0))
@@ -578,7 +578,7 @@ pub async fn Client::voxels_to_mesh(
   voxelsId : String,
   id : String?,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("voxelsId", Json::string(voxelsId))
   match id {
     Some(v) => args.set("id", Json::string(v))
@@ -600,7 +600,7 @@ pub async fn Client::mesh_to_voxels(
   meshId : String,
   id : String?,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("meshId", Json::string(meshId))
   match id {
     Some(v) => args.set("id", Json::string(v))
@@ -622,7 +622,7 @@ pub async fn Client::mesh_from_stl(
   path : String,
   id : String?,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("path", Json::string(resolve_path(path)))
   match id {
     Some(v) => args.set("id", Json::string(v))
@@ -652,7 +652,7 @@ pub async fn Client::mesh_transform(
   translateZ : Double?,
   id : String?,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("meshId", Json::string(meshId))
   match scale {
     Some(v) => args.set("scale", Json::number(v))
@@ -702,7 +702,7 @@ pub async fn Client::mesh_mirror(
   nZ : Double,
   id : String?,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("meshId", Json::string(meshId))
   args.set("ptX", Json::number(ptX))
   args.set("ptY", Json::number(ptY))
@@ -730,7 +730,7 @@ pub async fn Client::mesh_append(
   targetId : String,
   sourceId : String,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("targetId", Json::string(targetId))
   args.set("sourceId", Json::string(sourceId))
   self.call_tool("mesh_append", args)
@@ -757,7 +757,7 @@ pub async fn Client::create_sphere(
   radius : Double,
   id : String?,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("x", Json::number(x))
   args.set("y", Json::number(y))
   args.set("z", Json::number(z))
@@ -792,7 +792,7 @@ pub async fn Client::create_box(
   maxZ : Double,
   id : String?,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("minX", Json::number(minX))
   args.set("minY", Json::number(minY))
   args.set("minZ", Json::number(minZ))
@@ -833,7 +833,7 @@ pub async fn Client::create_cylinder(
   dirZ : Double?,
   id : String?,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("x", Json::number(x))
   args.set("y", Json::number(y))
   args.set("z", Json::number(z))
@@ -883,7 +883,7 @@ pub async fn Client::create_capsule(
   radius : Double,
   id : String?,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("x1", Json::number(x1))
   args.set("y1", Json::number(y1))
   args.set("z1", Json::number(z1))
@@ -919,7 +919,7 @@ pub async fn Client::create_torus(
   z : Double?,
   id : String?,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("majorRadius", Json::number(majorRadius))
   args.set("minorRadius", Json::number(minorRadius))
   match x {
@@ -954,7 +954,7 @@ pub async fn Client::get_bounding_box(
   self : Client,
   objectId : String,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("objectId", Json::string(objectId))
   self.call_tool("get_bounding_box", args)
 }
@@ -967,7 +967,7 @@ pub async fn Client::get_bounding_box(
 ///   - objectId : String (required) — ID of the voxel object
 ///
 pub async fn Client::get_volume(self : Client, objectId : String) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("objectId", Json::string(objectId))
   self.call_tool("get_volume", args)
 }
@@ -980,7 +980,7 @@ pub async fn Client::get_volume(self : Client, objectId : String) -> String {
 ///   - objectId : String (required) — ID of the mesh object
 ///
 pub async fn Client::get_mesh_info(self : Client, objectId : String) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("objectId", Json::string(objectId))
   self.call_tool("get_mesh_info", args)
 }
@@ -1002,7 +1002,7 @@ pub async fn Client::point_inside(
   y : Double,
   z : Double,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("objectId", Json::string(objectId))
   args.set("x", Json::number(x))
   args.set("y", Json::number(y))
@@ -1027,7 +1027,7 @@ pub async fn Client::surface_normal(
   y : Double,
   z : Double,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("objectId", Json::string(objectId))
   args.set("x", Json::number(x))
   args.set("y", Json::number(y))
@@ -1052,7 +1052,7 @@ pub async fn Client::closest_point(
   y : Double,
   z : Double,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("objectId", Json::string(objectId))
   args.set("x", Json::number(x))
   args.set("y", Json::number(y))
@@ -1065,7 +1065,7 @@ pub async fn Client::closest_point(
 /// List all objects in the current session with their IDs, types, and descriptions.
 ///
 pub async fn Client::list_objects(self : Client) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   self.call_tool("list_objects", args)
 }
 
@@ -1077,7 +1077,7 @@ pub async fn Client::list_objects(self : Client) -> String {
 ///   - objectId : String (required) — ID of the object to delete
 ///
 pub async fn Client::delete_object(self : Client, objectId : String) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("objectId", Json::string(objectId))
   self.call_tool("delete_object", args)
 }
@@ -1093,7 +1093,7 @@ pub async fn Client::get_voxel_dimensions(
   self : Client,
   objectId : String,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("objectId", Json::string(objectId))
   self.call_tool("get_voxel_dimensions", args)
 }
@@ -1109,7 +1109,7 @@ pub async fn Client::voxels_is_empty(
   self : Client,
   objectId : String,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("objectId", Json::string(objectId))
   self.call_tool("voxels_is_empty", args)
 }
@@ -1125,7 +1125,7 @@ pub async fn Client::voxels_mem_usage(
   self : Client,
   objectId : String,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("objectId", Json::string(objectId))
   self.call_tool("voxels_mem_usage", args)
 }
@@ -1143,7 +1143,7 @@ pub async fn Client::voxels_is_equal(
   objectIdA : String,
   objectIdB : String,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("objectIdA", Json::string(objectIdA))
   args.set("objectIdB", Json::string(objectIdB))
   self.call_tool("voxels_is_equal", args)
@@ -1172,7 +1172,7 @@ pub async fn Client::ray_cast(
   dirY : Double,
   dirZ : Double,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("objectId", Json::string(objectId))
   args.set("x", Json::number(x))
   args.set("y", Json::number(y))
@@ -1206,7 +1206,7 @@ pub async fn Client::measure_thickness(
   dirY : Double,
   dirZ : Double,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("objectId", Json::string(objectId))
   args.set("x", Json::number(x))
   args.set("y", Json::number(y))
@@ -1230,7 +1230,7 @@ pub async fn Client::duplicate_object(
   objectId : String,
   id : String?,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("objectId", Json::string(objectId))
   match id {
     Some(v) => args.set("id", Json::string(v))
@@ -1252,7 +1252,7 @@ pub async fn Client::delete_objects(
   objectIds : Array[String],
   keepOnly : Bool?,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("objectIds", Json::array(objectIds.map(fn(s) { Json::string(s) })))
   match keepOnly {
     Some(v) => args.set("keepOnly", Json::boolean(v))
@@ -1284,7 +1284,7 @@ pub async fn Client::render_to_image(
   backgroundColor : String?,
   objectColor : String?,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("objectId", Json::string(objectId))
   args.set("path", Json::string(resolve_path(path)))
   match width {
@@ -1323,7 +1323,7 @@ pub async fn Client::render_slice(
   path : String,
   mode : String?,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("voxelsId", Json::string(voxelsId))
   args.set("zPosition", Json::number(zPosition))
   args.set("path", Json::string(resolve_path(path)))
@@ -1347,7 +1347,7 @@ pub async fn Client::picogk_init(
   self : Client,
   voxelSizeMM : Double?,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   match voxelSizeMM {
     Some(v) => args.set("voxelSizeMM", Json::number(v))
     None => ()
@@ -1360,7 +1360,7 @@ pub async fn Client::picogk_init(
 /// Get information about the PicoGK library and current session state. Returns version, memory usage, and counts of allocated objects.
 ///
 pub async fn Client::picogk_info(self : Client) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   self.call_tool("picogk_info", args)
 }
 
@@ -1369,7 +1369,7 @@ pub async fn Client::picogk_info(self : Client) -> String {
 /// Shut down the PicoGK session and release all resources. All object references become invalid after this call.
 ///
 pub async fn Client::picogk_shutdown(self : Client) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   self.call_tool("picogk_shutdown", args)
 }
 
@@ -1390,7 +1390,7 @@ pub async fn Client::offset(
   distance : Double,
   id : String?,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("objectId", Json::string(objectId))
   args.set("distance", Json::number(distance))
   match id {
@@ -1417,7 +1417,7 @@ pub async fn Client::double_offset(
   offset2 : Double,
   id : String?,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("objectId", Json::string(objectId))
   args.set("offset1", Json::number(offset1))
   args.set("offset2", Json::number(offset2))
@@ -1445,7 +1445,7 @@ pub async fn Client::over_offset(
   finalSurfaceDist : Double?,
   id : String?,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("objectId", Json::string(objectId))
   args.set("firstOffset", Json::number(firstOffset))
   match finalSurfaceDist {
@@ -1474,7 +1474,7 @@ pub async fn Client::smooth(
   distance : Double,
   id : String?,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("objectId", Json::string(objectId))
   args.set("distance", Json::number(distance))
   match id {
@@ -1509,7 +1509,7 @@ pub async fn Client::trim(
   maxZ : Double,
   id : String?,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("objectId", Json::string(objectId))
   args.set("minX", Json::number(minX))
   args.set("minY", Json::number(minY))
@@ -1543,7 +1543,7 @@ pub async fn Client::shell(
   smooth : Double?,
   id : String?,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("objectId", Json::string(objectId))
   args.set("innerOffset", Json::number(innerOffset))
   args.set("outerOffset", Json::number(outerOffset))
@@ -1573,7 +1573,7 @@ pub async fn Client::fillet(
   radius : Double,
   id : String?,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("objectId", Json::string(objectId))
   args.set("radius", Json::number(radius))
   match id {
@@ -1600,7 +1600,7 @@ pub async fn Client::project_z_slice(
   endZ : Double,
   id : String?,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("objectId", Json::string(objectId))
   args.set("startZ", Json::number(startZ))
   args.set("endZ", Json::number(endZ))
@@ -1638,7 +1638,7 @@ pub async fn Client::transform_voxels(
   scale : Double?,
   id : String?,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("objectId", Json::string(objectId))
   match translateX {
     Some(v) => args.set("translateX", Json::number(v))
@@ -1704,7 +1704,7 @@ pub async fn Client::circular_pattern(
   axisZ : Double?,
   id : String?,
 ) -> String {
-  let args : Map[String, Json] = {}
+  let args : Map[String, Json] = Map([])
   args.set("objectId", Json::string(objectId))
   args.set("count", Json::number(count.to_double()))
   match totalAngle {
