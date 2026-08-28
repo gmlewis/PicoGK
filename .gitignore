@@ -509,6 +509,7 @@ _build
 
 # Gossamer
 target
+.gos-cache
 
 # Dear ImGui
 imgui.ini

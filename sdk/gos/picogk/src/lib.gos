@@ -41,7 +41,7 @@ pub fn new_client_with(server_bin: String) -> Result<Client, errors::Error> {
         expand_path(server_bin)
     }
     let c = Client {
-        child: process::spawn_piped(bin, [])?,
+        child: process::spawn_piped(bin, #[])?,
         msg_id: sync::AtomicI64::new(0),
     }
     c.initialize()?
@@ -76,7 +76,7 @@ impl Client {
                 let line = strings::trim(line)
                 match json::parse(line) {
                     Ok(v) => {
-                        if let Some(err) = json::get(&v, "error") {
+                        if let Some(err) = json::get(v, "error") {
                             let mut code: i64 = 0
                             if let Some(cv) = json::get(err, "code") {
                                 if let Some(n) = json::as_i64(cv) { code = n }
@@ -103,7 +103,7 @@ impl Client {
         ])
         let req = build_rpc_request(self.next_id(), "tools/call", params)
         let result = self.call_raw(req)?
-        let res_obj = match json::get(&result, "result") {
+        let res_obj = match json::get(result, "result") {
             Some(v) => v,
             None => return Err(errors::new("missing result field")),
         }
@@ -172,7 +172,7 @@ pub fn resolve_path(path: String) -> String {
     if expanded.starts_with("/") {
         expanded
     } else {
-        let cwd = env::current_dir().unwrap_or(".".to_string())
+        let cwd = env::current_dir().unwrap_or(".")
         cwd + "/" + expanded
     }
 }
@@ -185,25 +185,25 @@ mod picogk_tests {
 
     #[test]
     fn expand_path_tilde() {
-        let p = expand_path("~/foo".to_string())
+        let p = expand_path("~/foo")
         let _ = testing::check(p.contains("foo"), "tilde should expand")
     }
 
     #[test]
     fn expand_path_no_tilde() {
-        let p = expand_path("/abs/path".to_string())
+        let p = expand_path("/abs/path")
         let _ = testing::check_eq(p, "/abs/path", "absolute path unchanged")
     }
 
     #[test]
     fn resolve_path_absolute() {
-        let p = resolve_path("/absolute/path".to_string())
+        let p = resolve_path("/absolute/path")
         let _ = testing::check_eq(p, "/absolute/path", "absolute path returned as-is")
     }
 
     #[test]
     fn resolve_path_relative() {
-        let p = resolve_path("relative/path".to_string())
+        let p = resolve_path("relative/path")
         let _ = testing::check(p.starts_with("/"), "relative path should be resolved to absolute")
         let _ = testing::check(p.contains("relative/path"), "resolved path should contain original")
     }

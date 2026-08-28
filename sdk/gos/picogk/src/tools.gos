@@ -8,19 +8,19 @@ impl Client {
 
     pub fn boolean_add(&self, a: String, b: String, id: Option<String>) -> Result<String, errors::Error> {
         let mut obj = json::Value::object([("a", json::Value::String(a)), ("b", json::Value::String(b))])
-        if let Some(v) = id { let _ = json::set(&mut obj, &"id", json::Value::String(v)) }
+        if let Some(v) = id { let _ = json::set(&mut obj, "id", json::Value::String(v)) }
         self.call_tool("boolean_add", obj)
     }
 
     pub fn boolean_subtract(&self, a: String, b: String, id: Option<String>) -> Result<String, errors::Error> {
         let mut obj = json::Value::object([("a", json::Value::String(a)), ("b", json::Value::String(b))])
-        if let Some(v) = id { let _ = json::set(&mut obj, &"id", json::Value::String(v)) }
+        if let Some(v) = id { let _ = json::set(&mut obj, "id", json::Value::String(v)) }
         self.call_tool("boolean_subtract", obj)
     }
 
     pub fn boolean_intersect(&self, a: String, b: String, id: Option<String>) -> Result<String, errors::Error> {
         let mut obj = json::Value::object([("a", json::Value::String(a)), ("b", json::Value::String(b))])
-        if let Some(v) = id { let _ = json::set(&mut obj, &"id", json::Value::String(v)) }
+        if let Some(v) = id { let _ = json::set(&mut obj, "id", json::Value::String(v)) }
         self.call_tool("boolean_intersect", obj)
     }
 
@@ -28,7 +28,7 @@ impl Client {
         let mut ids: Vec<json::Value> = Vec::new()
         for s in object_ids { ids.push(json::Value::String(s)) }
         let mut obj = json::Value::object([("objectIds", json::Value::Array(ids))])
-        if let Some(v) = id { let _ = json::set(&mut obj, &"id", json::Value::String(v)) }
+        if let Some(v) = id { let _ = json::set(&mut obj, "id", json::Value::String(v)) }
         self.call_tool("boolean_add_all", obj)
     }
 
@@ -36,7 +36,7 @@ impl Client {
         let mut ids: Vec<json::Value> = Vec::new()
         for s in subtract_ids { ids.push(json::Value::String(s)) }
         let mut obj = json::Value::object([("a", json::Value::String(a)), ("subtractIds", json::Value::Array(ids))])
-        if let Some(v) = id { let _ = json::set(&mut obj, &"id", json::Value::String(v)) }
+        if let Some(v) = id { let _ = json::set(&mut obj, "id", json::Value::String(v)) }
         self.call_tool("boolean_subtract_all", obj)
     }
 
@@ -44,20 +44,20 @@ impl Client {
 
     pub fn save_stl(&self, mesh_id: String, path: String, units: Option<String>) -> Result<String, errors::Error> {
         let mut obj = json::Value::object([("meshId", json::Value::String(mesh_id)), ("path", json::Value::String(resolve_path(path)))])
-        if let Some(v) = units { let _ = json::set(&mut obj, &"units", json::Value::String(v)) }
+        if let Some(v) = units { let _ = json::set(&mut obj, "units", json::Value::String(v)) }
         self.call_tool("save_stl", obj)
     }
 
     pub fn save_vdb(&self, voxels_id: String, path: String, field_name: Option<String>) -> Result<String, errors::Error> {
         let mut obj = json::Value::object([("voxelsId", json::Value::String(voxels_id)), ("path", json::Value::String(resolve_path(path)))])
-        if let Some(v) = field_name { let _ = json::set(&mut obj, &"fieldName", json::Value::String(v)) }
+        if let Some(v) = field_name { let _ = json::set(&mut obj, "fieldName", json::Value::String(v)) }
         self.call_tool("save_vdb", obj)
     }
 
     pub fn load_vdb(&self, path: String, field_name: Option<String>, id: Option<String>) -> Result<String, errors::Error> {
         let mut obj = json::Value::object([("path", json::Value::String(resolve_path(path)))])
-        if let Some(v) = field_name { let _ = json::set(&mut obj, &"fieldName", json::Value::String(v)) }
-        if let Some(v) = id { let _ = json::set(&mut obj, &"id", json::Value::String(v)) }
+        if let Some(v) = field_name { let _ = json::set(&mut obj, "fieldName", json::Value::String(v)) }
+        if let Some(v) = id { let _ = json::set(&mut obj, "id", json::Value::String(v)) }
         self.call_tool("load_vdb", obj)
     }
 
@@ -68,15 +68,15 @@ impl Client {
 
     pub fn save_svg(&self, voxels_id: String, path: String, layer_height: Option<f64>) -> Result<String, errors::Error> {
         let mut obj = json::Value::object([("voxelsId", json::Value::String(voxels_id)), ("path", json::Value::String(resolve_path(path)))])
-        if let Some(v) = layer_height { let _ = json::set(&mut obj, &"layerHeight", json::Value::Float(v)) }
+        if let Some(v) = layer_height { let _ = json::set(&mut obj, "layerHeight", json::Value::Float(v)) }
         self.call_tool("save_svg", obj)
     }
 
-    pub fn save_cli(&self, voxels_id: String, path: String, layer_height: Option<f64>, format: Option<String>, use_abs_xy_origin: Option<bool>) -> Result<String, errors::Error> {
+    pub fn save_cli(&self, voxels_id: String, path: String, layer_height: Option<f64>, fmt: Option<String>, use_abs_xy_origin: Option<bool>) -> Result<String, errors::Error> {
         let mut obj = json::Value::object([("voxelsId", json::Value::String(voxels_id)), ("path", json::Value::String(resolve_path(path)))])
-        if let Some(v) = layer_height { let _ = json::set(&mut obj, &"layerHeight", json::Value::Float(v)) }
-        if let Some(v) = format { let _ = json::set(&mut obj, &"format", json::Value::String(v)) }
-        if let Some(v) = use_abs_xy_origin { let _ = json::set(&mut obj, &"useAbsXYOrigin", json::Value::Bool(v)) }
+        if let Some(v) = layer_height { let _ = json::set(&mut obj, "layerHeight", json::Value::Float(v)) }
+        if let Some(v) = fmt { let _ = json::set(&mut obj, "format", json::Value::String(v)) }
+        if let Some(v) = use_abs_xy_origin { let _ = json::set(&mut obj, "useAbsXYOrigin", json::Value::Bool(v)) }
         self.call_tool("save_cli", obj)
     }
 
@@ -84,13 +84,13 @@ impl Client {
 
     pub fn create_lattice(&self, id: Option<String>) -> Result<String, errors::Error> {
         let mut obj = json::Value::object([])
-        if let Some(v) = id { let _ = json::set(&mut obj, &"id", json::Value::String(v)) }
+        if let Some(v) = id { let _ = json::set(&mut obj, "id", json::Value::String(v)) }
         self.call_tool("create_lattice", obj)
     }
 
     pub fn lattice_add_beam(&self, lattice_id: String, x1: f64, y1: f64, z1: f64, radius1: f64, x2: f64, y2: f64, z2: f64, radius2: f64, round_cap: Option<bool>) -> Result<String, errors::Error> {
         let mut obj = json::Value::object([("latticeId", json::Value::String(lattice_id)), ("x1", json::Value::Float(x1)), ("y1", json::Value::Float(y1)), ("z1", json::Value::Float(z1)), ("radius1", json::Value::Float(radius1)), ("x2", json::Value::Float(x2)), ("y2", json::Value::Float(y2)), ("z2", json::Value::Float(z2)), ("radius2", json::Value::Float(radius2))])
-        if let Some(v) = round_cap { let _ = json::set(&mut obj, &"roundCap", json::Value::Bool(v)) }
+        if let Some(v) = round_cap { let _ = json::set(&mut obj, "roundCap", json::Value::Bool(v)) }
         self.call_tool("lattice_add_beam", obj)
     }
 
@@ -101,7 +101,7 @@ impl Client {
 
     pub fn lattice_to_voxels(&self, lattice_id: String, id: Option<String>) -> Result<String, errors::Error> {
         let mut obj = json::Value::object([("latticeId", json::Value::String(lattice_id))])
-        if let Some(v) = id { let _ = json::set(&mut obj, &"id", json::Value::String(v)) }
+        if let Some(v) = id { let _ = json::set(&mut obj, "id", json::Value::String(v)) }
         self.call_tool("lattice_to_voxels", obj)
     }
 
@@ -109,7 +109,7 @@ impl Client {
 
     pub fn create_mesh(&self, id: Option<String>) -> Result<String, errors::Error> {
         let mut obj = json::Value::object([])
-        if let Some(v) = id { let _ = json::set(&mut obj, &"id", json::Value::String(v)) }
+        if let Some(v) = id { let _ = json::set(&mut obj, "id", json::Value::String(v)) }
         self.call_tool("create_mesh", obj)
     }
 
@@ -130,41 +130,41 @@ impl Client {
 
     pub fn mesh_add_quad(&self, mesh_id: String, x0: f64, y0: f64, z0: f64, x1: f64, y1: f64, z1: f64, x2: f64, y2: f64, z2: f64, x3: f64, y3: f64, z3: f64, flipped: Option<bool>) -> Result<String, errors::Error> {
         let mut obj = json::Value::object([("meshId", json::Value::String(mesh_id)), ("x0", json::Value::Float(x0)), ("y0", json::Value::Float(y0)), ("z0", json::Value::Float(z0)), ("x1", json::Value::Float(x1)), ("y1", json::Value::Float(y1)), ("z1", json::Value::Float(z1)), ("x2", json::Value::Float(x2)), ("y2", json::Value::Float(y2)), ("z2", json::Value::Float(z2)), ("x3", json::Value::Float(x3)), ("y3", json::Value::Float(y3)), ("z3", json::Value::Float(z3))])
-        if let Some(v) = flipped { let _ = json::set(&mut obj, &"flipped", json::Value::Bool(v)) }
+        if let Some(v) = flipped { let _ = json::set(&mut obj, "flipped", json::Value::Bool(v)) }
         self.call_tool("mesh_add_quad", obj)
     }
 
     pub fn voxels_to_mesh(&self, voxels_id: String, id: Option<String>) -> Result<String, errors::Error> {
         let mut obj = json::Value::object([("voxelsId", json::Value::String(voxels_id))])
-        if let Some(v) = id { let _ = json::set(&mut obj, &"id", json::Value::String(v)) }
+        if let Some(v) = id { let _ = json::set(&mut obj, "id", json::Value::String(v)) }
         self.call_tool("voxels_to_mesh", obj)
     }
 
     pub fn mesh_to_voxels(&self, mesh_id: String, id: Option<String>) -> Result<String, errors::Error> {
         let mut obj = json::Value::object([("meshId", json::Value::String(mesh_id))])
-        if let Some(v) = id { let _ = json::set(&mut obj, &"id", json::Value::String(v)) }
+        if let Some(v) = id { let _ = json::set(&mut obj, "id", json::Value::String(v)) }
         self.call_tool("mesh_to_voxels", obj)
     }
 
     pub fn mesh_from_stl(&self, path: String, id: Option<String>) -> Result<String, errors::Error> {
         let mut obj = json::Value::object([("path", json::Value::String(resolve_path(path)))])
-        if let Some(v) = id { let _ = json::set(&mut obj, &"id", json::Value::String(v)) }
+        if let Some(v) = id { let _ = json::set(&mut obj, "id", json::Value::String(v)) }
         self.call_tool("mesh_from_stl", obj)
     }
 
     pub fn mesh_transform(&self, mesh_id: String, scale: Option<f64>, translate_x: Option<f64>, translate_y: Option<f64>, translate_z: Option<f64>, id: Option<String>) -> Result<String, errors::Error> {
         let mut obj = json::Value::object([("meshId", json::Value::String(mesh_id))])
-        if let Some(v) = scale { let _ = json::set(&mut obj, &"scale", json::Value::Float(v)) }
-        if let Some(v) = translate_x { let _ = json::set(&mut obj, &"translateX", json::Value::Float(v)) }
-        if let Some(v) = translate_y { let _ = json::set(&mut obj, &"translateY", json::Value::Float(v)) }
-        if let Some(v) = translate_z { let _ = json::set(&mut obj, &"translateZ", json::Value::Float(v)) }
-        if let Some(v) = id { let _ = json::set(&mut obj, &"id", json::Value::String(v)) }
+        if let Some(v) = scale { let _ = json::set(&mut obj, "scale", json::Value::Float(v)) }
+        if let Some(v) = translate_x { let _ = json::set(&mut obj, "translateX", json::Value::Float(v)) }
+        if let Some(v) = translate_y { let _ = json::set(&mut obj, "translateY", json::Value::Float(v)) }
+        if let Some(v) = translate_z { let _ = json::set(&mut obj, "translateZ", json::Value::Float(v)) }
+        if let Some(v) = id { let _ = json::set(&mut obj, "id", json::Value::String(v)) }
         self.call_tool("mesh_transform", obj)
     }
 
     pub fn mesh_mirror(&self, mesh_id: String, pt_x: f64, pt_y: f64, pt_z: f64, n_x: f64, n_y: f64, n_z: f64, id: Option<String>) -> Result<String, errors::Error> {
         let mut obj = json::Value::object([("meshId", json::Value::String(mesh_id)), ("ptX", json::Value::Float(pt_x)), ("ptY", json::Value::Float(pt_y)), ("ptZ", json::Value::Float(pt_z)), ("nX", json::Value::Float(n_x)), ("nY", json::Value::Float(n_y)), ("nZ", json::Value::Float(n_z))])
-        if let Some(v) = id { let _ = json::set(&mut obj, &"id", json::Value::String(v)) }
+        if let Some(v) = id { let _ = json::set(&mut obj, "id", json::Value::String(v)) }
         self.call_tool("mesh_mirror", obj)
     }
 
@@ -177,37 +177,37 @@ impl Client {
 
     pub fn create_sphere(&self, x: f64, y: f64, z: f64, radius: f64, id: Option<String>) -> Result<String, errors::Error> {
         let mut obj = json::Value::object([("x", json::Value::Float(x)), ("y", json::Value::Float(y)), ("z", json::Value::Float(z)), ("radius", json::Value::Float(radius))])
-        if let Some(v) = id { let _ = json::set(&mut obj, &"id", json::Value::String(v)) }
+        if let Some(v) = id { let _ = json::set(&mut obj, "id", json::Value::String(v)) }
         self.call_tool("create_sphere", obj)
     }
 
     pub fn create_box(&self, min_x: f64, min_y: f64, min_z: f64, max_x: f64, max_y: f64, max_z: f64, id: Option<String>) -> Result<String, errors::Error> {
         let mut obj = json::Value::object([("minX", json::Value::Float(min_x)), ("minY", json::Value::Float(min_y)), ("minZ", json::Value::Float(min_z)), ("maxX", json::Value::Float(max_x)), ("maxY", json::Value::Float(max_y)), ("maxZ", json::Value::Float(max_z))])
-        if let Some(v) = id { let _ = json::set(&mut obj, &"id", json::Value::String(v)) }
+        if let Some(v) = id { let _ = json::set(&mut obj, "id", json::Value::String(v)) }
         self.call_tool("create_box", obj)
     }
 
     pub fn create_cylinder(&self, x: f64, y: f64, z: f64, radius: f64, height: f64, dir_x: Option<f64>, dir_y: Option<f64>, dir_z: Option<f64>, id: Option<String>) -> Result<String, errors::Error> {
         let mut obj = json::Value::object([("x", json::Value::Float(x)), ("y", json::Value::Float(y)), ("z", json::Value::Float(z)), ("radius", json::Value::Float(radius)), ("height", json::Value::Float(height))])
-        if let Some(v) = dir_x { let _ = json::set(&mut obj, &"dirX", json::Value::Float(v)) }
-        if let Some(v) = dir_y { let _ = json::set(&mut obj, &"dirY", json::Value::Float(v)) }
-        if let Some(v) = dir_z { let _ = json::set(&mut obj, &"dirZ", json::Value::Float(v)) }
-        if let Some(v) = id { let _ = json::set(&mut obj, &"id", json::Value::String(v)) }
+        if let Some(v) = dir_x { let _ = json::set(&mut obj, "dirX", json::Value::Float(v)) }
+        if let Some(v) = dir_y { let _ = json::set(&mut obj, "dirY", json::Value::Float(v)) }
+        if let Some(v) = dir_z { let _ = json::set(&mut obj, "dirZ", json::Value::Float(v)) }
+        if let Some(v) = id { let _ = json::set(&mut obj, "id", json::Value::String(v)) }
         self.call_tool("create_cylinder", obj)
     }
 
     pub fn create_capsule(&self, x1: f64, y1: f64, z1: f64, x2: f64, y2: f64, z2: f64, radius: f64, id: Option<String>) -> Result<String, errors::Error> {
         let mut obj = json::Value::object([("x1", json::Value::Float(x1)), ("y1", json::Value::Float(y1)), ("z1", json::Value::Float(z1)), ("x2", json::Value::Float(x2)), ("y2", json::Value::Float(y2)), ("z2", json::Value::Float(z2)), ("radius", json::Value::Float(radius))])
-        if let Some(v) = id { let _ = json::set(&mut obj, &"id", json::Value::String(v)) }
+        if let Some(v) = id { let _ = json::set(&mut obj, "id", json::Value::String(v)) }
         self.call_tool("create_capsule", obj)
     }
 
     pub fn create_torus(&self, major_radius: f64, minor_radius: f64, x: Option<f64>, y: Option<f64>, z: Option<f64>, id: Option<String>) -> Result<String, errors::Error> {
         let mut obj = json::Value::object([("majorRadius", json::Value::Float(major_radius)), ("minorRadius", json::Value::Float(minor_radius))])
-        if let Some(v) = x { let _ = json::set(&mut obj, &"x", json::Value::Float(v)) }
-        if let Some(v) = y { let _ = json::set(&mut obj, &"y", json::Value::Float(v)) }
-        if let Some(v) = z { let _ = json::set(&mut obj, &"z", json::Value::Float(v)) }
-        if let Some(v) = id { let _ = json::set(&mut obj, &"id", json::Value::String(v)) }
+        if let Some(v) = x { let _ = json::set(&mut obj, "x", json::Value::Float(v)) }
+        if let Some(v) = y { let _ = json::set(&mut obj, "y", json::Value::Float(v)) }
+        if let Some(v) = z { let _ = json::set(&mut obj, "z", json::Value::Float(v)) }
+        if let Some(v) = id { let _ = json::set(&mut obj, "id", json::Value::String(v)) }
         self.call_tool("create_torus", obj)
     }
 
@@ -271,7 +271,7 @@ impl Client {
 
     pub fn duplicate_object(&self, object_id: String, id: Option<String>) -> Result<String, errors::Error> {
         let mut obj = json::Value::object([("objectId", json::Value::String(object_id))])
-        if let Some(v) = id { let _ = json::set(&mut obj, &"id", json::Value::String(v)) }
+        if let Some(v) = id { let _ = json::set(&mut obj, "id", json::Value::String(v)) }
         self.call_tool("duplicate_object", obj)
     }
 
@@ -279,7 +279,7 @@ impl Client {
         let mut ids: Vec<json::Value> = Vec::new()
         for s in object_ids { ids.push(json::Value::String(s)) }
         let mut obj = json::Value::object([("objectIds", json::Value::Array(ids))])
-        if let Some(v) = keep_only { let _ = json::set(&mut obj, &"keepOnly", json::Value::Bool(v)) }
+        if let Some(v) = keep_only { let _ = json::set(&mut obj, "keepOnly", json::Value::Bool(v)) }
         self.call_tool("delete_objects", obj)
     }
 
@@ -287,16 +287,16 @@ impl Client {
 
     pub fn render_to_image(&self, object_id: String, path: String, width: Option<i64>, height: Option<i64>, background_color: Option<String>, object_color: Option<String>) -> Result<String, errors::Error> {
         let mut obj = json::Value::object([("objectId", json::Value::String(object_id)), ("path", json::Value::String(resolve_path(path)))])
-        if let Some(v) = width { let _ = json::set(&mut obj, &"width", json::Value::Int(v)) }
-        if let Some(v) = height { let _ = json::set(&mut obj, &"height", json::Value::Int(v)) }
-        if let Some(v) = background_color { let _ = json::set(&mut obj, &"backgroundColor", json::Value::String(v)) }
-        if let Some(v) = object_color { let _ = json::set(&mut obj, &"objectColor", json::Value::String(v)) }
+        if let Some(v) = width { let _ = json::set(&mut obj, "width", json::Value::Int(v)) }
+        if let Some(v) = height { let _ = json::set(&mut obj, "height", json::Value::Int(v)) }
+        if let Some(v) = background_color { let _ = json::set(&mut obj, "backgroundColor", json::Value::String(v)) }
+        if let Some(v) = object_color { let _ = json::set(&mut obj, "objectColor", json::Value::String(v)) }
         self.call_tool("render_to_image", obj)
     }
 
     pub fn render_slice(&self, voxels_id: String, z_position: f64, path: String, mode: Option<String>) -> Result<String, errors::Error> {
         let mut obj = json::Value::object([("voxelsId", json::Value::String(voxels_id)), ("zPosition", json::Value::Float(z_position)), ("path", json::Value::String(resolve_path(path)))])
-        if let Some(v) = mode { let _ = json::set(&mut obj, &"mode", json::Value::String(v)) }
+        if let Some(v) = mode { let _ = json::set(&mut obj, "mode", json::Value::String(v)) }
         self.call_tool("render_slice", obj)
     }
 
@@ -304,7 +304,7 @@ impl Client {
 
     pub fn picogk_init(&self, voxel_size_mm: Option<f64>) -> Result<String, errors::Error> {
         let mut obj = json::Value::object([])
-        if let Some(v) = voxel_size_mm { let _ = json::set(&mut obj, &"voxelSizeMM", json::Value::Float(v)) }
+        if let Some(v) = voxel_size_mm { let _ = json::set(&mut obj, "voxelSizeMM", json::Value::Float(v)) }
         self.call_tool("picogk_init", obj)
     }
 
@@ -320,77 +320,77 @@ impl Client {
 
     pub fn offset(&self, object_id: String, distance: f64, id: Option<String>) -> Result<String, errors::Error> {
         let mut obj = json::Value::object([("objectId", json::Value::String(object_id)), ("distance", json::Value::Float(distance))])
-        if let Some(v) = id { let _ = json::set(&mut obj, &"id", json::Value::String(v)) }
+        if let Some(v) = id { let _ = json::set(&mut obj, "id", json::Value::String(v)) }
         self.call_tool("offset", obj)
     }
 
     pub fn double_offset(&self, object_id: String, offset1: f64, offset2: f64, id: Option<String>) -> Result<String, errors::Error> {
         let mut obj = json::Value::object([("objectId", json::Value::String(object_id)), ("offset1", json::Value::Float(offset1)), ("offset2", json::Value::Float(offset2))])
-        if let Some(v) = id { let _ = json::set(&mut obj, &"id", json::Value::String(v)) }
+        if let Some(v) = id { let _ = json::set(&mut obj, "id", json::Value::String(v)) }
         self.call_tool("double_offset", obj)
     }
 
     pub fn over_offset(&self, object_id: String, first_offset: f64, final_surface_dist: Option<f64>, id: Option<String>) -> Result<String, errors::Error> {
         let mut obj = json::Value::object([("objectId", json::Value::String(object_id)), ("firstOffset", json::Value::Float(first_offset))])
-        if let Some(v) = final_surface_dist { let _ = json::set(&mut obj, &"finalSurfaceDist", json::Value::Float(v)) }
-        if let Some(v) = id { let _ = json::set(&mut obj, &"id", json::Value::String(v)) }
+        if let Some(v) = final_surface_dist { let _ = json::set(&mut obj, "finalSurfaceDist", json::Value::Float(v)) }
+        if let Some(v) = id { let _ = json::set(&mut obj, "id", json::Value::String(v)) }
         self.call_tool("over_offset", obj)
     }
 
     pub fn smooth(&self, object_id: String, distance: f64, id: Option<String>) -> Result<String, errors::Error> {
         let mut obj = json::Value::object([("objectId", json::Value::String(object_id)), ("distance", json::Value::Float(distance))])
-        if let Some(v) = id { let _ = json::set(&mut obj, &"id", json::Value::String(v)) }
+        if let Some(v) = id { let _ = json::set(&mut obj, "id", json::Value::String(v)) }
         self.call_tool("smooth", obj)
     }
 
     pub fn trim(&self, object_id: String, min_x: f64, min_y: f64, min_z: f64, max_x: f64, max_y: f64, max_z: f64, id: Option<String>) -> Result<String, errors::Error> {
         let mut obj = json::Value::object([("objectId", json::Value::String(object_id)), ("minX", json::Value::Float(min_x)), ("minY", json::Value::Float(min_y)), ("minZ", json::Value::Float(min_z)), ("maxX", json::Value::Float(max_x)), ("maxY", json::Value::Float(max_y)), ("maxZ", json::Value::Float(max_z))])
-        if let Some(v) = id { let _ = json::set(&mut obj, &"id", json::Value::String(v)) }
+        if let Some(v) = id { let _ = json::set(&mut obj, "id", json::Value::String(v)) }
         self.call_tool("trim", obj)
     }
 
     pub fn shell(&self, object_id: String, inner_offset: f64, outer_offset: f64, smooth: Option<f64>, id: Option<String>) -> Result<String, errors::Error> {
         let mut obj = json::Value::object([("objectId", json::Value::String(object_id)), ("innerOffset", json::Value::Float(inner_offset)), ("outerOffset", json::Value::Float(outer_offset))])
-        if let Some(v) = smooth { let _ = json::set(&mut obj, &"smooth", json::Value::Float(v)) }
-        if let Some(v) = id { let _ = json::set(&mut obj, &"id", json::Value::String(v)) }
+        if let Some(v) = smooth { let _ = json::set(&mut obj, "smooth", json::Value::Float(v)) }
+        if let Some(v) = id { let _ = json::set(&mut obj, "id", json::Value::String(v)) }
         self.call_tool("shell", obj)
     }
 
     pub fn fillet(&self, object_id: String, radius: f64, id: Option<String>) -> Result<String, errors::Error> {
         let mut obj = json::Value::object([("objectId", json::Value::String(object_id)), ("radius", json::Value::Float(radius))])
-        if let Some(v) = id { let _ = json::set(&mut obj, &"id", json::Value::String(v)) }
+        if let Some(v) = id { let _ = json::set(&mut obj, "id", json::Value::String(v)) }
         self.call_tool("fillet", obj)
     }
 
     pub fn project_z_slice(&self, object_id: String, start_z: f64, end_z: f64, id: Option<String>) -> Result<String, errors::Error> {
         let mut obj = json::Value::object([("objectId", json::Value::String(object_id)), ("startZ", json::Value::Float(start_z)), ("endZ", json::Value::Float(end_z))])
-        if let Some(v) = id { let _ = json::set(&mut obj, &"id", json::Value::String(v)) }
+        if let Some(v) = id { let _ = json::set(&mut obj, "id", json::Value::String(v)) }
         self.call_tool("project_z_slice", obj)
     }
 
     pub fn transform_voxels(&self, object_id: String, translate_x: Option<f64>, translate_y: Option<f64>, translate_z: Option<f64>, rotate_x: Option<f64>, rotate_y: Option<f64>, rotate_z: Option<f64>, scale: Option<f64>, id: Option<String>) -> Result<String, errors::Error> {
         let mut obj = json::Value::object([("objectId", json::Value::String(object_id))])
-        if let Some(v) = translate_x { let _ = json::set(&mut obj, &"translateX", json::Value::Float(v)) }
-        if let Some(v) = translate_y { let _ = json::set(&mut obj, &"translateY", json::Value::Float(v)) }
-        if let Some(v) = translate_z { let _ = json::set(&mut obj, &"translateZ", json::Value::Float(v)) }
-        if let Some(v) = rotate_x { let _ = json::set(&mut obj, &"rotateX", json::Value::Float(v)) }
-        if let Some(v) = rotate_y { let _ = json::set(&mut obj, &"rotateY", json::Value::Float(v)) }
-        if let Some(v) = rotate_z { let _ = json::set(&mut obj, &"rotateZ", json::Value::Float(v)) }
-        if let Some(v) = scale { let _ = json::set(&mut obj, &"scale", json::Value::Float(v)) }
-        if let Some(v) = id { let _ = json::set(&mut obj, &"id", json::Value::String(v)) }
+        if let Some(v) = translate_x { let _ = json::set(&mut obj, "translateX", json::Value::Float(v)) }
+        if let Some(v) = translate_y { let _ = json::set(&mut obj, "translateY", json::Value::Float(v)) }
+        if let Some(v) = translate_z { let _ = json::set(&mut obj, "translateZ", json::Value::Float(v)) }
+        if let Some(v) = rotate_x { let _ = json::set(&mut obj, "rotateX", json::Value::Float(v)) }
+        if let Some(v) = rotate_y { let _ = json::set(&mut obj, "rotateY", json::Value::Float(v)) }
+        if let Some(v) = rotate_z { let _ = json::set(&mut obj, "rotateZ", json::Value::Float(v)) }
+        if let Some(v) = scale { let _ = json::set(&mut obj, "scale", json::Value::Float(v)) }
+        if let Some(v) = id { let _ = json::set(&mut obj, "id", json::Value::String(v)) }
         self.call_tool("transform_voxels", obj)
     }
 
     pub fn circular_pattern(&self, object_id: String, count: i64, total_angle: Option<f64>, center_x: Option<f64>, center_y: Option<f64>, center_z: Option<f64>, axis_x: Option<f64>, axis_y: Option<f64>, axis_z: Option<f64>, id: Option<String>) -> Result<String, errors::Error> {
         let mut obj = json::Value::object([("objectId", json::Value::String(object_id)), ("count", json::Value::Int(count))])
-        if let Some(v) = total_angle { let _ = json::set(&mut obj, &"totalAngle", json::Value::Float(v)) }
-        if let Some(v) = center_x { let _ = json::set(&mut obj, &"centerX", json::Value::Float(v)) }
-        if let Some(v) = center_y { let _ = json::set(&mut obj, &"centerY", json::Value::Float(v)) }
-        if let Some(v) = center_z { let _ = json::set(&mut obj, &"centerZ", json::Value::Float(v)) }
-        if let Some(v) = axis_x { let _ = json::set(&mut obj, &"axisX", json::Value::Float(v)) }
-        if let Some(v) = axis_y { let _ = json::set(&mut obj, &"axisY", json::Value::Float(v)) }
-        if let Some(v) = axis_z { let _ = json::set(&mut obj, &"axisZ", json::Value::Float(v)) }
-        if let Some(v) = id { let _ = json::set(&mut obj, &"id", json::Value::String(v)) }
+        if let Some(v) = total_angle { let _ = json::set(&mut obj, "totalAngle", json::Value::Float(v)) }
+        if let Some(v) = center_x { let _ = json::set(&mut obj, "centerX", json::Value::Float(v)) }
+        if let Some(v) = center_y { let _ = json::set(&mut obj, "centerY", json::Value::Float(v)) }
+        if let Some(v) = center_z { let _ = json::set(&mut obj, "centerZ", json::Value::Float(v)) }
+        if let Some(v) = axis_x { let _ = json::set(&mut obj, "axisX", json::Value::Float(v)) }
+        if let Some(v) = axis_y { let _ = json::set(&mut obj, "axisY", json::Value::Float(v)) }
+        if let Some(v) = axis_z { let _ = json::set(&mut obj, "axisZ", json::Value::Float(v)) }
+        if let Some(v) = id { let _ = json::set(&mut obj, "id", json::Value::String(v)) }
         self.call_tool("circular_pattern", obj)
     }
 }

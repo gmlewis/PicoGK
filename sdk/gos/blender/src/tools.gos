@@ -269,13 +269,13 @@ fn build_search_args(
 ) -> json::Value {
     let mut obj = json::Value::object([("query", json::Value::String(query))])
     if let Some(v) = max_results {
-        let _ = json::set(&mut obj, &"max_results", json::Value::Int(v))
+        let _ = json::set(&mut obj, "max_results", json::Value::Int(v))
     }
     if let Some(v) = context {
-        let _ = json::set(&mut obj, &"context", json::Value::Int(v))
+        let _ = json::set(&mut obj, "context", json::Value::Int(v))
     }
     if let Some(v) = index {
-        let _ = json::set(&mut obj, &"index", json::Value::Int(v))
+        let _ = json::set(&mut obj, "index", json::Value::Int(v))
     }
     obj
 }
@@ -286,7 +286,7 @@ fn build_screenshot_area_args(
 ) -> json::Value {
     let mut obj = json::Value::object([("area_ui_type", json::Value::String(area_ui_type))])
     if let Some(v) = size_limit_in_bytes {
-        let _ = json::set(&mut obj, &"size_limit_in_bytes", json::Value::Int(v))
+        let _ = json::set(&mut obj, "size_limit_in_bytes", json::Value::Int(v))
     }
     obj
 }
@@ -294,7 +294,7 @@ fn build_screenshot_area_args(
 fn build_screenshot_window_args(size_limit_in_bytes: Option<i64>) -> json::Value {
     let mut obj = json::Value::object([])
     if let Some(v) = size_limit_in_bytes {
-        let _ = json::set(&mut obj, &"size_limit_in_bytes", json::Value::Int(v))
+        let _ = json::set(&mut obj, "size_limit_in_bytes", json::Value::Int(v))
     }
     obj
 }
@@ -305,7 +305,7 @@ fn build_jump_space_type_args(
 ) -> json::Value {
     let mut obj = json::Value::object([("space_type", json::Value::String(space_type))])
     if let Some(v) = allow_edits {
-        let _ = json::set(&mut obj, &"allow_edits", json::Value::Bool(v))
+        let _ = json::set(&mut obj, "allow_edits", json::Value::Bool(v))
     }
     obj
 }
@@ -316,7 +316,7 @@ fn build_jump_view3d_args(
 ) -> json::Value {
     let mut obj = json::Value::object([("name", json::Value::String(name))])
     if let Some(v) = allow_edits {
-        let _ = json::set(&mut obj, &"allow_edits", json::Value::Bool(v))
+        let _ = json::set(&mut obj, "allow_edits", json::Value::Bool(v))
     }
     obj
 }
