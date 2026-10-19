@@ -12,10 +12,10 @@ pub async fn new_client(String) -> Client
 
 // Types and methods
 pub struct Client {
-  pid : Int
+  pid : Int32
   stdin : @process.WriteToProcess
   stdout : @process.ReadFromProcess
-  mut msg_id : Int
+  mut msg_id : Int32
 }
 pub async fn Client::boolean_add(Self, String, String, String?) -> String
 pub async fn Client::boolean_add_all(Self, Array[String], String?) -> String
@@ -23,7 +23,7 @@ pub async fn Client::boolean_intersect(Self, String, String, String?) -> String
 pub async fn Client::boolean_subtract(Self, String, String, String?) -> String
 pub async fn Client::boolean_subtract_all(Self, String, Array[String], String?) -> String
 pub async fn Client::call_tool(Self, String, Map[String, Json]) -> String
-pub async fn Client::circular_pattern(Self, String, Int, Double?, Double?, Double?, Double?, Double?, Double?, Double?, String?) -> String
+pub async fn Client::circular_pattern(Self, String, Int32, Double?, Double?, Double?, Double?, Double?, Double?, Double?, String?) -> String
 pub fn Client::close(Self) -> Unit
 pub async fn Client::closest_point(Self, String, Double, Double, Double) -> String
 pub async fn Client::create_box(Self, Double, Double, Double, Double, Double, Double, String?) -> String
@@ -50,7 +50,7 @@ pub async fn Client::list_vdb_fields(Self, String) -> String
 pub async fn Client::load_vdb(Self, String, String?, String?) -> String
 pub async fn Client::measure_thickness(Self, String, Double, Double, Double, Double, Double, Double) -> String
 pub async fn Client::mesh_add_quad(Self, String, Double, Double, Double, Double, Double, Double, Double, Double, Double, Double, Double, Double, Bool?) -> String
-pub async fn Client::mesh_add_triangle(Self, String, Int, Int, Int) -> String
+pub async fn Client::mesh_add_triangle(Self, String, Int32, Int32, Int32) -> String
 pub async fn Client::mesh_add_triangle_vertices(Self, String, Double, Double, Double, Double, Double, Double, Double, Double, Double) -> String
 pub async fn Client::mesh_add_vertex(Self, String, Double, Double, Double) -> String
 pub async fn Client::mesh_append(Self, String, String) -> String
@@ -67,7 +67,7 @@ pub async fn Client::point_inside(Self, String, Double, Double, Double) -> Strin
 pub async fn Client::project_z_slice(Self, String, Double, Double, String?) -> String
 pub async fn Client::ray_cast(Self, String, Double, Double, Double, Double, Double, Double) -> String
 pub async fn Client::render_slice(Self, String, Double, String, String?) -> String
-pub async fn Client::render_to_image(Self, String, String, Int?, Int?, String?, String?) -> String
+pub async fn Client::render_to_image(Self, String, String, Int32?, Int32?, String?, String?) -> String
 pub async fn Client::save_cli(Self, String, String, Double?, String?, Bool?) -> String
 pub async fn Client::save_stl(Self, String, String, String?) -> String
 pub async fn Client::save_svg(Self, String, String, Double?) -> String
@@ -85,4 +85,3 @@ pub async fn Client::voxels_to_mesh(Self, String, String?) -> String
 // Type aliases
 
 // Traits
-

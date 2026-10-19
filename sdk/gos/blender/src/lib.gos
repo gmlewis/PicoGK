@@ -61,7 +61,7 @@ pub fn new_client_with(server_dir: String) -> Result<Client, errors::Error> {
 impl Client {
     pub fn close(&self) {
         self.child.close_stdin()
-        self.child.kill()
+        let _ = self.child.kill()
     }
 
     fn next_id(&self) -> i64 {

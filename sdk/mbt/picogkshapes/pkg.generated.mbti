@@ -18,7 +18,7 @@ pub fn new_box(LocalFrame?, Double, (Double) -> Double, (Double) -> Double) -> B
 
 pub fn new_color_scale_3d(Array[RGB], Double, Double) -> ColorScale3D
 
-pub fn new_control_point_spline(Array[Vec3], Int, Bool) -> ControlPointSpline
+pub fn new_control_point_spline(Array[Vec3], Int32, Bool) -> ControlPointSpline
 
 pub fn new_cylinder(LocalFrame?, Double, (Double, Double) -> Double) -> Cylinder
 
@@ -74,7 +74,7 @@ pub fn scene_group_voxels(@picogkffi.Voxels, RGB) -> SceneGroup
 
 pub fn spline_points() -> Array[Vec3]
 
-pub fn split_by_overhang_angle(@picogkffi.Mesh, ColorScale3D, Int) -> Array[SceneGroup]
+pub fn split_by_overhang_angle(@picogkffi.Mesh, ColorScale3D, Int32) -> Array[SceneGroup]
 
 pub fn surf_const(Double) -> (Double, Double) -> Double
 
@@ -95,9 +95,9 @@ pub struct Box {
   width : (Double) -> Double
   depth : (Double) -> Double
   frames : Frames?
-  w_steps : Int
-  d_steps : Int
-  l_steps : Int
+  w_steps : Int32
+  d_steps : Int32
+  l_steps : Int32
   transform : ((Array[Vec3]) -> Array[Vec3])?
 }
 pub fn Box::to_mesh(Self) -> @picogkffi.Mesh
@@ -112,20 +112,20 @@ pub fn ColorScale3D::color(Self, Double) -> RGB
 
 pub struct ControlPointSpline {
   control_points : Array[Vec3]
-  degree : Int
+  degree : Int32
   knot : Array[Double]
 }
 pub fn ControlPointSpline::point_at(Self, Double) -> Vec3
-pub fn ControlPointSpline::points(Self, Int) -> Array[Vec3]
+pub fn ControlPointSpline::points(Self, Int32) -> Array[Vec3]
 
 pub struct Cylinder {
   frame : LocalFrame
   length : Double
   radius : (Double, Double) -> Double
   frames : Frames?
-  polar_steps : Int
-  radial_steps : Int
-  length_steps : Int
+  polar_steps : Int32
+  radial_steps : Int32
+  length_steps : Int32
 }
 pub fn Cylinder::to_mesh(Self) -> @picogkffi.Mesh
 pub fn Cylinder::to_voxels(Self) -> @picogkffi.Voxels
@@ -162,7 +162,7 @@ pub struct LatticeManifold {
   length : Double
   radius : (Double) -> Double
   frames : Frames?
-  l_steps : Int
+  l_steps : Int32
   max_overhang_angle : Double
   extend_both_sides : Bool
   min_printable_radius : Double
@@ -175,7 +175,7 @@ pub struct LatticePipe {
   length : Double
   radius : (Double) -> Double
   frames : Frames?
-  l_steps : Int
+  l_steps : Int32
 }
 pub fn LatticePipe::to_voxels(Self) -> @picogkffi.Voxels
 
@@ -186,9 +186,9 @@ pub struct Lens {
   outer_radius : Double
   lower : (Double, Double) -> Double
   upper : (Double, Double) -> Double
-  radial_steps : Int
-  polar_steps : Int
-  height_steps : Int
+  radial_steps : Int32
+  polar_steps : Int32
+  height_steps : Int32
 }
 pub fn Lens::to_mesh(Self) -> @picogkffi.Mesh
 pub fn Lens::to_voxels(Self) -> @picogkffi.Voxels
@@ -220,9 +220,9 @@ pub struct Pipe {
   inner : (Double, Double) -> Double
   outer : (Double, Double) -> Double
   frames : Frames?
-  polar_steps : Int
-  radial_steps : Int
-  length_steps : Int
+  polar_steps : Int32
+  radial_steps : Int32
+  length_steps : Int32
   transform : ((Array[Vec3]) -> Array[Vec3])?
   mut phi_angle_func : (Double, Double) -> Double
 }
@@ -249,8 +249,8 @@ pub struct Ring {
   frame : LocalFrame
   ring_radius : Double
   radius : (Double, Double) -> Double
-  radial_steps : Int
-  polar_steps : Int
+  radial_steps : Int32
+  polar_steps : Int32
 }
 pub fn Ring::to_mesh(Self) -> @picogkffi.Mesh
 pub fn Ring::to_voxels(Self) -> @picogkffi.Voxels
@@ -264,8 +264,8 @@ pub struct SceneGroup {
 pub struct Sphere {
   frame : LocalFrame
   radius : (Double, Double) -> Double
-  azim_steps : Int
-  polar_steps : Int
+  azim_steps : Int32
+  polar_steps : Int32
   transform : ((Array[Vec3]) -> Array[Vec3])?
 }
 pub fn Sphere::to_mesh(Self) -> @picogkffi.Mesh
@@ -273,7 +273,7 @@ pub fn Sphere::to_voxels(Self) -> @picogkffi.Voxels
 
 pub struct SurfaceMeshBuilder {
   verts : Array[Double]
-  tris : Array[Int]
+  tris : Array[Int32]
 }
 pub fn SurfaceMeshBuilder::add(Self, Array[Array[Vec3]], Bool) -> Self
 pub fn SurfaceMeshBuilder::build(Self) -> @picogkffi.Mesh
@@ -307,4 +307,3 @@ pub fn Vec3::sub(Self, Self) -> Self
 // Type aliases
 
 // Traits
-

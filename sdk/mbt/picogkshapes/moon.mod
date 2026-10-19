@@ -3,7 +3,7 @@
 
 name = "gmlewis/picogkshapes"
 
-version = "0.2.0"
+version = "0.2.1"
 
 repository = "https://github.com/gmlewis/PicoGK"
 

@@ -12,10 +12,10 @@ pub async fn new_client(String) -> Client
 
 // Types and methods
 pub struct Client {
-  pid : Int
+  pid : Int32
   stdin : @process.WriteToProcess
   stdout : @process.ReadFromProcess
-  mut msg_id : Int
+  mut msg_id : Int32
 }
 pub async fn Client::call_tool(Self, String, Map[String, Json]) -> String
 pub fn Client::close(Self) -> Unit
@@ -34,8 +34,8 @@ pub async fn Client::get_blendfile_summary_usage_guess_for_cli(Self, String) -> 
 pub async fn Client::get_object_detail_summary(Self, String) -> String
 pub async fn Client::get_objects_summary(Self) -> String
 pub async fn Client::get_python_api_docs(Self, String) -> String
-pub async fn Client::get_screenshot_of_area_as_image(Self, String, Int?) -> String
-pub async fn Client::get_screenshot_of_window_as_image(Self, Int?) -> String
+pub async fn Client::get_screenshot_of_area_as_image(Self, String, Int32?) -> String
+pub async fn Client::get_screenshot_of_window_as_image(Self, Int32?) -> String
 pub async fn Client::get_screenshot_of_window_as_json(Self) -> String
 pub async fn Client::jump_to_tab_by_name(Self, String) -> String
 pub async fn Client::jump_to_tab_by_space_type(Self, String, Bool?) -> String
@@ -43,10 +43,9 @@ pub async fn Client::jump_to_view3d_object_by_name(Self, String, Bool?) -> Strin
 pub async fn Client::jump_to_view3d_object_data_by_name(Self, String, Bool?) -> String
 pub async fn Client::render_thumbnail_to_path(Self, String) -> String
 pub async fn Client::render_viewport_to_path(Self, String) -> String
-pub async fn Client::search_api_docs(Self, String, Int?, Int?, Int?) -> String
-pub async fn Client::search_manual_docs(Self, String, Int?, Int?, Int?) -> String
+pub async fn Client::search_api_docs(Self, String, Int32?, Int32?, Int32?) -> String
+pub async fn Client::search_manual_docs(Self, String, Int32?, Int32?, Int32?) -> String
 
 // Type aliases
 
 // Traits
-
