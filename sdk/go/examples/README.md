@@ -47,6 +47,7 @@ produce identical geometry.
 | `ffi-visualize` | `visualize.py` | Z-slice PNG (from raw SDF data) + 3D Viewer render |
 | `ffi-web-demo` | `web/demo.py` | HTML viewer with inline JSON geometry + real gyroid sphere |
 | `ffi-gallery` | `shapekernel/gallery.py` | 16 parametric shape scenes via `picogkshapes` |
+| `archimedes` | — | Archimedes spiral turbine geometry (CLI flags) solidified and exported as STL |
 
 ### Running an FFI example
 

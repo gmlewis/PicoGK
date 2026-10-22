@@ -1,3 +1,10 @@
+// Command archimedes builds the Archimedes spiral turbine geometry and
+// exports it as an STL solid through the PicoGK FFI runtime.
+//
+// Run with no flags for a parameter summary, or pass -stl to write a file:
+//
+//	go run . -stl rotor.stl
+//	go run . -stl rotor.stl -blades 4 -diameter 200 -thickness 2 -voxel 0.4
 package main
 
 import (
@@ -7,20 +14,82 @@ import (
 )
 
 func main() {
+	c := defaultConfig()
+
+	stlPath := flag.String("stl", "", "write a binary STL file of the solidified rotor to this path")
+	flag.Float64Var(&c.RotorDiameter, "diameter", c.RotorDiameter, "rotor envelope diameter (mm)")
+	flag.Float64Var(&c.AxialLength, "length", c.AxialLength, "axial length (mm)")
+	flag.IntVar(&c.BladeCount, "blades", c.BladeCount, "number of blades")
+	flag.IntVar(&c.Samples, "samples", c.Samples, "samples along each spiral (higher is smoother)")
+	flag.Float64Var(&c.RadialStart, "radial-start", c.RadialStart, "inner radius as a fraction of the rotor radius")
+	flag.Float64Var(&c.Turns, "turns", c.Turns, "spiral turns per blade")
+	flag.Float64Var(&c.Thickness, "thickness", c.Thickness, "blade thickness (mm), measured normal to the surface")
+	flag.Float64Var(&c.OpeningAngleDeg, "opening-angle", c.OpeningAngleDeg, "angle of the inner generating line to the rotor axis (degrees)")
+	voxelSize := flag.Float64("voxel", 0.5, "PicoGK voxel size (mm)")
+	flag.Usage = func() {
+		fmt.Fprintf(flag.CommandLine.Output(), `Usage: %s [flags]
+
+Build the Archimedes spiral turbine geometry. With no -stl flag only a
+summary is printed; with -stl the rotor is solidified by PicoGK and
+written as a binary STL file.
+
+Flags:
+`, os.Args[0])
+		flag.PrintDefaults()
+	}
 	flag.Parse()
 
-	c := defaultConfig()
 	if err := c.Validate(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		fmt.Fprintf(os.Stderr, "%v: %+v\n", err, c)
 		os.Exit(1)
 	}
-	fmt.Printf("Archimedes geometry prototype\n")
-	fmt.Printf("Rotor envelope: diameter %.1f mm, axial length %.1f mm, blades %v\n",
+	if *voxelSize <= 0 {
+		fmt.Fprintf(os.Stderr, "voxel size must be positive, got %g mm\n", *voxelSize)
+		os.Exit(1)
+	}
+
+	printSummary(c)
+
+	if *stlPath == "" {
+		fmt.Println("\nNo -stl given: geometry summary only. Pass -stl filename.stl to export a solid.")
+		return
+	}
+
+	mesh, err := c.RotorMesh()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "build rotor mesh:", err)
+		os.Exit(1)
+	}
+	fmt.Printf("\nClosed input mesh: %d vertices, %d triangles\n",
+		mesh.VertexCount(), mesh.TriangleCount())
+
+	if c.Thickness < 2*(*voxelSize) {
+		fmt.Fprintf(os.Stderr, "warning: blade thickness %.2f mm is less than two voxels (%.2f mm); "+
+			"the solid may be incomplete. Use a smaller -voxel.\n", c.Thickness, 2*(*voxelSize))
+	}
+
+	result, err := exportSolidSTL(*stlPath, mesh, float32(*voxelSize))
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "export STL:", err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("PicoGK %s, voxel %.2f mm\n", result.PicoGKVersion, result.VoxelSizeMM)
+	fmt.Printf("Solid volume: %.1f mm³\n", result.VolumeMM3)
+	fmt.Printf("Wrote %s: %d vertices, %d triangles\n",
+		*stlPath, result.Vertices, result.Triangles)
+}
+
+func printSummary(c Config) {
+	fmt.Println("Archimedes spiral turbine")
+	fmt.Printf("  envelope: diameter %.1f mm, axial length %.1f mm, blades %d\n",
 		c.RotorDiameter, c.AxialLength, c.BladeCount)
-	fmt.Printf("Spiral samples: %v; turns %.2f; nominal thickness %.2f mm\n",
-		c.Samples, c.Turns, c.Thickness)
+	fmt.Printf("  spiral: samples %d, turns %.2f, radial start %.3f\n",
+		c.Samples, c.Turns, c.RadialStart)
+	fmt.Printf("  blade: thickness %.2f mm, opening angle %.1f°\n",
+		c.Thickness, c.OpeningAngleDeg)
 	pts := c.BladeBoundarySamples()
-	fmt.Printf("Boundary points: %v\n", len(pts))
-	fmt.Printf("First: %+v\nLast:  %+v\n", pts[0], pts[len(pts)-1])
-	fmt.Println("Geometry core only: STL export and PicoGK FFI solidification are the next milestone.")
+	fmt.Printf("  boundary points: %d (first %v, last %v)\n",
+		len(pts), pts[0], pts[len(pts)-1])
+	fmt.Printf("  generating-line anchor: %v\n", c.Anchor())
 }

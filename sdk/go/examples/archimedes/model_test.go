@@ -58,3 +58,15 @@ func TestRejectInvalidConfig(t *testing.T) {
 		t.Fatal("expected invalid config")
 	}
 }
+
+func TestRejectOpeningAngleAtOrAbove90(t *testing.T) {
+	c := defaultConfig()
+	c.OpeningAngleDeg = 90
+	if c.Validate() == nil {
+		t.Fatal("expected 90° opening angle to be rejected")
+	}
+	c.OpeningAngleDeg = 120
+	if c.Validate() == nil {
+		t.Fatal("expected 120° opening angle to be rejected")
+	}
+}
