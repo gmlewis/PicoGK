@@ -13,28 +13,45 @@ func TestDefaultConfigValid(t *testing.T) {
 
 func TestSpiralEndpoints(t *testing.T) {
 	c := defaultConfig()
-	a := c.SpiralPoint(0)
-	b := c.SpiralPoint(2 * math.Pi * c.Turns)
-	if math.Abs(a.Z+c.AxialLength/2) > 1e-9 {
-		t.Fatalf("start z=%g", a.Z)
+	root := c.SpiralPoint(0)
+	apex := c.SpiralPoint(c.bladeSpan())
+	if math.Abs(root.Z+c.AxialLength/2) > 1e-9 {
+		t.Fatalf("root z=%g", root.Z)
 	}
-	if math.Abs(b.Z-c.AxialLength/2) > 1e-9 {
-		t.Fatalf("end z=%g", b.Z)
+	if math.Abs(math.Hypot(root.X, root.Y)-c.RotorRadius()) > 1e-9 {
+		t.Fatalf("root radius = %g, want %g", math.Hypot(root.X, root.Y), c.RotorRadius())
 	}
-	if math.Abs(math.Hypot(b.X, b.Y)-c.RotorDiameter/2) > 1e-9 {
-		t.Fatalf("outer radius mismatch")
+	if math.Abs(apex.Z-c.AxialLength/2) > 1e-9 {
+		t.Fatalf("apex z=%g", apex.Z)
+	}
+	wantApex := c.RotorRadius() * c.ApexRadius
+	if math.Abs(math.Hypot(apex.X, apex.Y)-wantApex) > 1e-9 {
+		t.Fatalf("apex radius = %g, want %g", math.Hypot(apex.X, apex.Y), wantApex)
 	}
 }
 
 func TestSurfaceInterpolation(t *testing.T) {
 	c := defaultConfig()
-	anchor := Vec3{1, 2, 3}
 	u := 0.7
-	if got := c.SurfacePoint(u, 0, anchor); got != anchor {
-		t.Fatalf("v=0: got %+v", got)
+	if got, want := c.SurfacePoint(u, 0), c.AxisPoint(u); got != want {
+		t.Fatalf("v=0: got %+v want %+v", got, want)
 	}
-	if got, want := c.SurfacePoint(u, 1, anchor), c.SpiralPoint(u); got != want {
+	if got, want := c.SurfacePoint(u, 1), c.SpiralPoint(u); got != want {
 		t.Fatalf("v=1: got %+v want %+v", got, want)
+	}
+	// The generating line must be radial: both ends share the same z.
+	if a, b := c.SurfacePoint(u, 0), c.SurfacePoint(u, 1); math.Abs(a.Z-b.Z) > 1e-9 {
+		t.Fatalf("generator not radial: z %g vs %g", a.Z, b.Z)
+	}
+}
+
+func TestAxisPointOnRotorAxis(t *testing.T) {
+	c := defaultConfig()
+	for _, u := range []float64{0, 1, math.Pi, c.bladeSpan()} {
+		p := c.AxisPoint(u)
+		if p.X != 0 || p.Y != 0 {
+			t.Fatalf("u=%g: axis point not on the Z axis: %+v", u, p)
+		}
 	}
 }
 
@@ -57,16 +74,14 @@ func TestRejectInvalidConfig(t *testing.T) {
 	if c.Validate() == nil {
 		t.Fatal("expected invalid config")
 	}
-}
-
-func TestRejectOpeningAngleAtOrAbove90(t *testing.T) {
-	c := defaultConfig()
-	c.OpeningAngleDeg = 90
+	c = defaultConfig()
+	c.ApexRadius = 1
 	if c.Validate() == nil {
-		t.Fatal("expected 90° opening angle to be rejected")
+		t.Fatal("expected an apex radius of 1 to be rejected")
 	}
-	c.OpeningAngleDeg = 120
+	c = defaultConfig()
+	c.ApexRadius = 0
 	if c.Validate() == nil {
-		t.Fatal("expected 120° opening angle to be rejected")
+		t.Fatal("expected a zero apex radius to be rejected")
 	}
 }

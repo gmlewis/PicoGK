@@ -21,10 +21,9 @@ func main() {
 	flag.Float64Var(&c.AxialLength, "length", c.AxialLength, "axial length (mm)")
 	flag.IntVar(&c.BladeCount, "blades", c.BladeCount, "number of blades")
 	flag.IntVar(&c.Samples, "samples", c.Samples, "samples along each spiral (higher is smoother)")
-	flag.Float64Var(&c.RadialStart, "radial-start", c.RadialStart, "inner radius as a fraction of the rotor radius")
+	flag.Float64Var(&c.ApexRadius, "apex-radius", c.ApexRadius, "radius at the narrow end as a fraction of the rotor radius")
 	flag.Float64Var(&c.Turns, "turns", c.Turns, "spiral turns per blade")
 	flag.Float64Var(&c.Thickness, "thickness", c.Thickness, "blade thickness (mm), measured normal to the surface")
-	flag.Float64Var(&c.OpeningAngleDeg, "opening-angle", c.OpeningAngleDeg, "angle of the inner generating line to the rotor axis (degrees)")
 	voxelSize := flag.Float64("voxel", 0.5, "PicoGK voxel size (mm)")
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), `Usage: %s [flags]
@@ -84,12 +83,10 @@ func printSummary(c Config) {
 	fmt.Println("Archimedes spiral turbine")
 	fmt.Printf("  envelope: diameter %.1f mm, axial length %.1f mm, blades %d\n",
 		c.RotorDiameter, c.AxialLength, c.BladeCount)
-	fmt.Printf("  spiral: samples %d, turns %.2f, radial start %.3f\n",
-		c.Samples, c.Turns, c.RadialStart)
-	fmt.Printf("  blade: thickness %.2f mm, opening angle %.1f°\n",
-		c.Thickness, c.OpeningAngleDeg)
+	fmt.Printf("  spiral: samples %d, turns %.2f, apex radius %.3f R\n",
+		c.Samples, c.Turns, c.ApexRadius)
+	fmt.Printf("  blade: thickness %.2f mm\n", c.Thickness)
 	pts := c.BladeBoundarySamples()
-	fmt.Printf("  boundary points: %d (first %v, last %v)\n",
+	fmt.Printf("  boundary points: %d (root %v, apex %v)\n",
 		len(pts), pts[0], pts[len(pts)-1])
-	fmt.Printf("  generating-line anchor: %v\n", c.Anchor())
 }

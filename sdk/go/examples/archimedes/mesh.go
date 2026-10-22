@@ -68,29 +68,24 @@ func (c Config) RotorMesh() (*MeshData, error) {
 }
 
 // appendBlade appends one closed blade shell rotated about Z by phi.
-//
-// The ruled surface is linear in v with a normal that does not depend on v,
-// so a single span across v represents the offset surfaces exactly; the
-// surface is sampled only along u.
 func (c Config) appendBlade(md *MeshData, phi float64) {
-	const nv = 1
+	// The surface normal changes across v, so sample v as well as u.
+	const nv = 8
 
 	nu := c.Samples
-	uMax := 2 * math.Pi * c.Turns
-	anchor := c.Anchor()
+	uMax := c.bladeSpan()
 	half := c.Thickness / 2
 
 	top := make([][]int32, nu+1)
 	bot := make([][]int32, nu+1)
 	for i := 0; i <= nu; i++ {
 		u := uMax * float64(i) / float64(nu)
-		boundary := c.SpiralPoint(u)
-		normal := c.SurfaceNormal(u)
 		top[i] = make([]int32, nv+1)
 		bot[i] = make([]int32, nv+1)
 		for j := 0; j <= nv; j++ {
 			v := float64(j) / float64(nv)
-			p := anchor.Scale(1 - v).Add(boundary.Scale(v))
+			p := c.SurfacePoint(u, v)
+			normal := c.SurfaceNormal(u, v)
 			top[i][j] = md.addVertex(p.Add(normal.Scale(half)).RotateZ(phi))
 			bot[i][j] = md.addVertex(p.Sub(normal.Scale(half)).RotateZ(phi))
 		}

@@ -8,22 +8,14 @@ import (
 	"testing"
 )
 
-func TestAnchorOpeningAngle(t *testing.T) {
-	c := defaultConfig()
-	a := c.Anchor()
-	d := c.SpiralPoint(0).Sub(a)
-	got := math.Atan2(math.Hypot(d.X, d.Y), d.Z) * 180 / math.Pi
-	if math.Abs(got-c.OpeningAngleDeg) > 1e-9 {
-		t.Fatalf("opening angle = %g°, want %g°", got, c.OpeningAngleDeg)
-	}
-}
-
 func TestSurfaceNormalUnit(t *testing.T) {
 	c := defaultConfig()
 	for _, u := range []float64{0, 0.3, math.Pi, 2 * math.Pi} {
-		n := c.SurfaceNormal(u)
-		if math.Abs(n.Norm()-1) > 1e-12 {
-			t.Errorf("u=%g: normal length %g", u, n.Norm())
+		for _, v := range []float64{0, 0.5, 1} {
+			n := c.SurfaceNormal(u, v)
+			if math.Abs(n.Norm()-1) > 1e-12 {
+				t.Errorf("u=%g v=%g: normal length %g", u, v, n.Norm())
+			}
 		}
 	}
 }
@@ -79,7 +71,7 @@ func TestRotorMeshVolumeAndBounds(t *testing.T) {
 		if r := math.Hypot(x, y); r > maxR+1e-4 {
 			t.Fatalf("vertex radius %g exceeds %g", r, maxR)
 		}
-		if z < c.Anchor().Z-c.Thickness || z > c.AxialLength/2+c.Thickness {
+		if z < -c.AxialLength/2-c.Thickness || z > c.AxialLength/2+c.Thickness {
 			t.Fatalf("vertex z=%g outside expected span", z)
 		}
 	}
