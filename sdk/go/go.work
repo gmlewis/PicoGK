@@ -1,7 +1,8 @@
-go 1.22
+go 1.23
 
 use (
 	./blender
+	./examples/archimedes
 	./examples/blender-scene
 	./examples/ffi-fields-and-io
 	./examples/ffi-gallery
