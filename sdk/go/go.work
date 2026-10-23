@@ -3,6 +3,7 @@ go 1.23
 use (
 	./blender
 	./examples/archimedes
+	./examples/archimedes-air-foil
 	./examples/blender-scene
 	./examples/ffi-fields-and-io
 	./examples/ffi-gallery

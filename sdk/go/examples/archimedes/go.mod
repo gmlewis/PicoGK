@@ -1,4 +1,4 @@
-module example.com/archimedes-go
+module github.com/gmlewis/PicoGK/sdk/go/examples/archimedes
 
 go 1.23
 
