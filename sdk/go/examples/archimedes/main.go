@@ -4,7 +4,7 @@
 // Run with no flags for a parameter summary, or pass -stl to write a file:
 //
 //	go run . -stl rotor.stl
-//	go run . -stl rotor.stl -blades 4 -diameter 200 -minBaseThickness 5 -minTopThickness 2.5 -voxel 0.4
+//	go run . -stl rotor.stl -blades 4 -diameter 200 -minBaseThickness 5 -minTopThickness 2.5
 package main
 
 import (
@@ -27,7 +27,7 @@ func main() {
 	flag.Float64Var(&c.MinBaseThickness, "minBaseThickness", c.MinBaseThickness, "minimum blade thickness at the wide base (mm)")
 	flag.Float64Var(&c.MinTopThickness, "minTopThickness", c.MinTopThickness, "minimum blade thickness at the narrow top (mm)")
 	flag.Float64Var(&c.BaseExtensionDeg, "baseExtension", c.BaseExtensionDeg, "extra smooth spiral below the bed plane, cut flat for the print footprint (degrees)")
-	voxelSize := flag.Float64("voxel", 0.5, "PicoGK voxel size (mm)")
+	voxelSize := flag.Float64("voxel", 0.2, "PicoGK voxel size (mm)")
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), `Usage: %s [flags]
 
