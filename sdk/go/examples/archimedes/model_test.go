@@ -68,6 +68,54 @@ func TestSamplesAndFinite(t *testing.T) {
 	}
 }
 
+func TestBladeThicknessTapers(t *testing.T) {
+	c := defaultConfig()
+	if got, want := c.BaseThickness(), 4.0; got != want {
+		t.Fatalf("base thickness = %g, want %g", got, want)
+	}
+	if got, want := c.TopThickness(), 2.0; got != want {
+		t.Fatalf("top thickness = %g, want %g", got, want)
+	}
+	span := c.bladeSpan()
+	if got, want := c.BladeThicknessAt(0), 4.0; got != want {
+		t.Fatalf("thickness at base = %g, want %g", got, want)
+	}
+	if got, want := c.BladeThicknessAt(span), 2.0; got != want {
+		t.Fatalf("thickness at top = %g, want %g", got, want)
+	}
+	if got, want := c.BladeThicknessAt(span/2), 3.0; got != want {
+		t.Fatalf("thickness at mid-span = %g, want %g", got, want)
+	}
+	prev := math.Inf(1)
+	for i := 0; i <= 20; i++ {
+		got := c.BladeThicknessAt(span * float64(i) / 20)
+		if got > prev {
+			t.Fatalf("thickness increased from %g to %g at step %d", prev, got, i)
+		}
+		prev = got
+	}
+}
+
+func TestThicknessFloors(t *testing.T) {
+	c := defaultConfig()
+	c.Thickness = 5
+	if got := c.BaseThickness(); got != 5 {
+		t.Errorf("base thickness = %g, want the 5 mm floor", got)
+	}
+	if got := c.TopThickness(); got != 5 {
+		t.Errorf("top thickness = %g, want the 5 mm floor", got)
+	}
+
+	c = defaultConfig()
+	c.Thickness = 3
+	if got := c.BaseThickness(); got != 4 {
+		t.Errorf("base thickness = %g, want 4", got)
+	}
+	if got := c.TopThickness(); got != 3 {
+		t.Errorf("top thickness = %g, want the 3 mm floor", got)
+	}
+}
+
 func TestRejectInvalidConfig(t *testing.T) {
 	c := defaultConfig()
 	c.BladeCount = 0
@@ -83,5 +131,15 @@ func TestRejectInvalidConfig(t *testing.T) {
 	c.ApexRadius = 0
 	if c.Validate() == nil {
 		t.Fatal("expected a zero apex radius to be rejected")
+	}
+	c = defaultConfig()
+	c.MinBaseThickness = 0
+	if c.Validate() == nil {
+		t.Fatal("expected a zero minimum base thickness to be rejected")
+	}
+	c = defaultConfig()
+	c.MinTopThickness = -1
+	if c.Validate() == nil {
+		t.Fatal("expected a negative minimum top thickness to be rejected")
 	}
 }

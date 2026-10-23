@@ -15,7 +15,12 @@ type Config struct {
 	Samples       int     // samples along each blade's spiral
 	ApexRadius    float64 // radius at the narrow end, as a fraction of the rotor radius
 	Turns         float64 // spiral turns per blade; 1 matches the standard blade
-	Thickness     float64 // blade thickness, measured normal to the ruled surface
+	Thickness     float64 // uniform blade thickness floor, measured normal to the ruled surface
+	// MinBaseThickness and MinTopThickness set the blade thickness at the wide
+	// base and the narrow top. The blade tapers linearly between the two, so
+	// it is never thinner than the corresponding setting at either end.
+	MinBaseThickness float64
+	MinTopThickness  float64
 }
 
 // defaultConfig returns the user-selected envelope and conservative starting sampling.
@@ -23,17 +28,19 @@ func defaultConfig() Config {
 	return Config{
 		RotorDiameter: 150, AxialLength: 140, BladeCount: 3,
 		Samples: 240, ApexRadius: 0.05, Turns: 1,
-		Thickness: 1.2,
+		Thickness: 1.2, MinBaseThickness: 4.0, MinTopThickness: 2.0,
 	}
 }
 
 func (c Config) Validate() error {
 	if c.RotorDiameter <= 0 || c.AxialLength <= 0 || c.BladeCount < 1 ||
 		c.Samples < 8 || c.ApexRadius <= 0 || c.ApexRadius >= 1 ||
-		c.Turns <= 0 || c.Thickness <= 0 {
+		c.Turns <= 0 || c.Thickness <= 0 ||
+		c.MinBaseThickness <= 0 || c.MinTopThickness <= 0 {
 		return ErrInvalidConfig
 	}
-	for _, v := range []float64{c.RotorDiameter, c.AxialLength, c.ApexRadius, c.Turns, c.Thickness} {
+	for _, v := range []float64{c.RotorDiameter, c.AxialLength, c.ApexRadius, c.Turns,
+		c.Thickness, c.MinBaseThickness, c.MinTopThickness} {
 		if math.IsNaN(v) || math.IsInf(v, 0) {
 			return ErrInvalidConfig
 		}
@@ -87,6 +94,34 @@ func (c Config) SpiralDerivative(u float64) Vec3 {
 func (c Config) AxisDerivative() Vec3 {
 	return Vec3{0, 0, c.AxialLength / c.bladeSpan()}
 }
+
+// BaseThickness is the blade thickness at the wide base (u=0): the larger of
+// the uniform Thickness floor and MinBaseThickness.
+func (c Config) BaseThickness() float64 { return math.Max(c.Thickness, c.MinBaseThickness) }
+
+// TopThickness is the blade thickness at the narrow top (u=bladeSpan): the
+// larger of the uniform Thickness floor and MinTopThickness.
+func (c Config) TopThickness() float64 { return math.Max(c.Thickness, c.MinTopThickness) }
+
+// BladeThicknessAt returns the local blade thickness at spiral parameter u.
+// The thickness decreases linearly from BaseThickness() at the base to
+// TopThickness() at the top, so the blade is never thinner at either end than
+// the corresponding minimum.
+func (c Config) BladeThicknessAt(u float64) float64 {
+	s := u / c.bladeSpan()
+	if s < 0 {
+		s = 0
+	} else if s > 1 {
+		s = 1
+	}
+	return c.BaseThickness() + (c.TopThickness()-c.BaseThickness())*s
+}
+
+// MinBladeThickness is the thinnest point of the tapered blade.
+func (c Config) MinBladeThickness() float64 { return math.Min(c.BaseThickness(), c.TopThickness()) }
+
+// MaxBladeThickness is the thickest point of the tapered blade.
+func (c Config) MaxBladeThickness() float64 { return math.Max(c.BaseThickness(), c.TopThickness()) }
 
 // SurfacePoint is the conical helicoid S(u,v) = (1-v) C(u) + v B(u).
 // C(u) lies on the rotor axis and B(u) on the 3D spiral; v is in [0,1].

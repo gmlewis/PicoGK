@@ -65,14 +65,44 @@ func TestRotorMeshVolumeAndBounds(t *testing.T) {
 		t.Fatalf("blade volume %g mm³ exceeds envelope %g mm³", vol, envelope)
 	}
 
-	maxR := c.RotorRadius() + c.Thickness
+	maxOffset := c.MaxBladeThickness()
+	maxR := c.RotorRadius() + maxOffset
 	for i := 0; i < len(md.Vertices); i += 3 {
 		x, y, z := float64(md.Vertices[i]), float64(md.Vertices[i+1]), float64(md.Vertices[i+2])
 		if r := math.Hypot(x, y); r > maxR+1e-4 {
 			t.Fatalf("vertex radius %g exceeds %g", r, maxR)
 		}
-		if z < -c.AxialLength/2-c.Thickness || z > c.AxialLength/2+c.Thickness {
+		if z < -c.AxialLength/2-maxOffset || z > c.AxialLength/2+maxOffset {
 			t.Fatalf("vertex z=%g outside expected span", z)
+		}
+	}
+}
+
+func TestRotorMeshThicknessTapers(t *testing.T) {
+	c := defaultConfig()
+	c.BladeCount = 1
+	c.Samples = 8
+	md, err := c.RotorMesh()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// appendBlade stores, for each (u,v) sample, the top vertex then the
+	// bottom vertex, so the pair's separation is the local blade thickness.
+	// j=0 is the inner edge where all blades meet the rotor axis, so this also
+	// checks that the common junction is never thinner than the minimum.
+	const nv = 8
+	perStation := (nv + 1) * 2
+	span := c.bladeSpan()
+	for i := 0; i <= c.Samples; i++ {
+		u := span * float64(i) / float64(c.Samples)
+		want := c.BladeThicknessAt(u)
+		for j := 0; j <= nv; j++ {
+			top := md.vertex(int32(i*perStation + j*2))
+			bot := md.vertex(int32(i*perStation + j*2 + 1))
+			if got := top.Sub(bot).Norm(); math.Abs(got-want) > 1e-3 {
+				t.Fatalf("u=%g v=%g: thickness %g, want %g", u, float64(j)/nv, got, want)
+			}
 		}
 	}
 }
@@ -140,7 +170,8 @@ func TestExportSolidSTL(t *testing.T) {
 	}
 	c := defaultConfig()
 	c.Samples = 24
-	c.Thickness = 3
+	c.MinBaseThickness = 3
+	c.MinTopThickness = 3
 	md, err := c.RotorMesh()
 	if err != nil {
 		t.Fatal(err)

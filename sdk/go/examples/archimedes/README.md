@@ -10,7 +10,8 @@ blades through the [PicoGK FFI SDK](../../picogkffi/).
 go test ./...
 go run .                      # parameter summary only
 go run . -stl rotor.stl       # solidify and write a binary STL
-go run . -stl rotor.stl -blades 4 -diameter 200 -thickness 2 -voxel 0.4
+go run . -stl rotor.stl -blades 4 -diameter 200 \
+  -minBaseThickness 5 -minTopThickness 2.5 -voxel 0.4
 ```
 
 `-stl` writes a binary STL through PicoGK. Without it the program just prints
@@ -26,11 +27,15 @@ native library.
 | `-samples` | 240 | Samples along each spiral |
 | `-apex-radius` | 0.05 | Radius at the narrow end, as a fraction of the rotor radius |
 | `-turns` | 1 | Spiral turns per blade |
-| `-thickness` | 1.2 | Blade thickness (mm), normal to the surface |
+| `-thickness` | 1.2 | Uniform blade thickness floor (mm), normal to the surface |
+| `-minBaseThickness` | 4.0 | Minimum blade thickness at the wide base (mm) |
+| `-minTopThickness` | 2.0 | Minimum blade thickness at the narrow top (mm) |
 | `-voxel` | 0.5 | PicoGK voxel size (mm) |
 
-Keep `-voxel` at or below about half the blade thickness, or the thin solid
-can disappear during voxelization.
+The blade tapers linearly from `max(-thickness, -minBaseThickness)` at the
+base to `max(-thickness, -minTopThickness)` at the top, so it is never thinner
+than either minimum. Keep `-voxel` at or below about half the thinnest blade
+thickness, or the thin solid can disappear during voxelization.
 
 ## How the solid is built
 
@@ -44,11 +49,15 @@ can disappear during voxelization.
    `S(u,v) = (1-v) C(u) + v B(u)`, `0 <= v <= 1`. This is the ruled spiral
    blade: each blade is a screw surface wrapped around the rotor axis, so the
    wind drives it about Z rather than flattening against a cone.
-3. `mesh.go` gives the sheet a thickness by offsetting it `±Thickness/2`
-   along its surface normal and closing the four boundary edges. The result
-   is a closed, consistently wound triangle mesh for one blade; `BladeCount`
-   copies rotated by `2*pi*k/BladeCount` about Z form the rotor (a
-   multi-start screw).
+3. `mesh.go` gives the sheet a thickness by offsetting it by half the local
+   `BladeThicknessAt(u)` along its surface normal and closing the four
+   boundary edges. The offset is applied at every `(u,v)` sample, so the
+   inner edge `v=0` where all blades meet the rotor axis is just as thick as
+   the rest of the blade: the junction is not a knife edge or a point, and
+   it tapers from the base minimum to the top minimum along with the blade.
+   The result is a closed, consistently wound triangle mesh for one blade;
+   `BladeCount` copies rotated by `2*pi*k/BladeCount` about Z form the rotor
+   (a multi-start screw).
 4. `solid.go` hands the closed mesh to PicoGK (`MeshFromArrays` +
    `FromMesh`), extracts the solid again with marching cubes (`ToMesh`), and
    writes it as a binary STL (`stl.go`).

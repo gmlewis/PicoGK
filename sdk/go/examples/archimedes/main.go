@@ -4,7 +4,7 @@
 // Run with no flags for a parameter summary, or pass -stl to write a file:
 //
 //	go run . -stl rotor.stl
-//	go run . -stl rotor.stl -blades 4 -diameter 200 -thickness 2 -voxel 0.4
+//	go run . -stl rotor.stl -blades 4 -diameter 200 -minBaseThickness 5 -minTopThickness 2.5 -voxel 0.4
 package main
 
 import (
@@ -23,7 +23,9 @@ func main() {
 	flag.IntVar(&c.Samples, "samples", c.Samples, "samples along each spiral (higher is smoother)")
 	flag.Float64Var(&c.ApexRadius, "apex-radius", c.ApexRadius, "radius at the narrow end as a fraction of the rotor radius")
 	flag.Float64Var(&c.Turns, "turns", c.Turns, "spiral turns per blade")
-	flag.Float64Var(&c.Thickness, "thickness", c.Thickness, "blade thickness (mm), measured normal to the surface")
+	flag.Float64Var(&c.Thickness, "thickness", c.Thickness, "uniform blade thickness floor (mm), measured normal to the surface")
+	flag.Float64Var(&c.MinBaseThickness, "minBaseThickness", c.MinBaseThickness, "minimum blade thickness at the wide base (mm)")
+	flag.Float64Var(&c.MinTopThickness, "minTopThickness", c.MinTopThickness, "minimum blade thickness at the narrow top (mm)")
 	voxelSize := flag.Float64("voxel", 0.5, "PicoGK voxel size (mm)")
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), `Usage: %s [flags]
@@ -62,9 +64,9 @@ Flags:
 	fmt.Printf("\nClosed input mesh: %d vertices, %d triangles\n",
 		mesh.VertexCount(), mesh.TriangleCount())
 
-	if c.Thickness < 2*(*voxelSize) {
-		fmt.Fprintf(os.Stderr, "warning: blade thickness %.2f mm is less than two voxels (%.2f mm); "+
-			"the solid may be incomplete. Use a smaller -voxel.\n", c.Thickness, 2*(*voxelSize))
+	if c.MinBladeThickness() < 2*(*voxelSize) {
+		fmt.Fprintf(os.Stderr, "warning: the thinnest part of the blade (%.2f mm) is less than two voxels (%.2f mm); "+
+			"the solid may be incomplete. Use a smaller -voxel.\n", c.MinBladeThickness(), 2*(*voxelSize))
 	}
 
 	result, err := exportSolidSTL(*stlPath, mesh, float32(*voxelSize))
@@ -85,7 +87,8 @@ func printSummary(c Config) {
 		c.RotorDiameter, c.AxialLength, c.BladeCount)
 	fmt.Printf("  spiral: samples %d, turns %.2f, apex radius %.3f R\n",
 		c.Samples, c.Turns, c.ApexRadius)
-	fmt.Printf("  blade: thickness %.2f mm\n", c.Thickness)
+	fmt.Printf("  blade: thickness %.2f mm at base -> %.2f mm at top\n",
+		c.BaseThickness(), c.TopThickness())
 	pts := c.BladeBoundarySamples()
 	fmt.Printf("  boundary points: %d (root %v, apex %v)\n",
 		len(pts), pts[0], pts[len(pts)-1])
