@@ -94,39 +94,100 @@ thickness).
 The new section removes the flat rim and gives the pressure-side/suction-side
 surfaces a smoother profile, which is intended to reduce separation and tip
 losses. It is not a classic wing section, though: the blade chord runs radially
-from the axis to
-the outer spiral, while the relative wind in this rotor runs mostly *along*
-the helix (the `u` direction). The dominant torque still comes from the
-pressure difference across the inclined helical surface, not from 2D airfoil
-lift along the chord. Camber and a sharp trailing edge can help, but the
-helix pitch, blade count, and chord law remain the larger design levers. Use
-CFD or a blade-element model before treating any of these settings as an
+from the axis to the outer spiral, while the relative wind in this rotor runs
+mostly *along* the helix (the `u` direction). The dominant torque still comes
+from the pressure difference across the inclined helical surface, not from 2D
+airfoil lift along the chord. Camber and a sharp trailing edge can help, but
+the helix pitch, blade count, and chord law remain the larger design levers.
+Use CFD or a blade-element model before treating any of these settings as an
 optimum.
 
-### Simulation path
+### Simulated wind tunnel and optimization
 
-Full 3D CFD is the digital wind tunnel, but it is the last step, not the
-first:
+A simulated wind tunnel is 3D CFD. That is the most reliable way to test the
+airfoil, but it should be the last step in a funnel, not the first: a full
+rotor case is expensive, and most of the design space can be screened more
+cheaply.
 
-1. **Section polars.** Run XFOIL, NeuralFoil, or XFLR5 on the NACA section at
-   the Reynolds number of each radial station. This gives `Cl(alpha)` and
-   `Cd(alpha)` for the candidate camber/thickness combinations.
-2. **Blade-element model.** A double-multiple-streamtube (DMS) or blade-element
-   momentum solver over the conical spiral is cheap enough to sweep thousands
-   of designs. Optimize the power coefficient
-   `CP = P / (0.5 rho A V^3)` over tip-speed ratio, helix pitch, camber,
-   camber position, blade count, and thickness. The geometry in `model.go` is
-   already parameterized for this.
-3. **3D CFD.** Take the best few candidates into OpenFOAM (free) or SimScale
-   (cloud, free tier). Use a cylindrical domain with the inlet at the narrow
-   upwind end and the outlet at the wide base, a rotating reference frame or
-   sliding mesh around the rotor, and `k-omega SST`. Extract the torque about
-   Z and compare CP at the design tip-speed ratio.
-4. **Physical test.** Print the winner and measure torque and rpm on a small
-   dynamometer in front of a fan or in a wind tunnel. Use that to calibrate
-   the CFD/BEM model, not to discover the design from scratch.
+First define the operating point: wind speed, target rpm, and target tip-speed
+ratio `lambda = omega * R / V`. Every simulation and optimization below should
+be judged at that operating point, not at one arbitrary rpm.
 
-The exported STL is watertight and can be imported directly by CFD tools.
+1. **Section polars (minutes).** Run XFOIL, NeuralFoil, or XFLR5 on the NACA
+   section at the Reynolds number of each radial station. This gives
+   `Cl(alpha)` and `Cd(alpha)` for candidate camber, camber-position, and
+   thickness combinations. Use it to remove obviously bad sections. Remember
+   that a 2D polar assumes chordwise flow, while this rotor's flow is highly
+   three-dimensional.
+
+2. **Fast whole-rotor model (seconds to minutes per design).** A
+   blade-element/momentum or double-multiple-streamtube model over the conical
+   spiral is cheap enough to sweep thousands of geometries. Optimize the power
+   coefficient
+
+   ```
+   CP = P / (0.5 * rho * A * V^3)
+   ```
+
+   over tip-speed ratio, helix pitch (`-turns` and `-length`), blade count,
+   chord law, camber, camber position, and trailing-edge thickness. The
+   geometry in `model.go` is already parameterized for this. Treat the result
+   as a surrogate: it is useful for ranking designs and finding the promising
+   region, not as proof of performance.
+
+3. **3D CFD (hours per case).** Take the best few candidates into OpenFOAM
+   (free, with ParaView and `snappyHexMesh`) or SimScale (browser-based, free
+   community tier); ANSYS Fluent/CFX, SU2, and SolidWorks Flow Simulation are
+   also suitable. A practical setup:
+
+   - Cylindrical domain with the inlet at the narrow upwind end and the outlet
+     at the wide base; use a far-field or slip outer wall and no-slip rotor
+     surfaces.
+   - A rotating reference frame (MRF) around the rotor for a steady first pass,
+     then a sliding-mesh/AMI transient case to check the steady result.
+   - Incompressible flow, `k-omega SST`, and a mesh-convergence study. If you
+     resolve the wall, keep `y+` near 1; otherwise use a consistent wall
+     function. A first rotor case is typically 5–20 million cells.
+   - Sweep wind speed `V` and rotation rate `omega` (or sweep TSR directly),
+     and extract the torque about Z. Plot CP against TSR rather than trusting
+     a single point. Also record thrust, pressure fields, and where separation
+     starts.
+
+4. **Optimization loop.** Wrap the Go geometry generator in a
+   design-of-experiments (DOE) or Bayesian optimizer (Optuna works well).
+   Parameters are the section and rotor knobs above; the objective is CP at
+   the design TSR, subject to printability and strength constraints (minimum printable
+   thickness, no unsupported overhangs, build volume). Use the cheap model to
+   explore, and spend CFD runs on the Pareto front. A surrogate model trained
+   on the CFD results can then search a much larger space.
+
+5. **Physical validation.** Print the winner and measure torque and rpm with a
+   small dynamometer in front of a fan or in a wind tunnel. Use the physical
+   result to calibrate the CFD/BEM model, not to discover the design from
+   scratch. Small 3D-printed rotors are sensitive to surface finish, balance,
+   and bearing drag, so compare trends rather than expecting exact agreement.
+
+#### What to expect, and common pitfalls
+
+- **Bernoulli is a simplification.** The pressure field is the real driver.
+  The rotor is a helical ramp, so most of the torque comes from the pressure
+  difference across the inclined surface, not from 2D airfoil lift along the
+  radial chord. Camber can help, but it can also hurt; test both signs, e.g.
+  `-camber 0.02` and `-camber -0.02`.
+- **The section may matter less than the pitch.** Because the relative flow is
+  mostly along the helix, the helix angle, blade count, and chord law are
+  larger levers than the airfoil profile. Optimize them together.
+- **A sharp trailing edge is not printable at voxel scale.** The default
+  section tapers to zero thickness; PicoGK rounds that to roughly one voxel.
+  Use `-trailingEdge 0.4` (or a similar minimum) if the printed edge matters,
+  and remember that the thin outer region is also the most fragile.
+- **The exported solid is watertight** and can be imported directly into CFD
+  tools, but a realistic case should include a hub/shaft and a mounting
+  arrangement. The current model has neither.
+- **Steady MRF is a first pass.** It is fast and good for ranking, but a
+  transient sliding-mesh case is the check before committing to a print.
+- **Compare curves, not single points.** A design that wins at one TSR can
+  lose badly off-design. The CP–TSR curve is the useful output.
 
 ### Print-bed contact
 
