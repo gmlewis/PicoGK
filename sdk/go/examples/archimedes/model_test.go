@@ -116,6 +116,40 @@ func TestThicknessFloors(t *testing.T) {
 	}
 }
 
+func TestBaseExtensionIsSmooth(t *testing.T) {
+	c := defaultConfig()
+	start := c.baseStart()
+	if start >= 0 {
+		t.Fatalf("base extension start = %g, want negative", start)
+	}
+	if got := c.BladeThicknessAt(0); got != c.BaseThickness() {
+		t.Fatalf("thickness at the base = %g, want %g", got, c.BaseThickness())
+	}
+	// The same linear law must hold on both sides of u=0: no jump and no
+	// slope change, so the surfaces are smooth, not an added lead-in.
+	const du = 1e-4
+	slopeAbove := (c.BladeThicknessAt(du) - c.BladeThicknessAt(0)) / du
+	slopeBelow := (c.BladeThicknessAt(0) - c.BladeThicknessAt(-du)) / du
+	if math.Abs(slopeAbove-slopeBelow) > 1e-6 {
+		t.Fatalf("thickness slope jumps at the base: %g vs %g", slopeAbove, slopeBelow)
+	}
+	if math.Abs(c.BladeThicknessAt(du)-c.BladeThicknessAt(-du)) > 1e-3 {
+		t.Fatalf("thickness jumps at the base: %g vs %g",
+			c.BladeThicknessAt(-du), c.BladeThicknessAt(du))
+	}
+	// The extension must carry the whole blade below the bed plane so the bed
+	// can cut both sheets flat.
+	lead := c.SpiralPoint(start)
+	if lead.Z >= c.BedZ() {
+		t.Fatalf("extension start z=%g is not below the bed z=%g", lead.Z, c.BedZ())
+	}
+	// The flat contact at v=0 is exactly the local blade thickness, which is
+	// never below -minBaseThickness.
+	if got := c.BladeThicknessAt(0); got < c.MinBaseThickness {
+		t.Fatalf("base contact width %g is below minBaseThickness %g", got, c.MinBaseThickness)
+	}
+}
+
 func TestRejectInvalidConfig(t *testing.T) {
 	c := defaultConfig()
 	c.BladeCount = 0
@@ -141,5 +175,15 @@ func TestRejectInvalidConfig(t *testing.T) {
 	c.MinTopThickness = -1
 	if c.Validate() == nil {
 		t.Fatal("expected a negative minimum top thickness to be rejected")
+	}
+	c = defaultConfig()
+	c.BaseExtensionDeg = -1
+	if c.Validate() == nil {
+		t.Fatal("expected a negative base extension to be rejected")
+	}
+	c = defaultConfig()
+	c.BaseExtensionDeg = 360 / float64(c.BladeCount)
+	if c.Validate() == nil {
+		t.Fatal("expected a base extension reaching the next blade to be rejected")
 	}
 }

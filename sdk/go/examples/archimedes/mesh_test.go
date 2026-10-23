@@ -65,15 +65,20 @@ func TestRotorMeshVolumeAndBounds(t *testing.T) {
 		t.Fatalf("blade volume %g mm³ exceeds envelope %g mm³", vol, envelope)
 	}
 
+	// The base extension spirals outward past the nominal rotor radius and
+	// down below the bed plane, so bound by its start plus an offset.
 	maxOffset := c.MaxBladeThickness()
-	maxR := c.RotorRadius() + maxOffset
+	lead := c.SpiralPoint(c.baseStart())
+	maxR := math.Hypot(lead.X, lead.Y) + maxOffset
+	zMin := lead.Z - maxOffset
+	zMax := c.AxialLength/2 + maxOffset
 	for i := 0; i < len(md.Vertices); i += 3 {
 		x, y, z := float64(md.Vertices[i]), float64(md.Vertices[i+1]), float64(md.Vertices[i+2])
 		if r := math.Hypot(x, y); r > maxR+1e-4 {
 			t.Fatalf("vertex radius %g exceeds %g", r, maxR)
 		}
-		if z < -c.AxialLength/2-maxOffset || z > c.AxialLength/2+maxOffset {
-			t.Fatalf("vertex z=%g outside expected span", z)
+		if z < zMin || z > zMax {
+			t.Fatalf("vertex z=%g outside expected span [%g,%g]", z, zMin, zMax)
 		}
 	}
 }
@@ -93,9 +98,7 @@ func TestRotorMeshThicknessTapers(t *testing.T) {
 	// checks that the common junction is never thinner than the minimum.
 	const nv = 8
 	perStation := (nv + 1) * 2
-	span := c.bladeSpan()
-	for i := 0; i <= c.Samples; i++ {
-		u := span * float64(i) / float64(c.Samples)
+	for i, u := range c.bladeStations() {
 		want := c.BladeThicknessAt(u)
 		for j := 0; j <= nv; j++ {
 			top := md.vertex(int32(i*perStation + j*2))
@@ -178,7 +181,7 @@ func TestExportSolidSTL(t *testing.T) {
 	}
 
 	path := filepath.Join(t.TempDir(), "rotor.stl")
-	result, err := exportSolidSTL(path, md, 2)
+	result, err := exportSolidSTL(path, md, 2, float32(c.BedZ()))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -196,5 +199,32 @@ func TestExportSolidSTL(t *testing.T) {
 	}
 	if got, want := len(data), 84+50*int(nf); got != want {
 		t.Fatalf("file size = %d, want %d", got, want)
+	}
+
+	// The bed cut must leave a broad, perfectly flat face at the lowest z.
+	minZ := math.Inf(1)
+	for i := 0; i < int(nf); i++ {
+		base := 84 + i*50 + 12 // skip normal
+		for v := 0; v < 3; v++ {
+			off := base + v*12 + 8
+			z := float64(math.Float32frombits(binary.LittleEndian.Uint32(data[off:])))
+			if z < minZ {
+				minZ = z
+			}
+		}
+	}
+	flat := 0
+	for i := 0; i < int(nf); i++ {
+		base := 84 + i*50 + 12
+		for v := 0; v < 3; v++ {
+			off := base + v*12 + 8
+			z := float64(math.Float32frombits(binary.LittleEndian.Uint32(data[off:])))
+			if z <= minZ+1e-3 {
+				flat++
+			}
+		}
+	}
+	if flat < 100 {
+		t.Fatalf("only %d vertices at the bed plane z=%g; expected a flat contact face", flat, minZ)
 	}
 }

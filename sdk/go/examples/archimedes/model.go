@@ -21,6 +21,10 @@ type Config struct {
 	// it is never thinner than the corresponding setting at either end.
 	MinBaseThickness float64
 	MinTopThickness  float64
+	// BaseExtensionDeg continues each blade below the nominal base by this
+	// many degrees of the same spiral. The surfaces stay smooth, and the
+	// print bed then cuts the extended solid flat.
+	BaseExtensionDeg float64
 }
 
 // defaultConfig returns the user-selected envelope and conservative starting sampling.
@@ -29,6 +33,9 @@ func defaultConfig() Config {
 		RotorDiameter: 150, AxialLength: 140, BladeCount: 3,
 		Samples: 240, ApexRadius: 0.05, Turns: 1,
 		Thickness: 1.2, MinBaseThickness: 4.0, MinTopThickness: 2.0,
+		// A little past the ~5 deg needed to carry the thickest sheet below
+		// the bed at the default base thickness.
+		BaseExtensionDeg: 10,
 	}
 }
 
@@ -36,11 +43,12 @@ func (c Config) Validate() error {
 	if c.RotorDiameter <= 0 || c.AxialLength <= 0 || c.BladeCount < 1 ||
 		c.Samples < 8 || c.ApexRadius <= 0 || c.ApexRadius >= 1 ||
 		c.Turns <= 0 || c.Thickness <= 0 ||
-		c.MinBaseThickness <= 0 || c.MinTopThickness <= 0 {
+		c.MinBaseThickness <= 0 || c.MinTopThickness <= 0 ||
+		c.BaseExtensionDeg < 0 || c.BaseExtensionDeg >= 360/float64(c.BladeCount) {
 		return ErrInvalidConfig
 	}
 	for _, v := range []float64{c.RotorDiameter, c.AxialLength, c.ApexRadius, c.Turns,
-		c.Thickness, c.MinBaseThickness, c.MinTopThickness} {
+		c.Thickness, c.MinBaseThickness, c.MinTopThickness, c.BaseExtensionDeg} {
 		if math.IsNaN(v) || math.IsInf(v, 0) {
 			return ErrInvalidConfig
 		}
@@ -103,25 +111,55 @@ func (c Config) BaseThickness() float64 { return math.Max(c.Thickness, c.MinBase
 // larger of the uniform Thickness floor and MinTopThickness.
 func (c Config) TopThickness() float64 { return math.Max(c.Thickness, c.MinTopThickness) }
 
+// baseStart is the spiral parameter at the bottom end of the base extension.
+func (c Config) baseStart() float64 { return -c.BaseExtensionDeg * math.Pi / 180 }
+
+// BedZ is the print-bed plane. The solid extends smoothly below it and is cut
+// flat by this plane, giving each blade a substantial flat footprint.
+func (c Config) BedZ() float64 { return -c.AxialLength / 2 }
+
 // BladeThicknessAt returns the local blade thickness at spiral parameter u.
-// The thickness decreases linearly from BaseThickness() at the base to
-// TopThickness() at the top, so the blade is never thinner at either end than
-// the corresponding minimum.
+// The same linear law is used everywhere, including the base extension
+// (u < 0), so the top and bottom surfaces are smooth all the way past the
+// bed: there is no added lead-in and no kink at u=0.
 func (c Config) BladeThicknessAt(u float64) float64 {
 	s := u / c.bladeSpan()
-	if s < 0 {
-		s = 0
-	} else if s > 1 {
+	if s > 1 {
 		s = 1
 	}
 	return c.BaseThickness() + (c.TopThickness()-c.BaseThickness())*s
 }
 
+// bladeStations returns the spiral parameters sampled along one blade: the
+// base extension followed by the main spiral. It samples u=0 exactly so the
+// bed plane and the nominal base are represented.
+func (c Config) bladeStations() []float64 {
+	uMax := c.bladeSpan()
+	start := c.baseStart()
+	us := make([]float64, 0, c.Samples+1)
+	if start < 0 {
+		nr := c.Samples / 20
+		if nr < 4 {
+			nr = 4
+		}
+		for i := 0; i < nr; i++ {
+			us = append(us, start+(-start)*float64(i)/float64(nr))
+		}
+	}
+	for i := 0; i <= c.Samples; i++ {
+		us = append(us, uMax*float64(i)/float64(c.Samples))
+	}
+	return us
+}
+
 // MinBladeThickness is the thinnest point of the tapered blade.
 func (c Config) MinBladeThickness() float64 { return math.Min(c.BaseThickness(), c.TopThickness()) }
 
-// MaxBladeThickness is the thickest point of the tapered blade.
-func (c Config) MaxBladeThickness() float64 { return math.Max(c.BaseThickness(), c.TopThickness()) }
+// MaxBladeThickness is the thickest point of the tapered blade, including the
+// base extension where the linear taper continues past the base.
+func (c Config) MaxBladeThickness() float64 {
+	return math.Max(math.Max(c.BaseThickness(), c.TopThickness()), c.BladeThicknessAt(c.baseStart()))
+}
 
 // SurfacePoint is the conical helicoid S(u,v) = (1-v) C(u) + v B(u).
 // C(u) lies on the rotor axis and B(u) on the 3D spiral; v is in [0,1].
@@ -138,12 +176,14 @@ func (c Config) SurfaceNormal(u, v float64) Vec3 {
 	return su.Cross(sv).Normalized()
 }
 
-// BladeBoundarySamples samples the outer 3D spiral including both endpoints.
+// BladeBoundarySamples samples the outer 3D spiral from the start of the base
+// extension to the top, including both endpoints.
 func (c Config) BladeBoundarySamples() []Vec3 {
 	out := make([]Vec3, c.Samples+1)
+	start := c.baseStart()
 	end := c.bladeSpan()
 	for i := range out {
-		out[i] = c.SpiralPoint(end * float64(i) / float64(c.Samples))
+		out[i] = c.SpiralPoint(start + (end-start)*float64(i)/float64(c.Samples))
 	}
 	return out
 }

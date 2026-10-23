@@ -30,12 +30,30 @@ native library.
 | `-thickness` | 1.2 | Uniform blade thickness floor (mm), normal to the surface |
 | `-minBaseThickness` | 4.0 | Minimum blade thickness at the wide base (mm) |
 | `-minTopThickness` | 2.0 | Minimum blade thickness at the narrow top (mm) |
+| `-baseExtension` | 10 | Extra smooth spiral below the bed plane (degrees) |
 | `-voxel` | 0.5 | PicoGK voxel size (mm) |
 
 The blade tapers linearly from `max(-thickness, -minBaseThickness)` at the
 base to `max(-thickness, -minTopThickness)` at the top, so it is never thinner
 than either minimum. Keep `-voxel` at or below about half the thinnest blade
 thickness, or the thin solid can disappear during voxelization.
+
+### Print-bed contact
+
+The top and bottom sheets are the *same* smooth surfaces everywhere: the same
+spiral and the same thickness law continue below the nominal base for
+`-baseExtension` degrees (no added ramp, no taper to a knife edge, no kink at
+`u=0`). The printed part is then cut flat at the bed plane `z =
+-AxialLength/2`. Because the surfaces run smoothly past that plane, the cut
+leaves each blade with a large, completely flat footprint instead of a blunt
+wall or a point. At the inner edge `v=0` the footprint is the full local blade
+thickness, so it is at least `-minBaseThickness` (4 mm by default) wide, and
+the three footprints meet in a broad central area rather than a single point.
+The extension only needs to be long enough to carry both sheets below the bed;
+10 degrees is comfortable for the default thicknesses. Because it continues the
+same conical spiral, it reaches about 2 mm outside the nominal rotor radius and
+2 mm below the nominal base at the defaults, so the bed plane is the only new
+surface.
 
 ## How the solid is built
 
@@ -55,12 +73,15 @@ thickness, or the thin solid can disappear during voxelization.
    inner edge `v=0` where all blades meet the rotor axis is just as thick as
    the rest of the blade: the junction is not a knife edge or a point, and
    it tapers from the base minimum to the top minimum along with the blade.
+   The sampled `u` range starts at `-baseExtension` and uses the same spiral
+   and thickness law there, so both sheets continue smoothly past the bed.
    The result is a closed, consistently wound triangle mesh for one blade;
    `BladeCount` copies rotated by `2*pi*k/BladeCount` about Z form the rotor
    (a multi-start screw).
 4. `solid.go` hands the closed mesh to PicoGK (`MeshFromArrays` +
-   `FromMesh`), extracts the solid again with marching cubes (`ToMesh`), and
-   writes it as a binary STL (`stl.go`).
+   `FromMesh`) and intersects it with a closed box whose bottom is exactly the
+   bed plane, cutting the extended blades flat. The solid is extracted again
+   with marching cubes (`ToMesh`) and written as a binary STL (`stl.go`).
 
 The pure-Go model and mesh code do not import PicoGK, so they can be unit
 tested without loading the native runtime. Only `solid.go` touches the FFI

@@ -38,8 +38,9 @@ func (m *MeshData) vertex(i int32) Vec3 {
 // RotorMesh builds a closed, thickness-bearing triangle mesh of all blades.
 // Each blade is a ruled surface S(u,v) offset along its normal by half the
 // local Config.BladeThicknessAt(u), with side walls closing the four boundary
-// edges. The blade therefore tapers from the base to the top. Blades
-// are copies rotated about the Z axis by 2*pi*blade/BladeCount.
+// edges. The blade therefore tapers from the base to the top, and the same
+// smooth sheets continue below the nominal base so the print bed can cut them
+// flat. Blades are copies rotated about the Z axis by 2*pi*blade/BladeCount.
 func (c Config) RotorMesh() (*MeshData, error) {
 	if err := c.Validate(); err != nil {
 		return nil, err
@@ -73,13 +74,12 @@ func (c Config) appendBlade(md *MeshData, phi float64) {
 	// The surface normal changes across v, so sample v as well as u.
 	const nv = 8
 
-	nu := c.Samples
-	uMax := c.bladeSpan()
+	us := c.bladeStations()
+	nu := len(us) - 1
 
 	top := make([][]int32, nu+1)
 	bot := make([][]int32, nu+1)
-	for i := 0; i <= nu; i++ {
-		u := uMax * float64(i) / float64(nu)
+	for i, u := range us {
 		half := c.BladeThicknessAt(u) / 2
 		top[i] = make([]int32, nv+1)
 		bot[i] = make([]int32, nv+1)

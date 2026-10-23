@@ -26,6 +26,7 @@ func main() {
 	flag.Float64Var(&c.Thickness, "thickness", c.Thickness, "uniform blade thickness floor (mm), measured normal to the surface")
 	flag.Float64Var(&c.MinBaseThickness, "minBaseThickness", c.MinBaseThickness, "minimum blade thickness at the wide base (mm)")
 	flag.Float64Var(&c.MinTopThickness, "minTopThickness", c.MinTopThickness, "minimum blade thickness at the narrow top (mm)")
+	flag.Float64Var(&c.BaseExtensionDeg, "baseExtension", c.BaseExtensionDeg, "extra smooth spiral below the bed plane, cut flat for the print footprint (degrees)")
 	voxelSize := flag.Float64("voxel", 0.5, "PicoGK voxel size (mm)")
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), `Usage: %s [flags]
@@ -69,7 +70,7 @@ Flags:
 			"the solid may be incomplete. Use a smaller -voxel.\n", c.MinBladeThickness(), 2*(*voxelSize))
 	}
 
-	result, err := exportSolidSTL(*stlPath, mesh, float32(*voxelSize))
+	result, err := exportSolidSTL(*stlPath, mesh, float32(*voxelSize), float32(c.BedZ()))
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "export STL:", err)
 		os.Exit(1)
@@ -89,7 +90,9 @@ func printSummary(c Config) {
 		c.Samples, c.Turns, c.ApexRadius)
 	fmt.Printf("  blade: thickness %.2f mm at base -> %.2f mm at top\n",
 		c.BaseThickness(), c.TopThickness())
+	fmt.Printf("  base extension: %.1f deg, cut flat at the bed z=%.2f mm\n",
+		c.BaseExtensionDeg, c.BedZ())
 	pts := c.BladeBoundarySamples()
-	fmt.Printf("  boundary points: %d (root %v, apex %v)\n",
+	fmt.Printf("  boundary points: %d (extension %v, apex %v)\n",
 		len(pts), pts[0], pts[len(pts)-1])
 }
