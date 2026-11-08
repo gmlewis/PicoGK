@@ -3,7 +3,7 @@
 
 name = "gmlewis/picogkshapes"
 
-version = "0.2.1"
+version = "0.2.2"
 
 repository = "https://github.com/gmlewis/PicoGK"
 
@@ -18,5 +18,5 @@ preferred_target = "native"
 supported_targets = "+native"
 
 import {
-  "gmlewis/picogkffi@0.2.0",
+  "gmlewis/picogkffi@0.2.1",
 }
