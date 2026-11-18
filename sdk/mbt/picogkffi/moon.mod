@@ -3,7 +3,7 @@
 
 name = "gmlewis/picogkffi"
 
-version = "0.2.1"
+version = "0.2.2"
 
 license = "Apache-2.0"
 
