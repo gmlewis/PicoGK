@@ -65,12 +65,12 @@ impl Client {
             ("jsonrpc", json::Value::String("2.0")),
             ("method", json::Value::String("notifications/initialized")),
         ])
-        self.child.write_stdin(json::render(notif) + "\n")
+        self.child.write_stdin(json::encode(notif)? + "\n")
         Ok(())
     }
 
     fn call_raw(&self, req: json::Value) -> Result<json::Value, errors::Error> {
-        self.child.write_stdin(json::render(req) + "\n")
+        self.child.write_stdin(json::encode(req)? + "\n")
         match self.child.read_line() {
             Some(line) => {
                 let line = strings::trim(line)

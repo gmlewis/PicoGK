@@ -1,5 +1,5 @@
 #![recursion_limit = "512"]
-#![allow(dead_code, unused_variables, unused_imports, unused_mut, non_snake_case, non_camel_case_types, unused_mut, clippy::all)]
+#![allow(dead_code, unused_variables, unused_imports, unused_mut, non_snake_case, non_camel_case_types, unused_mut, unsafe_op_in_unsafe_fn, clippy::all)]
 
 // picogkffi: Gossamer Rust binding for the PicoGK native C library.
 //

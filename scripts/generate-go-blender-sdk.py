@@ -193,9 +193,8 @@ def _extract_docstring(source: str) -> str:
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 if node.body and isinstance(node.body[0], ast.Expr):
                     val = node.body[0].value
-                    if isinstance(val, (ast.Constant, ast.Str)):
-                        s = val.value if isinstance(val, ast.Constant) else val.s
-                        return s.strip()
+                    if isinstance(val, ast.Constant) and isinstance(val.value, str):
+                        return val.value.strip()
     except SyntaxError:
         pass
     return ""
@@ -220,8 +219,8 @@ def _parse_function_def(source: str) -> tuple[str, str, list[Param]]:
         docstring = ""
         if node.body and isinstance(node.body[0], ast.Expr):
             val = node.body[0].value
-            if isinstance(val, (ast.Constant, ast.Str)):
-                docstring = val.value if isinstance(val, ast.Constant) else val.s
+            if isinstance(val, ast.Constant) and isinstance(val.value, str):
+                docstring = val.value
 
         # Extract parameters
         params = []
@@ -262,8 +261,6 @@ def _parse_function_def(source: str) -> tuple[str, str, list[Param]]:
                 default_node = args.defaults[default_idx]
                 if isinstance(default_node, ast.Constant):
                     default_val = repr(default_node.value)
-                elif isinstance(default_node, ast.NameConstant):
-                    default_val = str(default_node.value)
                 elif isinstance(default_node, ast.Attribute):
                     default_val = ast.dump(default_node)
                 else:
@@ -324,10 +321,8 @@ def parse_all_tools() -> list[ToolDef]:
             docstring = ""
             if node.body and isinstance(node.body[0], ast.Expr):
                 val = node.body[0].value
-                if isinstance(val, (ast.Constant, ast.Str)):
-                    docstring = val.value if isinstance(val, ast.Constant) else val.s
-                    # Clean up: strip leading/trailing whitespace, normalize newlines
-                    docstring = " ".join(docstring.split())
+                if isinstance(val, ast.Constant) and isinstance(val.value, str):
+                    docstring = " ".join(val.value.split())
 
             # Extract parameters
             params = []
@@ -400,8 +395,6 @@ def _ast_value_to_str(node: ast.AST) -> str:
     """Convert an AST default value node to a string."""
     if isinstance(node, ast.Constant):
         return repr(node.value)
-    if isinstance(node, ast.NameConstant):
-        return str(node.value)
     if isinstance(node, ast.Name):
         return node.id
     if isinstance(node, ast.Attribute):

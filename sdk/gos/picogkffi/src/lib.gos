@@ -1,0 +1,29 @@
+// Structs answered by the picogkffi Rust binding.
+//
+// Gossamer reads a binding's struct as the program's struct of the same name,
+// so these declarations must match the `#[derive(GosStruct)]` types in
+// picogkffi/src/lib.rs field for field.
+
+pub struct Vec3 {
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
+}
+
+pub struct BBox3 {
+    pub min: Vec3,
+    pub max: Vec3,
+}
+
+pub struct ColorFloat {
+    pub r: f64,
+    pub g: f64,
+    pub b: f64,
+    pub a: f64,
+}
+
+pub struct Triangle {
+    pub a: i64,
+    pub b: i64,
+    pub c: i64,
+}

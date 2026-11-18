@@ -21,5 +21,5 @@ preferred_target = "native"
 supported_targets = "+native"
 
 import {
-  "moonbitlang/async@0.19.2",
+  "moonbitlang/async@0.22.9",
 }

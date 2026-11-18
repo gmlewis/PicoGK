@@ -361,7 +361,7 @@ This updates version constants across all SDKs:
 | C# | `SessionTools.cs` (version tool return value) |
 | Cargo | `Cargo.toml` |
 
-MoonBit import versions (e.g., `gmlewis/picogkffi@0.2.0`) are also updated automatically. Third-party dependencies (e.g., `moonbitlang/async@0.19.2`) are not modified.
+MoonBit import versions (e.g., `gmlewis/picogkffi@0.2.0`) are also updated automatically. Third-party dependencies (e.g., `moonbitlang/async@0.22.9`) are not modified.
 
 ---
 

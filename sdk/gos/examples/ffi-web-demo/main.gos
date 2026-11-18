@@ -18,26 +18,26 @@
 use picogkffi::{init, version, shutdown}
 
 fn main() {
-    println!("=== Web Viewer Demo (Gossamer FFI) ===")
-    println!()
-    println!("This example is a stub: it requires the picogkshapes parametric")
-    println!("shape library and the OpenGL Viewer, neither of which is")
-    println!("available via the Gossamer FFI binding.")
-    println!()
-    println!("picogkshapes provides parametric shapes (Box, Sphere, Cylinder,")
-    println!("Ring, Lens, Pipe, LatticePipe, ImplicitGyroid, etc.) with Go-native")
-    println!("implementations. There is no Gossamer FFI binding for this library.")
-    println!()
-    println!("The OpenGL Viewer requires C function-pointer callbacks that")
-    println!("cannot be provided from .gos source (see ffi-viewer-demo for details).")
-    println!()
-    println!("For a working headless FFI example, see ffi-hello-picogk which")
-    println!("builds geometry using the low-level FFI primitives and exports STL.")
+    println("=== Web Viewer Demo (Gossamer FFI) ===")
+    println()
+    println("This example is a stub: it requires the picogkshapes parametric")
+    println("shape library and the OpenGL Viewer, neither of which is")
+    println("available via the Gossamer FFI binding.")
+    println()
+    println("picogkshapes provides parametric shapes (Box, Sphere, Cylinder,")
+    println("Ring, Lens, Pipe, LatticePipe, ImplicitGyroid, etc.) with Go-native")
+    println("implementations. There is no Gossamer FFI binding for this library.")
+    println()
+    println("The OpenGL Viewer requires C function-pointer callbacks that")
+    println("cannot be provided from .gos source (see ffi-viewer-demo for details).")
+    println()
+    println("For a working headless FFI example, see ffi-hello-picogk which")
+    println("builds geometry using the low-level FFI primitives and exports STL.")
 
     match init(0.5) {
-        Ok(_) => println!("\nPicoGK {}", version()),
-        Err(e) => { eprintln!("init failed: {}", e); return }
+        Ok(_) => println("\nPicoGK {}", version()),
+        Err(e) => { eprintln("init failed: {}", e); return }
     }
     shutdown()
-    println!("done.")
+    println("done.")
 }

@@ -16,8 +16,8 @@ Prerequisites: the PicoGK MCP server binary at `~/.local/bin/picogk-mcp/PicoGK.M
 ### PicoGK FFI Demo (native binding)
 
 ```bash
-cd sdk/gos/picogkffi
-RUSTFLAGS="-Awarnings" gos run src/main.gos
+cd sdk/gos/examples/ffi-hello-picogk
+RUSTFLAGS="-Awarnings" gos run .
 ```
 
 Prerequisites: the PicoGK native library at `native/<platform>/` (included in the repo).
@@ -56,7 +56,7 @@ sdk/gos/
 │   │       ├── lib.rs                 # register_module! with 100+ FFI functions
 │   │       ├── sdf.rs                 # SDF callbacks (gyroid, superellipsoid, etc.)
 │   │       └── viewer.rs              # OpenGL Viewer with camera callbacks
-│   └── src/main.gos                   # demo entry (primitives, SDF, mesh)
+│   └── src/lib.gos                    # binding struct declarations (Vec3, BBox3, ColorFloat, Triangle)
 └── examples/
     ├── blender-scene/                 # Blender scene inspection
     │   ├── project.toml               # path dep on blender SDK

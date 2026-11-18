@@ -10,7 +10,7 @@
 use std::env
 use std::errors
 use std::flag
-use std::os
+use std::fs::create_dir_all
 use std::strings
 use "github.com/gmlewis/picogk/gos" as picogk
 
@@ -22,17 +22,20 @@ fn truncate(s: String, n: i64) -> String {
 fn main() {
     let mut fs = flag::Set::new("full-api")
     let verbose = fs.bool("v", false, "Verbose output")
-    let _positional = fs.parse(env::args())?
+    let _positional = match fs.parse(env::args()) {
+        Ok(p) => p,
+        Err(e) => { eprintln("{}", e); return }
+    }
 
     let outdir = "/tmp/gos-picogk-full-api"
-    os::mkdir_all(outdir)
+    let _ = create_dir_all(outdir)
 
-    println!("=== picogk Full API Exercise ===")
-    println!("Output dir: {}\n", outdir)
+    println("=== picogk Full API Exercise ===")
+    println("Output dir: {}\n", outdir)
 
     let client = match picogk::new_client() {
         Ok(c) => c,
-        Err(e) => { eprintln!("connect failed: {}", e); return }
+        Err(e) => { eprintln("connect failed: {}", e); return }
     }
     defer client.close()
 
@@ -41,10 +44,10 @@ fn main() {
         match result {
             Ok(text) => {
                 if *verbose {
-                    println!("  OK: {} -> {}", label, truncate(text, 80))
+                    println("  OK: {} -> {}", label, truncate(text, 80))
                 }
             },
-            Err(e) => println!("  FAIL: {} -> {}", label, e)
+            Err(e) => println("  FAIL: {} -> {}", label, e)
         }
     }
     let do = |result: Result<String, errors::Error>, label: String| {
@@ -53,18 +56,18 @@ fn main() {
         } else {
             match result {
                 Ok(_) => { () },
-                Err(e) => println!("  FAIL: {} -> {}", label, e)
+                Err(e) => println("  FAIL: {} -> {}", label, e)
             }
         }
     }
 
     // --- Session ---
-    println!("--- Session ---")
+    println("--- Session ---")
     do(client.picogk_init(Some(0.5)), "Init")
     do_print(client.picogk_info(), "Info")
 
     // --- Primitives ---
-    println!("\n--- Primitives ---")
+    println("\n--- Primitives ---")
     do(client.create_sphere(0.0, 0.0, 0.0, 30.0, Some("sphere1")), "CreateSphere")
     do(client.create_box(-10.0, -10.0, -40.0, 10.0, 10.0, 40.0, Some("box1")), "CreateBox")
     do(client.create_cylinder(0.0, 0.0, 0.0, 10.0, 50.0, None, None, None, Some("cyl1")), "CreateCylinder")
@@ -73,7 +76,7 @@ fn main() {
     do(client.create_torus(25.0, 5.0, None, None, None, Some("torus1")), "CreateTorus")
 
     // --- Booleans ---
-    println!("\n--- Booleans ---")
+    println("\n--- Booleans ---")
     do(client.boolean_add("sphere1", "cyl1", Some("union1")), "BooleanAdd")
     do(client.boolean_subtract("sphere1", "box1", Some("sub1")), "BooleanSubtract")
     do(client.boolean_intersect("sphere1", "cyl1", Some("inter1")), "BooleanIntersect")
@@ -81,7 +84,7 @@ fn main() {
     do(client.boolean_subtract_all("sphere1", ["box1"].to_vec(), Some("subAll1")), "BooleanSubtractAll")
 
     // --- Transforms ---
-    println!("\n--- Transforms ---")
+    println("\n--- Transforms ---")
     do(client.offset("sphere1", 2.0, Some("offset1")), "Offset")
     do(client.double_offset("sphere1", 3.0, -2.0, Some("doff1")), "DoubleOffset")
     do(client.over_offset("sphere1", 2.0, Some(0.5), Some("over1")), "OverOffset")
@@ -94,14 +97,14 @@ fn main() {
     do(client.circular_pattern("cylX", 4, Some(360.0), Some(0.0), Some(0.0), Some(0.0), Some(0.0), Some(0.0), Some(1.0), Some("pattern1")), "CircularPattern")
 
     // --- Lattice ---
-    println!("\n--- Lattice ---")
+    println("\n--- Lattice ---")
     do(client.create_lattice(Some("lat1")), "CreateLattice")
     do(client.lattice_add_beam("lat1", -20.0, 0.0, 0.0, 3.0, 20.0, 0.0, 0.0, 3.0, None), "LatticeAddBeam")
     do(client.lattice_add_sphere("lat1", 0.0, 0.0, 0.0, 5.0), "LatticeAddSphere")
     do(client.lattice_to_voxels("lat1", Some("latVox1")), "LatticeToVoxels")
 
     // --- Mesh ---
-    println!("\n--- Mesh ---")
+    println("\n--- Mesh ---")
     do(client.create_mesh(Some("mesh1")), "CreateMesh")
     do(client.mesh_add_vertex("mesh1", 0.0, 0.0, 0.0), "MeshAddVertex(0)")
     do(client.mesh_add_vertex("mesh1", 10.0, 0.0, 0.0), "MeshAddVertex(1)")
@@ -116,7 +119,7 @@ fn main() {
     do(client.mesh_append("mesh1", "mesh2x"), "MeshAppend")
 
     // --- Query ---
-    println!("\n--- Query ---")
+    println("\n--- Query ---")
     do_print(client.get_bounding_box("sphere1"), "GetBoundingBox")
     do_print(client.get_volume("sphere1"), "GetVolume")
     do_print(client.get_mesh_info("sphereMesh"), "GetMeshInfo")
@@ -134,7 +137,7 @@ fn main() {
     do_print(client.list_objects(), "ListObjects")
 
     // --- I/O ---
-    println!("\n--- I/O ---")
+    println("\n--- I/O ---")
     do(client.save_stl("sphereMesh", outdir + "/sphere.stl", None), "SaveSTL")
     do(client.save_vdb("sphere1", outdir + "/sphere.vdb", Some("myField")), "SaveVDB")
     do(client.list_vdb_fields(outdir + "/sphere.vdb"), "ListVDBFields")
@@ -143,19 +146,19 @@ fn main() {
     do(client.save_svg("sphere1", outdir + "/sphere.svg", Some(2.0)), "SaveSVG")
 
     // --- Render ---
-    println!("\n--- Render ---")
+    println("\n--- Render ---")
     do(client.render_to_image("sphere1", outdir + "/sphere.png", Some(600), Some(400), None, None), "RenderToImage")
     do(client.render_slice("sphere1", 0.0, outdir + "/slice_z0.png", None), "RenderSlice")
 
     // --- Cleanup ---
-    println!("\n--- Cleanup ---")
+    println("\n--- Cleanup ---")
     do(client.delete_object("box1"), "DeleteObject")
     do(client.delete_objects(["cyl1", "cap1", "torus1"].to_vec(), None), "DeleteObjects")
     do(client.delete_objects(["sphere1"].to_vec(), Some(true)), "DeleteObjects(keepOnly)")
 
     // --- Shutdown ---
-    println!("\n--- Shutdown ---")
+    println("\n--- Shutdown ---")
     do_print(client.picogk_shutdown(), "Shutdown")
 
-    println!("\n=== All 62 tools exercised! ===")
+    println("\n=== All 62 tools exercised! ===")
 }

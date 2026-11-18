@@ -8,7 +8,7 @@ publish = false
 crate-type = ["rlib"]
 
 [dependencies]
-gossamer-binding = "0.24"
+gossamer-binding = "0.75.19"
 png = "0.17"
 
 [build-dependencies]

@@ -173,8 +173,6 @@ def _ast_value_to_str(node: ast.AST) -> str:
     """Convert an AST default value node to a string."""
     if isinstance(node, ast.Constant):
         return repr(node.value)
-    if isinstance(node, ast.NameConstant):
-        return str(node.value)
     if isinstance(node, ast.Name):
         return node.id
     if isinstance(node, ast.Attribute):
@@ -237,9 +235,8 @@ def parse_all_tools() -> list[ToolDef]:
             docstring = ""
             if node.body and isinstance(node.body[0], ast.Expr):
                 val = node.body[0].value
-                if isinstance(val, (ast.Constant, ast.Str)):
-                    docstring = val.value if isinstance(val, ast.Constant) else val.s
-                    docstring = " ".join(docstring.split())
+                if isinstance(val, ast.Constant) and isinstance(val.value, str):
+                    docstring = " ".join(val.value.split())
 
             # Extract parameters
             params = []
@@ -597,7 +594,7 @@ preferred_target = "native"
 supported_targets = "+native"
 
 import {
-  "moonbitlang/async@0.19.2"
+  "moonbitlang/async@0.22.9"
 }
 """
 
