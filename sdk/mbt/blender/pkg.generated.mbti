@@ -3,6 +3,7 @@ package "gmlewis/blender"
 
 import {
   "moonbitlang/async/process",
+  "moonbitlang/core/json",
 }
 
 // Values
@@ -17,7 +18,7 @@ pub struct Client {
   stdout : @process.ReadFromProcess
   mut msg_id : Int32
 }
-pub async fn Client::call_tool(Self, String, Map[String, Json]) -> String
+pub async fn Client::call_tool(Self, String, Map[String, @json.Json]) -> String
 pub fn Client::close(Self) -> Unit
 pub async fn Client::execute_blender_code(Self, String) -> String
 pub async fn Client::execute_blender_code_for_cli(Self, String, String) -> String

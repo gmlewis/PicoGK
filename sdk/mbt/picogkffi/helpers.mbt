@@ -3,7 +3,7 @@
 
 ///|
 /// Write a 32-bit float in little-endian format.
-fn write_float_le(buf : FixedArray[Byte], offset : Int, val : Float) -> Unit {
+fn write_float_le(buf : FixedArray[Byte], offset : Int32, val : Float) -> Unit {
   let bits = picogk_float_to_bits(val)
   buf[offset] = (bits & 0xFF).to_byte()
   buf[offset + 1] = ((bits >> 8) & 0xFF).to_byte()
@@ -13,7 +13,7 @@ fn write_float_le(buf : FixedArray[Byte], offset : Int, val : Float) -> Unit {
 
 ///|
 /// Read a 32-bit float in little-endian format.
-fn read_float_le(buf : FixedArray[Byte], offset : Int) -> Float {
+fn read_float_le(buf : FixedArray[Byte], offset : Int32) -> Float {
   let b0 = buf[offset].to_int()
   let b1 = buf[offset + 1].to_int()
   let b2 = buf[offset + 2].to_int()
@@ -24,7 +24,7 @@ fn read_float_le(buf : FixedArray[Byte], offset : Int) -> Float {
 
 ///|
 /// Write a 32-bit integer in little-endian format.
-fn write_int32_le(buf : FixedArray[Byte], offset : Int, val : Int) -> Unit {
+fn write_int32_le(buf : FixedArray[Byte], offset : Int32, val : Int32) -> Unit {
   buf[offset] = (val & 0xFF).to_byte()
   buf[offset + 1] = ((val >> 8) & 0xFF).to_byte()
   buf[offset + 2] = ((val >> 16) & 0xFF).to_byte()
@@ -33,7 +33,7 @@ fn write_int32_le(buf : FixedArray[Byte], offset : Int, val : Int) -> Unit {
 
 ///|
 /// Read a 32-bit integer in little-endian format.
-fn read_int32_le(buf : FixedArray[Byte], offset : Int) -> Int {
+fn read_int32_le(buf : FixedArray[Byte], offset : Int32) -> Int32 {
   let b0 = buf[offset].to_int()
   let b1 = buf[offset + 1].to_int()
   let b2 = buf[offset + 2].to_int()

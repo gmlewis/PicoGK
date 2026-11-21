@@ -1,10 +1,10 @@
 // picogkffi runtime: Library lifecycle management.
 
 ///|
-let instance : @ref.Ref[Int64] = @ref.Ref::{ val: 0L }
+let instance : @ref.Ref[Int64] = @ref.Ref::{ val: 0L, }
 
 ///|
-let init_voxel_size : @ref.Ref[Double] = @ref.Ref::{ val: 0.0 }
+let init_voxel_size : @ref.Ref[Double] = @ref.Ref::{ val: 0.0, }
 
 ///|
 pub fn get_instance() -> Int64 {
@@ -39,22 +39,49 @@ fn load_library(path : String, vs : Double) -> Result[Unit, String] {
 
 ///|
 fn try_load_library(vs : Double) -> Result[Unit, String] {
-  // Try multiple candidate paths relative to different working directories.
-  // The tests may run from sdk/mbt/picogkffi/test/, sdk/mbt/, or the repo root.
-  let candidates = [
-    // macOS - from sdk/mbt/picogkffi/test/ (4 levels up to repo root)
-    "../../../../native/osx-arm64/picogk.26.2.dylib",
-    // macOS - from sdk/mbt/ (2 levels up to repo root)
-     "../../native/osx-arm64/picogk.26.2.dylib",
-    // macOS - from repo root
-     "native/osx-arm64/picogk.26.2.dylib",
-    // Linux - from sdk/mbt/picogkffi/test/ (4 levels up to repo root)
-     "../../../../native/linux-x64/libpicogk.so",
-    // Linux - from sdk/mbt/ (2 levels up to repo root)
-     "../../native/linux-x64/libpicogk.so",
-    // Linux - from repo root
-     "native/linux-x64/libpicogk.so",
+  // Look for the library in this order:
+  // 1. Relative to the current working directory. `moon test` and `moon run`
+  //    use the package's module as the working directory, which may sit at
+  //    several different depths below the repository root.
+  // 2. Standard install locations, for a system-wide installation
+  //    (e.g. `cmake --install` into /usr/local).
+  // 3. Bare library names, which the platform loader resolves using its
+  //    library search path (DYLD_LIBRARY_PATH, LD_LIBRARY_PATH, ...).
+  let relative_paths = [
+    "native/osx-arm64/picogk.26.2.dylib",
+    "native/linux-x64/libpicogk.so",
   ]
+  let candidates : Array[String] = []
+  for prefix in [
+    "", "../", "../../", "../../../", "../../../../", "../../../../../",
+  ] {
+    for path in relative_paths {
+      candidates.push(prefix + path)
+    }
+  }
+  let lib_names = [
+    "picogk.dylib",
+    "picogk.26.2.dylib",
+    "picogk.26.2.0.dylib",
+    "libpicogk.so",
+    "libpicogk.26.2.so",
+    "libpicogk.26.2.0.so",
+  ]
+  for dir in ["/usr/local/lib", "/opt/homebrew/lib", "/usr/lib"] {
+    for name in lib_names {
+      candidates.push(dir + "/" + name)
+    }
+  }
+  match @env.get_env_var("HOME") {
+    Some(home) =>
+      for name in lib_names {
+        candidates.push(home + "/lib/" + name)
+      }
+    None => ()
+  }
+  for name in lib_names {
+    candidates.push(name)
+  }
   // Try each candidate
   for candidate in candidates {
     let path_bytes = cstr(candidate)

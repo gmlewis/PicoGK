@@ -2,7 +2,7 @@
 
 name = "gmlewis/picogk-fields-and-io-example"
 
-version = "0.2.2"
+version = "0.2.3"
 
 license = "Apache-2.0"
 
@@ -13,5 +13,5 @@ preferred_target = "native"
 supported_targets = "+native"
 
 import {
-  "gmlewis/picogkffi@0.2.2",
+  "gmlewis/picogkffi@0.2.3",
 }

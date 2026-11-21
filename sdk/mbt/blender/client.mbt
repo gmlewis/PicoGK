@@ -14,10 +14,10 @@
 ///   }
 ///
 pub struct Client {
-  pid : Int
+  pid : Int32
   stdin : @process.WriteToProcess
   stdout : @process.ReadFromProcess
-  mut msg_id : Int
+  mut msg_id : Int32
 }
 
 ///|
@@ -95,7 +95,7 @@ fn expand_path(path : String) -> String {
 ///|
 /// next_id returns the next JSON-RPC request ID.
 ///
-fn Client::next_id(self : Client) -> Int {
+fn Client::next_id(self : Client) -> Int32 {
   self.msg_id = self.msg_id + 1
   self.msg_id
 }

@@ -17,27 +17,27 @@ pub struct Vec3 {
 
 ///|
 pub fn Vec3::new(x : Double, y : Double, z : Double) -> Vec3 {
-  Vec3::{ x, y, z }
+  Vec3::{ x, y, z, }
 }
 
 ///|
 pub fn vec3(x : Double, y : Double, z : Double) -> Vec3 {
-  Vec3::{ x, y, z }
+  Vec3::{ x, y, z, }
 }
 
 ///|
 pub fn Vec3::add(self : Vec3, o : Vec3) -> Vec3 {
-  Vec3::{ x: self.x + o.x, y: self.y + o.y, z: self.z + o.z }
+  Vec3::{ x: self.x + o.x, y: self.y + o.y, z: self.z + o.z, }
 }
 
 ///|
 pub fn Vec3::sub(self : Vec3, o : Vec3) -> Vec3 {
-  Vec3::{ x: self.x - o.x, y: self.y - o.y, z: self.z - o.z }
+  Vec3::{ x: self.x - o.x, y: self.y - o.y, z: self.z - o.z, }
 }
 
 ///|
 pub fn Vec3::mul(self : Vec3, s : Double) -> Vec3 {
-  Vec3::{ x: self.x * s, y: self.y * s, z: self.z * s }
+  Vec3::{ x: self.x * s, y: self.y * s, z: self.z * s, }
 }
 
 ///|
@@ -63,18 +63,18 @@ pub fn Vec3::len(self : Vec3) -> Double {
 pub fn Vec3::normalized(self : Vec3) -> Vec3 {
   let l = self.len()
   if l < 0.000000000001 {
-    return Vec3::{ x: 0.0, y: 0.0, z: 0.0 }
+    return Vec3::{ x: 0.0, y: 0.0, z: 0.0, }
   }
-  Vec3::{ x: self.x / l, y: self.y / l, z: self.z / l }
+  Vec3::{ x: self.x / l, y: self.y / l, z: self.z / l, }
 }
 
 ///|
 pub fn safe_normalized(v : Vec3, eps : Double) -> Vec3 {
   let l = v.len()
   if l < eps {
-    return Vec3::{ x: 0.0, y: 0.0, z: 0.0 }
+    return Vec3::{ x: 0.0, y: 0.0, z: 0.0, }
   }
-  Vec3::{ x: v.x / l, y: v.y / l, z: v.z / l }
+  Vec3::{ x: v.x / l, y: v.y / l, z: v.z / l, }
 }
 
 ///|
@@ -104,7 +104,7 @@ pub fn rotate_around_axis(
   let qy = axis.y * s
   let qz = axis.z * s
   let qw = @math.cos(half)
-  let qv = Vec3::{ x: qx, y: qy, z: qz }
+  let qv = Vec3::{ x: qx, y: qy, z: qz, }
   let cross1 = qv.cross(pt).add(pt.mul(qw))
   let cross2 = qv.cross(cross1)
   pt.add(cross2.mul(2.0)).add(origin)
@@ -114,9 +114,9 @@ pub fn rotate_around_axis(
 pub fn orthogonal_dir(dir : Vec3) -> Vec3 {
   let dir = dir.normalized()
   if dir.x.abs() < 0.95 {
-    return Vec3::{ x: 1.0, y: 0.0, z: 0.0 }.sub(dir.mul(dir.x)).normalized()
+    return Vec3::{ x: 1.0, y: 0.0, z: 0.0, }.sub(dir.mul(dir.x)).normalized()
   }
-  Vec3::{ x: 0.0, y: 1.0, z: 0.0 }.sub(dir.mul(dir.y)).normalized()
+  Vec3::{ x: 0.0, y: 1.0, z: 0.0, }.sub(dir.mul(dir.y)).normalized()
 }
 
 // --- RGB colors ---
@@ -130,7 +130,7 @@ pub struct RGB {
 
 ///|
 pub fn RGB::new(r : Double, g : Double, b : Double) -> RGB {
-  RGB::{ r, g, b }
+  RGB::{ r, g, b, }
 }
 
 ///|
@@ -141,22 +141,22 @@ pub fn RGB::to_ffi(self : RGB) -> @picogkffi.ColorFloat {
 ///|
 pub let palette : Map[String, RGB] = {
   let m : Map[String, RGB] = Map([])
-  m["blue"] = RGB::{ r: 0.258824, g: 0.529412, b: 0.960784 }
-  m["frozen"] = RGB::{ r: 0.427451, g: 0.886275, b: 0.988235 }
-  m["pitaya"] = RGB::{ r: 0.980392, g: 0.164706, b: 0.533333 }
-  m["warning"] = RGB::{ r: 0.988235, g: 0.4, b: 0.031373 }
-  m["green"] = RGB::{ r: 0.0, g: 0.721569, b: 0.0 }
-  m["yellow"] = RGB::{ r: 0.988235, g: 0.847059, b: 0.031373 }
-  m["blueberry"] = RGB::{ r: 0.309804, g: 0.05098, b: 0.74902 }
-  m["lemongrass"] = RGB::{ r: 0.721569, g: 0.878431, b: 0.192157 }
-  m["orchid"] = RGB::{ r: 0.780392, g: 0.141176, b: 0.513725 }
-  m["ruby"] = RGB::{ r: 0.690196, g: 0.0, b: 0.172549 }
-  m["racing_green"] = RGB::{ r: 0.023529, g: 0.360784, b: 0.207843 }
-  m["crystal"] = RGB::{ r: 0.047059, g: 0.756863, b: 0.968627 }
-  m["billie"] = RGB::{ r: 0.007843, g: 0.968627, b: 0.043137 }
-  m["lavender"] = RGB::{ r: 0.788235, g: 0.4, b: 1.0 }
-  m["bubblegum"] = RGB::{ r: 1.0, g: 0.4, b: 0.807843 }
-  m["gray"] = RGB::{ r: 0.741176, g: 0.741176, b: 0.741176 }
+  m["blue"] = RGB::{ r: 0.258824, g: 0.529412, b: 0.960784, }
+  m["frozen"] = RGB::{ r: 0.427451, g: 0.886275, b: 0.988235, }
+  m["pitaya"] = RGB::{ r: 0.980392, g: 0.164706, b: 0.533333, }
+  m["warning"] = RGB::{ r: 0.988235, g: 0.4, b: 0.031373, }
+  m["green"] = RGB::{ r: 0.0, g: 0.721569, b: 0.0, }
+  m["yellow"] = RGB::{ r: 0.988235, g: 0.847059, b: 0.031373, }
+  m["blueberry"] = RGB::{ r: 0.309804, g: 0.05098, b: 0.74902, }
+  m["lemongrass"] = RGB::{ r: 0.721569, g: 0.878431, b: 0.192157, }
+  m["orchid"] = RGB::{ r: 0.780392, g: 0.141176, b: 0.513725, }
+  m["ruby"] = RGB::{ r: 0.690196, g: 0.0, b: 0.172549, }
+  m["racing_green"] = RGB::{ r: 0.023529, g: 0.360784, b: 0.207843, }
+  m["crystal"] = RGB::{ r: 0.047059, g: 0.756863, b: 0.968627, }
+  m["billie"] = RGB::{ r: 0.007843, g: 0.968627, b: 0.043137, }
+  m["lavender"] = RGB::{ r: 0.788235, g: 0.4, b: 1.0, }
+  m["bubblegum"] = RGB::{ r: 1.0, g: 0.4, b: 0.807843, }
+  m["gray"] = RGB::{ r: 0.741176, g: 0.741176, b: 0.741176, }
   m
 }
 
@@ -173,7 +173,7 @@ pub struct LineModulation {
 
 ///|
 pub fn LineModulation::new(f : (Double) -> Double) -> LineModulation {
-  LineModulation::{ fn_: f }
+  LineModulation::{ fn_: f, }
 }
 
 ///|
@@ -183,12 +183,12 @@ pub fn LineModulation::call(self : LineModulation, ratio : Double) -> Double {
 
 ///|
 pub fn LineModulation::const_val(v : Double) -> LineModulation {
-  LineModulation::{ fn_: fn(_ : Double) { v } }
+  LineModulation::{ fn_: fn(_ : Double) { v }, }
 }
 
 ///|
 pub fn LineModulation::from_fn(f : (Double) -> Double) -> LineModulation {
-  LineModulation::{ fn_: f }
+  LineModulation::{ fn_: f, }
 }
 
 ///|
@@ -196,7 +196,7 @@ pub fn LineModulation::mul(
   self : LineModulation,
   factor : Double,
 ) -> LineModulation {
-  LineModulation::{ fn_: fn(r : Double) { (self.fn_)(r) * factor } }
+  LineModulation::{ fn_: fn(r : Double) { (self.fn_)(r) * factor }, }
 }
 
 ///|
@@ -204,7 +204,7 @@ pub fn LineModulation::add(
   self : LineModulation,
   other : LineModulation,
 ) -> LineModulation {
-  LineModulation::{ fn_: fn(r : Double) { (self.fn_)(r) + (other.fn_)(r) } }
+  LineModulation::{ fn_: fn(r : Double) { (self.fn_)(r) + (other.fn_)(r) }, }
 }
 
 ///|
@@ -212,7 +212,7 @@ pub fn LineModulation::sub(
   self : LineModulation,
   other : LineModulation,
 ) -> LineModulation {
-  LineModulation::{ fn_: fn(r : Double) { (self.fn_)(r) - (other.fn_)(r) } }
+  LineModulation::{ fn_: fn(r : Double) { (self.fn_)(r) - (other.fn_)(r) }, }
 }
 
 ///|
@@ -224,7 +224,7 @@ pub struct SurfaceModulation {
 pub fn SurfaceModulation::new(
   f : (Double, Double) -> Double,
 ) -> SurfaceModulation {
-  SurfaceModulation::{ fn_: f }
+  SurfaceModulation::{ fn_: f, }
 }
 
 ///|
@@ -238,14 +238,14 @@ pub fn SurfaceModulation::call(
 
 ///|
 pub fn SurfaceModulation::const_val(v : Double) -> SurfaceModulation {
-  SurfaceModulation::{ fn_: fn(_ : Double, _ : Double) { v } }
+  SurfaceModulation::{ fn_: fn(_ : Double, _ : Double) { v }, }
 }
 
 ///|
 pub fn SurfaceModulation::from_fn(
   f : (Double, Double) -> Double,
 ) -> SurfaceModulation {
-  SurfaceModulation::{ fn_: f }
+  SurfaceModulation::{ fn_: f, }
 }
 
 ///|
@@ -254,9 +254,11 @@ pub fn SurfaceModulation::from_line(
   line_arg : String,
 ) -> SurfaceModulation {
   if line_arg == "first" {
-    SurfaceModulation::{ fn_: fn(phi : Double, _ : Double) { (line.fn_)(phi) } }
+    SurfaceModulation::{
+      fn_: fn(phi : Double, _ : Double) { (line.fn_)(phi) },
+    }
   } else {
-    SurfaceModulation::{ fn_: fn(_ : Double, lr : Double) { (line.fn_)(lr) } }
+    SurfaceModulation::{ fn_: fn(_ : Double, lr : Double) { (line.fn_)(lr) }, }
   }
 }
 
@@ -356,7 +358,7 @@ pub fn new_local_frame(position : Vec3, local_z : Vec3?) -> LocalFrame {
         let zn = z.normalized()
         let x = orthogonal_dir(zn)
         let y = zn.cross(x).normalized()
-        LocalFrame::{ pos: position, local_x: x, local_y: y, local_z: zn }
+        LocalFrame::{ pos: position, local_x: x, local_y: y, local_z: zn, }
       }
   }
 }
@@ -370,7 +372,7 @@ pub fn new_local_frame_xyz(
   let zn = local_z.normalized()
   let xn = local_x.normalized()
   let yn = zn.cross(xn).normalized()
-  LocalFrame::{ pos: position, local_x: xn, local_y: yn, local_z: zn }
+  LocalFrame::{ pos: position, local_x: xn, local_y: yn, local_z: zn, }
 }
 
 ///|
@@ -437,7 +439,7 @@ pub fn frames_aligned_to_x(points : Array[Vec3], target_x : Vec3) -> Frames {
     last_x = lx[i]
     ly[i] = lz[i].cross(lx[i]).normalized()
   }
-  Frames::{ spine: points, local_x: lx, local_y: ly, local_z: lz }
+  Frames::{ spine: points, local_x: lx, local_y: ly, local_z: lz, }
 }
 
 ///|
@@ -498,14 +500,14 @@ pub fn Frames::frame_at(self : Frames, lr : Double) -> LocalFrame {
 ///|
 pub struct ControlPointSpline {
   control_points : Array[Vec3]
-  degree : Int
+  degree : Int32
   knot : Array[Double]
 }
 
 ///|
 pub fn new_control_point_spline(
   control_points : Array[Vec3],
-  degree : Int,
+  degree : Int32,
   closed : Bool,
 ) -> ControlPointSpline {
   let d = if degree < 1 { 2 } else { degree }
@@ -527,7 +529,7 @@ pub fn new_control_point_spline(
     }
   }
   let knot = spline_knot_vector(pts.length(), d, !closed)
-  ControlPointSpline::{ control_points: pts, degree: d, knot }
+  ControlPointSpline::{ control_points: pts, degree: d, knot, }
 }
 
 ///|
@@ -546,7 +548,7 @@ pub fn ControlPointSpline::point_at(
 ///|
 pub fn ControlPointSpline::points(
   self : ControlPointSpline,
-  n : Int,
+  n : Int32,
 ) -> Array[Vec3] {
   let result = Array::make(n, vec3(0.0, 0.0, 0.0))
   for i in 0..<n {
@@ -559,8 +561,8 @@ pub fn ControlPointSpline::points(
 fn spline_basis(
   knot : Array[Double],
   t : Double,
-  i : Int,
-  degree : Int,
+  i : Int32,
+  degree : Int32,
 ) -> Double {
   let eps = 0.0000001
   if degree == 0 {
@@ -591,8 +593,8 @@ fn spline_basis(
 
 ///|
 fn spline_knot_vector(
-  n_control : Int,
-  degree : Int,
+  n_control : Int32,
+  degree : Int32,
   clamp : Bool,
 ) -> Array[Double] {
   let n_knots = n_control + degree + 1
@@ -625,7 +627,7 @@ pub fn to_voxels(mesh : @picogkffi.Mesh) -> @picogkffi.Voxels {
 ///|
 fn quad_grid_to_mesh(grid : Array[Array[Vec3]]) -> @picogkffi.Mesh {
   let verts : Array[Double] = []
-  let tris : Array[Int] = []
+  let tris : Array[Int32] = []
   let a = grid.length()
   if a < 2 {
     return @picogkffi.mesh_from_arrays([], [])
@@ -669,12 +671,12 @@ fn append_vert(verts : Array[Double], v : Vec3) -> Unit {
 ///|
 pub struct SurfaceMeshBuilder {
   verts : Array[Double]
-  tris : Array[Int]
+  tris : Array[Int32]
 }
 
 ///|
 pub fn new_surface_mesh_builder() -> SurfaceMeshBuilder {
-  SurfaceMeshBuilder::{ verts: [], tris: [] }
+  SurfaceMeshBuilder::{ verts: [], tris: [], }
 }
 
 ///|
@@ -739,7 +741,7 @@ pub fn SurfaceMeshBuilder::build(self : SurfaceMeshBuilder) -> @picogkffi.Mesh {
 }
 
 ///|
-fn make_grid(a : Int, b : Int) -> Array[Array[Vec3]] {
+fn make_grid(a : Int32, b : Int32) -> Array[Array[Vec3]] {
   let grid : Array[Array[Vec3]] = []
   for _ in 0..<a {
     grid.push(Array::make(b, vec3(0.0, 0.0, 0.0)))
@@ -748,7 +750,7 @@ fn make_grid(a : Int, b : Int) -> Array[Array[Vec3]] {
 }
 
 ///|
-fn arange(n : Int) -> Array[Double] {
+fn arange(n : Int32) -> Array[Double] {
   let result = Array::make(n, 0.0)
   for i in 0..<n {
     result[i] = i.to_double() / (n - 1).to_double()
@@ -762,8 +764,8 @@ fn arange(n : Int) -> Array[Double] {
 pub struct Sphere {
   frame : LocalFrame
   radius : (Double, Double) -> Double
-  azim_steps : Int
-  polar_steps : Int
+  azim_steps : Int32
+  polar_steps : Int32
   transform : ((Array[Vec3]) -> Array[Vec3])?
 }
 
@@ -864,9 +866,9 @@ pub struct Box {
   width : (Double) -> Double
   depth : (Double) -> Double
   frames : Frames?
-  w_steps : Int
-  d_steps : Int
-  l_steps : Int
+  w_steps : Int32
+  d_steps : Int32
+  l_steps : Int32
   transform : ((Array[Vec3]) -> Array[Vec3])?
 }
 
@@ -1005,9 +1007,9 @@ pub struct Cylinder {
   length : Double
   radius : (Double, Double) -> Double
   frames : Frames?
-  polar_steps : Int
-  radial_steps : Int
-  length_steps : Int
+  polar_steps : Int32
+  radial_steps : Int32
+  length_steps : Int32
 }
 
 ///|
@@ -1109,8 +1111,8 @@ pub struct Ring {
   frame : LocalFrame
   ring_radius : Double
   radius : (Double, Double) -> Double
-  radial_steps : Int
-  polar_steps : Int
+  radial_steps : Int32
+  polar_steps : Int32
 }
 
 ///|
@@ -1123,7 +1125,7 @@ pub fn new_ring(
     Some(fr) => fr
     None => new_local_frame(vec3(0.0, 0.0, 0.0), None)
   }
-  Ring::{ frame: f, ring_radius, radius, radial_steps: 360, polar_steps: 360 }
+  Ring::{ frame: f, ring_radius, radius, radial_steps: 360, polar_steps: 360, }
 }
 
 ///|
@@ -1172,9 +1174,9 @@ pub struct Lens {
   outer_radius : Double
   lower : (Double, Double) -> Double
   upper : (Double, Double) -> Double
-  radial_steps : Int
-  polar_steps : Int
-  height_steps : Int
+  radial_steps : Int32
+  polar_steps : Int32
+  height_steps : Int32
 }
 
 ///|
@@ -1310,9 +1312,9 @@ pub struct Pipe {
   inner : (Double, Double) -> Double
   outer : (Double, Double) -> Double
   frames : Frames?
-  polar_steps : Int
-  radial_steps : Int
-  length_steps : Int
+  polar_steps : Int32
+  radial_steps : Int32
+  length_steps : Int32
   transform : ((Array[Vec3]) -> Array[Vec3])?
   mut phi_angle_func : (Double, Double) -> Double
 }
@@ -1542,7 +1544,7 @@ pub fn new_pipe_segment(
   } else {
     (start, end)
   }
-  let ps = PipeSegment::{ pipe, mid, rng }
+  let ps = PipeSegment::{ pipe, mid, rng, }
   ps.pipe.phi_angle_func = fn(phi_ratio : Double, lr : Double) {
     mid(lr) + (phi_ratio - 0.5) * rng(lr)
   }
@@ -1566,7 +1568,7 @@ pub fn new_pipe_segment_with_frames(
   } else {
     (start, end)
   }
-  let ps = PipeSegment::{ pipe, mid, rng }
+  let ps = PipeSegment::{ pipe, mid, rng, }
   ps.pipe.phi_angle_func = fn(phi_ratio : Double, lr : Double) {
     mid(lr) + (phi_ratio - 0.5) * rng(lr)
   }
@@ -1662,7 +1664,7 @@ pub fn new_implicit_super_ellipsoid(
   e1 : Double,
   e2 : Double,
 ) -> ImplicitSuperEllipsoid {
-  ImplicitSuperEllipsoid::{ center, ax, ay, az, e1, e2 }
+  ImplicitSuperEllipsoid::{ center, ax, ay, az, e1, e2, }
 }
 
 // --- LatticePipe ---
@@ -1673,7 +1675,7 @@ pub struct LatticePipe {
   length : Double
   radius : (Double) -> Double
   frames : Frames?
-  l_steps : Int
+  l_steps : Int32
 }
 
 ///|
@@ -1686,7 +1688,7 @@ pub fn new_lattice_pipe(
     Some(fr) => fr
     None => new_local_frame(vec3(0.0, 0.0, 0.0), None)
   }
-  LatticePipe::{ frame: f, length, radius, frames: None, l_steps: 100 }
+  LatticePipe::{ frame: f, length, radius, frames: None, l_steps: 100, }
 }
 
 ///|
@@ -1700,7 +1702,7 @@ pub fn new_lattice_pipe_with_frames(
     Some(fr) => fr
     None => new_local_frame(vec3(0.0, 0.0, 0.0), None)
   }
-  LatticePipe::{ frame: f, length, radius, frames: Some(fs), l_steps: 100 }
+  LatticePipe::{ frame: f, length, radius, frames: Some(fs), l_steps: 100, }
 }
 
 ///|
@@ -1741,7 +1743,7 @@ pub struct LatticeManifold {
   length : Double
   radius : (Double) -> Double
   frames : Frames?
-  l_steps : Int
+  l_steps : Int32
   max_overhang_angle : Double
   extend_both_sides : Bool
   min_printable_radius : Double
@@ -1868,12 +1870,12 @@ pub struct SceneGroup {
 
 ///|
 pub fn scene_group_voxels(vox : @picogkffi.Voxels, color : RGB) -> SceneGroup {
-  SceneGroup::{ voxels: Some(vox), mesh: None, color }
+  SceneGroup::{ voxels: Some(vox), mesh: None, color, }
 }
 
 ///|
 pub fn scene_group_mesh(mesh : @picogkffi.Mesh, color : RGB) -> SceneGroup {
-  SceneGroup::{ voxels: None, mesh: Some(mesh), color }
+  SceneGroup::{ voxels: None, mesh: Some(mesh), color, }
 }
 
 // --- ColorScale3D and SplitByOverhangAngle (for mesh_painter) ---
@@ -1882,11 +1884,11 @@ pub fn scene_group_mesh(mesh : @picogkffi.Mesh, color : RGB) -> SceneGroup {
 /// RainbowSpectrum returns blue→green→yellow→orange→red control colors.
 pub fn rainbow_spectrum() -> Array[RGB] {
   [
-    RGB::{ r: 0.0, g: 0.0, b: 1.0 },
-    RGB::{ r: 0.0, g: 1.0, b: 0.0 },
-    RGB::{ r: 1.0, g: 1.0, b: 0.0 },
-    RGB::{ r: 1.0, g: 130.0 / 255.0, b: 0.0 },
-    RGB::{ r: 1.0, g: 0.0, b: 0.0 },
+    RGB::{ r: 0.0, g: 0.0, b: 1.0, },
+    RGB::{ r: 0.0, g: 1.0, b: 0.0, },
+    RGB::{ r: 1.0, g: 1.0, b: 0.0, },
+    RGB::{ r: 1.0, g: 130.0 / 255.0, b: 0.0, },
+    RGB::{ r: 1.0, g: 0.0, b: 0.0, },
   ]
 }
 
@@ -1905,7 +1907,7 @@ pub fn new_color_scale_3d(
 ) -> ColorScale3D {
   let n = 500
   let nc = spectrum.length()
-  let rgb = Array::make(n, RGB::{ r: 0.0, g: 0.0, b: 0.0 })
+  let rgb = Array::make(n, RGB::{ r: 0.0, g: 0.0, b: 0.0, })
   for i in 0..<n {
     let t = i.to_double() / (n - 1).to_double()
     let idx = t * (nc - 1).to_double()
@@ -1919,7 +1921,7 @@ pub fn new_color_scale_3d(
       b: c1.b + frac * (c2.b - c1.b),
     }
   }
-  ColorScale3D::{ rgb_arr: rgb, min_value, max_value }
+  ColorScale3D::{ rgb_arr: rgb, min_value, max_value, }
 }
 
 ///|
@@ -1965,7 +1967,7 @@ fn clamp_d(v : Double, lo : Double, hi : Double) -> Double {
 pub fn split_by_overhang_angle(
   mesh : @picogkffi.Mesh,
   scale : ColorScale3D,
-  n_classes : Int,
+  n_classes : Int32,
 ) -> Array[SceneGroup] {
   let verts = mesh.vertices()
   let tris = mesh.triangles()
@@ -2016,7 +2018,7 @@ pub fn split_by_overhang_angle(
     let hi_k = lo +
       (k + 1).to_double() * (hi - lo) / (n_classes - 1).to_double()
     let sub_verts : Array[Double] = []
-    let sub_tris : Array[Int] = []
+    let sub_tris : Array[Int32] = []
     for i in 0..<nt {
       if angles[i] >= lo_k && (angles[i] < hi_k || k == n_classes - 1) {
         let a = tris[i * 3] * 3

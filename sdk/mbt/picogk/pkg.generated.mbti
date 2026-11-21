@@ -3,6 +3,7 @@ package "gmlewis/picogk"
 
 import {
   "moonbitlang/async/process",
+  "moonbitlang/core/json",
 }
 
 // Values
@@ -22,7 +23,7 @@ pub async fn Client::boolean_add_all(Self, Array[String], String?) -> String
 pub async fn Client::boolean_intersect(Self, String, String, String?) -> String
 pub async fn Client::boolean_subtract(Self, String, String, String?) -> String
 pub async fn Client::boolean_subtract_all(Self, String, Array[String], String?) -> String
-pub async fn Client::call_tool(Self, String, Map[String, Json]) -> String
+pub async fn Client::call_tool(Self, String, Map[String, @json.Json]) -> String
 pub async fn Client::circular_pattern(Self, String, Int32, Double?, Double?, Double?, Double?, Double?, Double?, Double?, String?) -> String
 pub fn Client::close(Self) -> Unit
 pub async fn Client::closest_point(Self, String, Double, Double, Double) -> String

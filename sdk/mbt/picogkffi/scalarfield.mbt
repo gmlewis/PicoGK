@@ -7,12 +7,12 @@ pub struct ScalarField {
 
 ///|
 pub fn new_scalar_field() -> ScalarField {
-  ScalarField::{ h: scalar_field_h_create(get_instance()) }
+  ScalarField::{ h: scalar_field_h_create(get_instance()), }
 }
 
 ///|
 pub fn scalar_field_from_voxels(v : Voxels) -> ScalarField {
-  ScalarField::{ h: scalar_field_h_create_from_voxels(get_instance(), v.h) }
+  ScalarField::{ h: scalar_field_h_create_from_voxels(get_instance(), v.h), }
 }
 
 ///|
@@ -33,7 +33,7 @@ pub fn scalar_field_build_from_voxels(
 
 ///|
 pub fn ScalarField::copy(self : ScalarField) -> ScalarField {
-  ScalarField::{ h: scalar_field_h_create_copy(get_instance(), self.h) }
+  ScalarField::{ h: scalar_field_h_create_copy(get_instance(), self.h), }
 }
 
 ///|
@@ -83,7 +83,7 @@ pub fn ScalarField::remove_value(self : ScalarField, pt : Vec3) -> Unit {
 ///|
 pub fn ScalarField::voxel_dimensions(
   self : ScalarField,
-) -> (Int, Int, Int, Int, Int, Int) {
+) -> (Int32, Int32, Int32, Int32, Int32, Int32) {
   let ox = FixedArray::make(4, 0L.to_byte())
   let oy = FixedArray::make(4, 0L.to_byte())
   let oz = FixedArray::make(4, 0L.to_byte())
@@ -111,7 +111,7 @@ pub fn ScalarField::voxel_dimensions(
 }
 
 ///|
-pub fn ScalarField::get_slice(self : ScalarField, z : Int) -> Array[Double] {
+pub fn ScalarField::get_slice(self : ScalarField, z : Int32) -> Array[Double] {
   let (_, _, _, sx, sy, _) = self.voxel_dimensions()
   let n = sx * sy
   if n <= 0 {

@@ -7,17 +7,17 @@ pub struct Metadata {
 
 ///|
 pub fn metadata_from_voxels(v : Voxels) -> Metadata {
-  Metadata::{ h: metadata_h_from_voxels(get_instance(), v.h) }
+  Metadata::{ h: metadata_h_from_voxels(get_instance(), v.h), }
 }
 
 ///|
 pub fn metadata_from_scalar_field(sf : ScalarField) -> Metadata {
-  Metadata::{ h: metadata_h_from_scalar_field(get_instance(), sf.h) }
+  Metadata::{ h: metadata_h_from_scalar_field(get_instance(), sf.h), }
 }
 
 ///|
 pub fn metadata_from_vector_field(vf : VectorField) -> Metadata {
-  Metadata::{ h: metadata_h_from_vector_field(get_instance(), vf.h) }
+  Metadata::{ h: metadata_h_from_vector_field(get_instance(), vf.h), }
 }
 
 ///|
@@ -26,12 +26,12 @@ pub fn Metadata::destroy(self : Metadata) -> Unit {
 }
 
 ///|
-pub fn Metadata::count(self : Metadata) -> Int {
+pub fn Metadata::count(self : Metadata) -> Int32 {
   metadata_n_count(get_instance(), self.h)
 }
 
 ///|
-pub fn Metadata::name_at(self : Metadata, index : Int) -> String {
+pub fn Metadata::name_at(self : Metadata, index : Int32) -> String {
   let name_len = metadata_n_name_length_at(get_instance(), self.h, index)
   if name_len <= 0 {
     return ""
@@ -44,7 +44,7 @@ pub fn Metadata::name_at(self : Metadata, index : Int) -> String {
 }
 
 ///|
-pub fn Metadata::type_at(self : Metadata, name : String) -> Int {
+pub fn Metadata::type_at(self : Metadata, name : String) -> Int32 {
   metadata_n_type_at(get_instance(), self.h, cstr(name))
 }
 

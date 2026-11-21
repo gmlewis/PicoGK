@@ -7,7 +7,7 @@ pub struct PolyLine {
 
 ///|
 pub fn new_polyline(color : ColorFloat) -> PolyLine {
-  PolyLine::{ h: polyline_h_create(get_instance(), pack_color(color)) }
+  PolyLine::{ h: polyline_h_create(get_instance(), pack_color(color)), }
 }
 
 ///|
@@ -26,17 +26,17 @@ pub fn PolyLine::mem_usage(self : PolyLine) -> Int64 {
 }
 
 ///|
-pub fn PolyLine::add_vertex(self : PolyLine, pt : Vec3) -> Int {
+pub fn PolyLine::add_vertex(self : PolyLine, pt : Vec3) -> Int32 {
   polyline_n_add_vertex(get_instance(), self.h, pack_vec3(pt))
 }
 
 ///|
-pub fn PolyLine::vertex_count(self : PolyLine) -> Int {
+pub fn PolyLine::vertex_count(self : PolyLine) -> Int32 {
   polyline_n_vertex_count(get_instance(), self.h)
 }
 
 ///|
-pub fn PolyLine::get_vertex(self : PolyLine, index : Int) -> Vec3 {
+pub fn PolyLine::get_vertex(self : PolyLine, index : Int32) -> Vec3 {
   let out = FixedArray::make(12, 0L.to_byte())
   polyline_get_vertex(get_instance(), self.h, index, out)
   unpack_vec3(out)

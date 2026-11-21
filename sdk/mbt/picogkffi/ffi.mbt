@@ -115,17 +115,17 @@ extern "C" fn mesh_n_add_vertex(
   h_this : Int64,
   h_mesh : Int64,
   p_v : FixedArray[Byte],
-) -> Int = "Mesh_nAddVertex"
+) -> Int32 = "Mesh_nAddVertex"
 
 ///|
-extern "C" fn mesh_n_vertex_count(h_this : Int64, h_mesh : Int64) -> Int = "Mesh_nVertexCount"
+extern "C" fn mesh_n_vertex_count(h_this : Int64, h_mesh : Int64) -> Int32 = "Mesh_nVertexCount"
 
 ///|
 #borrow(p_out)
 extern "C" fn mesh_get_vertex(
   h_this : Int64,
   h_mesh : Int64,
-  n_idx : Int,
+  n_idx : Int32,
   p_out : FixedArray[Byte],
 ) -> Unit = "Mesh_GetVertex"
 
@@ -135,17 +135,17 @@ extern "C" fn mesh_n_add_triangle(
   h_this : Int64,
   h_mesh : Int64,
   p_t : FixedArray[Byte],
-) -> Int = "Mesh_nAddTriangle"
+) -> Int32 = "Mesh_nAddTriangle"
 
 ///|
-extern "C" fn mesh_n_triangle_count(h_this : Int64, h_mesh : Int64) -> Int = "Mesh_nTriangleCount"
+extern "C" fn mesh_n_triangle_count(h_this : Int64, h_mesh : Int64) -> Int32 = "Mesh_nTriangleCount"
 
 ///|
 #borrow(p_out)
 extern "C" fn mesh_get_triangle(
   h_this : Int64,
   h_mesh : Int64,
-  n_idx : Int,
+  n_idx : Int32,
   p_out : FixedArray[Byte],
 ) -> Unit = "Mesh_GetTriangle"
 
@@ -154,7 +154,7 @@ extern "C" fn mesh_get_triangle(
 extern "C" fn mesh_get_triangle_v(
   h_this : Int64,
   h_mesh : Int64,
-  n_idx : Int,
+  n_idx : Int32,
   p_v0 : FixedArray[Byte],
   p_v1 : FixedArray[Byte],
   p_v2 : FixedArray[Byte],
@@ -384,7 +384,7 @@ extern "C" fn voxels_get_voxel_dimensions(
 extern "C" fn voxels_get_x_slice(
   h_this : Int64,
   h_vox : Int64,
-  n_x : Int,
+  n_x : Int32,
   p_out : FixedArray[Byte],
   _p_pad : FixedArray[Byte],
 ) -> Unit = "Voxels_GetXSlice"
@@ -394,7 +394,7 @@ extern "C" fn voxels_get_x_slice(
 extern "C" fn voxels_get_y_slice(
   h_this : Int64,
   h_vox : Int64,
-  n_y : Int,
+  n_y : Int32,
   p_out : FixedArray[Byte],
   _p_pad : FixedArray[Byte],
 ) -> Unit = "Voxels_GetYSlice"
@@ -404,7 +404,7 @@ extern "C" fn voxels_get_y_slice(
 extern "C" fn voxels_get_z_slice(
   h_this : Int64,
   h_vox : Int64,
-  n_z : Int,
+  n_z : Int32,
   p_out : FixedArray[Byte],
   _p_pad : FixedArray[Byte],
 ) -> Unit = "Voxels_GetZSlice"
@@ -443,17 +443,17 @@ extern "C" fn polyline_n_add_vertex(
   h_this : Int64,
   h_pl : Int64,
   p_v : FixedArray[Byte],
-) -> Int = "PolyLine_nAddVertex"
+) -> Int32 = "PolyLine_nAddVertex"
 
 ///|
-extern "C" fn polyline_n_vertex_count(h_this : Int64, h_pl : Int64) -> Int = "PolyLine_nVertexCount"
+extern "C" fn polyline_n_vertex_count(h_this : Int64, h_pl : Int64) -> Int32 = "PolyLine_nVertexCount"
 
 ///|
 #borrow(p_out)
 extern "C" fn polyline_get_vertex(
   h_this : Int64,
   h_pl : Int64,
-  n_idx : Int,
+  n_idx : Int32,
   p_out : FixedArray[Byte],
 ) -> Unit = "PolyLine_GetVertex"
 
@@ -506,7 +506,7 @@ extern "C" fn vdb_file_b_save_to_file(
 extern "C" fn vdb_file_h_get_voxels(
   h_this : Int64,
   h_file : Int64,
-  n_idx : Int,
+  n_idx : Int32,
 ) -> Int64 = "VdbFile_hGetVoxels"
 
 ///|
@@ -516,13 +516,13 @@ extern "C" fn vdb_file_n_add_voxels(
   h_file : Int64,
   p_name : FixedArray[Byte],
   h_vox : Int64,
-) -> Int = "VdbFile_nAddVoxels"
+) -> Int32 = "VdbFile_nAddVoxels"
 
 ///|
 extern "C" fn vdb_file_h_get_scalar_field(
   h_this : Int64,
   h_file : Int64,
-  n_idx : Int,
+  n_idx : Int32,
 ) -> Int64 = "VdbFile_hGetScalarField"
 
 ///|
@@ -532,13 +532,13 @@ extern "C" fn vdb_file_n_add_scalar_field(
   h_file : Int64,
   p_name : FixedArray[Byte],
   h_sf : Int64,
-) -> Int = "VdbFile_nAddScalarField"
+) -> Int32 = "VdbFile_nAddScalarField"
 
 ///|
 extern "C" fn vdb_file_h_get_vector_field(
   h_this : Int64,
   h_file : Int64,
-  n_idx : Int,
+  n_idx : Int32,
 ) -> Int64 = "VdbFile_hGetVectorField"
 
 ///|
@@ -548,17 +548,17 @@ extern "C" fn vdb_file_n_add_vector_field(
   h_file : Int64,
   p_name : FixedArray[Byte],
   h_vf : Int64,
-) -> Int = "VdbFile_nAddVectorField"
+) -> Int32 = "VdbFile_nAddVectorField"
 
 ///|
-extern "C" fn vdb_file_n_field_count(h_this : Int64, h_file : Int64) -> Int = "VdbFile_nFieldCount"
+extern "C" fn vdb_file_n_field_count(h_this : Int64, h_file : Int64) -> Int32 = "VdbFile_nFieldCount"
 
 ///|
 #borrow(psz)
 extern "C" fn vdb_file_get_field_name(
   h_this : Int64,
   h_file : Int64,
-  n_idx : Int,
+  n_idx : Int32,
   psz : FixedArray[Byte],
 ) -> Unit = "VdbFile_GetFieldName"
 
@@ -566,8 +566,8 @@ extern "C" fn vdb_file_get_field_name(
 extern "C" fn vdb_file_n_field_type(
   h_this : Int64,
   h_file : Int64,
-  n_idx : Int,
-) -> Int = "VdbFile_nFieldType"
+  n_idx : Int32,
+) -> Int32 = "VdbFile_nFieldType"
 
 // --- ScalarField ---
 
@@ -644,7 +644,7 @@ extern "C" fn scalar_field_get_voxel_dimensions(
 extern "C" fn scalar_field_get_slice(
   h_this : Int64,
   h_sf : Int64,
-  n_z : Int,
+  n_z : Int32,
   p_out : FixedArray[Byte],
 ) -> Unit = "ScalarField_GetSlice"
 
@@ -727,23 +727,23 @@ extern "C" fn metadata_h_from_vector_field(
 extern "C" fn metadata_destroy(h_this : Int64, h_meta : Int64) -> Unit = "Metadata_Destroy"
 
 ///|
-extern "C" fn metadata_n_count(h_this : Int64, h_meta : Int64) -> Int = "Metadata_nCount"
+extern "C" fn metadata_n_count(h_this : Int64, h_meta : Int64) -> Int32 = "Metadata_nCount"
 
 ///|
 extern "C" fn metadata_n_name_length_at(
   h_this : Int64,
   h_meta : Int64,
-  n_idx : Int,
-) -> Int = "Metadata_nNameLengthAt"
+  n_idx : Int32,
+) -> Int32 = "Metadata_nNameLengthAt"
 
 ///|
 #borrow(p_name)
 extern "C" fn metadata_b_get_name_at(
   h_this : Int64,
   h_meta : Int64,
-  n_idx : Int,
+  n_idx : Int32,
   p_name : FixedArray[Byte],
-  n_len : Int,
+  n_len : Int32,
 ) -> Bool = "Metadata_bGetNameAt"
 
 ///|
@@ -752,7 +752,7 @@ extern "C" fn metadata_n_type_at(
   h_this : Int64,
   h_meta : Int64,
   p_name : FixedArray[Byte],
-) -> Int = "Metadata_nTypeAt"
+) -> Int32 = "Metadata_nTypeAt"
 
 ///|
 #borrow(p_name)
@@ -760,7 +760,7 @@ extern "C" fn metadata_n_string_length_at(
   h_this : Int64,
   h_meta : Int64,
   p_name : FixedArray[Byte],
-) -> Int = "Metadata_nStringLengthAt"
+) -> Int32 = "Metadata_nStringLengthAt"
 
 ///|
 #borrow(p_name, p_val)
@@ -769,7 +769,7 @@ extern "C" fn metadata_b_get_string_at(
   h_meta : Int64,
   p_name : FixedArray[Byte],
   p_val : FixedArray[Byte],
-  n_len : Int,
+  n_len : Int32,
 ) -> Bool = "Metadata_bGetStringAt"
 
 ///|
@@ -913,16 +913,16 @@ extern "C" fn viewer_request_close(h_viewer : Int64) -> Unit = "Viewer_RequestCl
 extern "C" fn viewer_b_load_light_setup(
   h_viewer : Int64,
   p_diffuse : FixedArray[Byte],
-  n_diffuse_len : Int,
+  n_diffuse_len : Int32,
   p_specular : FixedArray[Byte],
-  n_specular_len : Int,
+  n_specular_len : Int32,
 ) -> Bool = "Viewer_bLoadLightSetup"
 
 ///|
 extern "C" fn viewer_add_mesh(
   h_this : Int64,
   h_viewer : Int64,
-  n_group : Int,
+  n_group : Int32,
   h_mesh : Int64,
 ) -> Unit = "Viewer_AddMesh"
 
@@ -946,7 +946,7 @@ extern "C" fn viewer_set_mesh_matrix(
 extern "C" fn viewer_add_voxels(
   h_this : Int64,
   h_viewer : Int64,
-  n_group : Int,
+  n_group : Int32,
   h_vox : Int64,
 ) -> Unit = "Viewer_AddVoxels"
 
@@ -970,7 +970,7 @@ extern "C" fn viewer_set_voxels_matrix(
 extern "C" fn viewer_add_poly_line(
   h_this : Int64,
   h_viewer : Int64,
-  n_group : Int,
+  n_group : Int32,
   h_pl : Int64,
 ) -> Unit = "Viewer_AddPolyLine"
 
@@ -996,7 +996,7 @@ extern "C" fn viewer_remove_all_objects(h_viewer : Int64) -> Unit = "Viewer_Remo
 ///|
 extern "C" fn viewer_set_group_visible(
   h_viewer : Int64,
-  n_group : Int,
+  n_group : Int32,
   b_visible : Bool,
 ) -> Unit = "Viewer_SetGroupVisible"
 
@@ -1004,7 +1004,7 @@ extern "C" fn viewer_set_group_visible(
 #borrow(p_color)
 extern "C" fn viewer_set_group_material(
   h_viewer : Int64,
-  n_group : Int,
+  n_group : Int32,
   p_color : FixedArray[Byte],
   f_metallic : Float,
   f_roughness : Float,
@@ -1014,14 +1014,14 @@ extern "C" fn viewer_set_group_material(
 #borrow(p_matrix)
 extern "C" fn viewer_set_group_matrix(
   h_viewer : Int64,
-  n_group : Int,
+  n_group : Int32,
   p_matrix : FixedArray[Byte],
 ) -> Unit = "Viewer_SetGroupMatrix"
 
 ///|
 extern "C" fn viewer_enable_group_warn_overhang(
   h_viewer : Int64,
-  n_group : Int,
+  n_group : Int32,
   f_max_angle : Float,
   f_min_length : Float,
 ) -> Unit = "Viewer_EnableGroupWarnOverhang"
@@ -1029,7 +1029,7 @@ extern "C" fn viewer_enable_group_warn_overhang(
 ///|
 extern "C" fn viewer_disable_group_warn_overhang(
   h_viewer : Int64,
-  n_group : Int,
+  n_group : Int32,
 ) -> Unit = "Viewer_DisableGroupWarnOverhang"
 
 ///|
@@ -1045,8 +1045,8 @@ extern "C" fn viewer_get_bounding_box(
 #borrow(p_name)
 extern "C" fn viewer_gpu_tex_h_create(
   h_viewer : Int64,
-  n_width : Int,
-  n_height : Int,
+  n_width : Int32,
+  n_height : Int32,
   p_name : FixedArray[Byte],
 ) -> Int64 = "Viewer_GpuTex_hCreate"
 
@@ -1097,9 +1097,9 @@ extern "C" fn viewer_quad_set_matrix(
 extern "C" fn viewer_sidebar_h_create(
   h_viewer : Int64,
   b_right : Bool,
-  n_width : Int,
-  n_height : Int,
-  n_font_size : Int,
+  n_width : Int32,
+  n_height : Int32,
+  n_font_size : Int32,
   p_bg_color : FixedArray[Byte],
   p_fg_color : FixedArray[Byte],
 ) -> Int64 = "Viewer_SideBar_hCreate"
@@ -1111,14 +1111,14 @@ extern "C" fn viewer_sidebar_destroy(h_viewer : Int64, h_gui : Int64) -> Unit = 
 
 ///|
 #borrow(path)
-extern "C" fn picogk_dlopen(path : FixedArray[Byte]) -> Int = "picogk_dlopen"
+extern "C" fn picogk_dlopen(path : FixedArray[Byte]) -> Int32 = "picogk_dlopen"
 // --- Float bit reinterpretation helpers ---
 
 ///|
-extern "C" fn picogk_float_to_bits(f : Float) -> Int = "picogk_float_to_bits"
+extern "C" fn picogk_float_to_bits(f : Float) -> Int32 = "picogk_float_to_bits"
 
 ///|
-extern "C" fn picogk_float_from_bits(bits : Int) -> Float = "picogk_float_from_bits"
+extern "C" fn picogk_float_from_bits(bits : Int32) -> Float = "picogk_float_from_bits"
 
 // --- STL writer ---
 
@@ -1127,10 +1127,10 @@ extern "C" fn picogk_float_from_bits(bits : Int) -> Float = "picogk_float_from_b
 extern "C" fn picogk_write_stl(
   path : FixedArray[Byte],
   vertices : FixedArray[Byte],
-  n_verts : Int,
+  n_verts : Int32,
   triangles : FixedArray[Byte],
-  n_tris : Int,
-) -> Int = "picogk_write_stl"
+  n_tris : Int32,
+) -> Int32 = "picogk_write_stl"
 
 // --- PNG writer ---
 
@@ -1138,13 +1138,13 @@ extern "C" fn picogk_write_stl(
 #borrow(path, pixels)
 pub extern "C" fn picogk_write_png(
   path : FixedArray[Byte],
-  width : Int,
-  height : Int,
+  width : Int32,
+  height : Int32,
   pixels : Bytes,
-  stride : Int,
-  bytes_per_pixel : Int,
-  top_origin : Int,
-) -> Int = "picogk_write_png"
+  stride : Int32,
+  bytes_per_pixel : Int32,
+  top_origin : Int32,
+) -> Int32 = "picogk_write_png"
 // --- Screenshot to PNG ---
 
 ///|
@@ -1152,8 +1152,8 @@ pub extern "C" fn picogk_write_png(
 extern "C" fn picogk_screenshot_png(
   viewer : Int64,
   png_path : FixedArray[Byte],
-  frames : Int,
-) -> Int = "picogk_screenshot_png"
+  frames : Int32,
+) -> Int32 = "picogk_screenshot_png"
 
 // --- Z-slice PNG writer ---
 
@@ -1162,9 +1162,9 @@ extern "C" fn picogk_screenshot_png(
 extern "C" fn picogk_write_slice_png(
   path : FixedArray[Byte],
   sdf : FixedArray[Byte],
-  width : Int,
-  height : Int,
-) -> Int = "picogk_write_slice_png"
+  width : Int32,
+  height : Int32,
+) -> Int32 = "picogk_write_slice_png"
 
 // --- Generic file writer ---
 
@@ -1173,11 +1173,11 @@ extern "C" fn picogk_write_slice_png(
 extern "C" fn picogk_write_file(
   path : FixedArray[Byte],
   data : FixedArray[Byte],
-  len : Int,
-) -> Int = "picogk_write_file"
+  len : Int32,
+) -> Int32 = "picogk_write_file"
 
 // --- Browser opener ---
 
 ///|
 #borrow(url)
-extern "C" fn picogk_open_url(url : FixedArray[Byte]) -> Int = "picogk_open_url"
+extern "C" fn picogk_open_url(url : FixedArray[Byte]) -> Int32 = "picogk_open_url"

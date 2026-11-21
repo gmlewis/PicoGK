@@ -7,12 +7,12 @@ pub struct VectorField {
 
 ///|
 pub fn new_vector_field() -> VectorField {
-  VectorField::{ h: vector_field_h_create(get_instance()) }
+  VectorField::{ h: vector_field_h_create(get_instance()), }
 }
 
 ///|
 pub fn vector_field_from_voxels(v : Voxels) -> VectorField {
-  VectorField::{ h: vector_field_h_create_from_voxels(get_instance(), v.h) }
+  VectorField::{ h: vector_field_h_create_from_voxels(get_instance(), v.h), }
 }
 
 ///|
@@ -33,7 +33,7 @@ pub fn vector_field_build_from_voxels(
 
 ///|
 pub fn VectorField::copy(self : VectorField) -> VectorField {
-  VectorField::{ h: vector_field_h_create_copy(get_instance(), self.h) }
+  VectorField::{ h: vector_field_h_create_copy(get_instance(), self.h), }
 }
 
 ///|

@@ -266,7 +266,7 @@ fn mesh_to_json_array(arr : Array[Double]) -> String {
 
 ///|
 /// mesh_to_json_int_array converts an int array to a JSON array string.
-fn mesh_to_json_int_array(arr : Array[Int]) -> String {
+fn mesh_to_json_int_array(arr : Array[Int32]) -> String {
   let mut result = "["
   let mut i = 0
   for x in arr {

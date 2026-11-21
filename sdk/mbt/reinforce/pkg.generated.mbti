@@ -1,0 +1,104 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "gmlewis/picogk-reinforce"
+
+import {
+  "gmlewis/picogkffi",
+}
+
+// Values
+pub fn principal_direction_3x3(Double, Double, Double, Double, Double, Double) -> (Double, @picogkffi.Vec3)
+
+pub fn reinforce_voxels(@picogkffi.Voxels, LoadCase, config? : ReinforceConfig) -> ReinforceResult
+
+pub fn solve_voxel_fea(@picogkffi.Voxels, LoadCase, ReinforceConfig) -> StressField
+
+pub fn trace_stress_streamlines(StressField, @picogkffi.Voxels, ReinforceConfig) -> Array[Array[@picogkffi.Vec3]]
+
+// Errors
+
+// Types and methods
+pub(all) struct AnchorZone {
+  name : String
+  region : Region
+}
+pub fn AnchorZone::new(String, Region) -> Self
+
+pub(all) struct ForceLoad {
+  name : String
+  region : Region
+  force_n : @picogkffi.Vec3
+}
+pub fn ForceLoad::new(String, Region, @picogkffi.Vec3) -> Self
+
+pub(all) struct LoadCase {
+  anchors : Array[AnchorZone]
+  loads : Array[ForceLoad]
+}
+pub fn LoadCase::new(anchors~ : Array[AnchorZone], loads~ : Array[ForceLoad]) -> Self
+
+pub(all) enum Region {
+  Box(@picogkffi.Vec3, @picogkffi.Vec3)
+  Sphere(@picogkffi.Vec3, Double)
+  CylinderZ(Double, Double, Double, Double, Double)
+}
+pub fn Region::contains(Self, @picogkffi.Vec3) -> Bool
+
+pub(all) struct ReinforceConfig {
+  fea_grid_step_mm : Double
+  skin_margin_mm : Double
+  fissure_radius_mm : Double
+  channel_spacing_mm : Double
+  stress_threshold_fraction : Double
+  streamline_step_mm : Double
+  max_streamline_steps : Int32
+  max_pcg_iters : Int32
+  youngs_modulus_mpa : Double
+}
+pub fn ReinforceConfig::default() -> Self
+
+pub(all) struct ReinforceReport {
+  active_fea_nodes : Int32
+  anchored_nodes : Int32
+  loaded_nodes : Int32
+  pcg_iterations : Int32
+  pcg_residual : Double
+  peak_von_mises_mpa : Double
+  streamline_count : Int32
+  total_channel_segments : Int32
+  original_volume_mm3 : Double
+  reinforced_volume_mm3 : Double
+  fissure_volume_mm3 : Double
+  modifier_volume_mm3 : Double
+}
+
+pub(all) struct ReinforceResult {
+  reinforced : @picogkffi.Voxels
+  fissures : @picogkffi.Voxels
+  modifier : @picogkffi.Voxels
+  stress : StressField
+  streamlines : Array[Array[@picogkffi.Vec3]]
+  report : ReinforceReport
+}
+pub fn ReinforceResult::destroy(Self) -> Unit
+
+pub(all) struct StressField {
+  origin : @picogkffi.Vec3
+  step_mm : Double
+  nx : Int32
+  ny : Int32
+  nz : Int32
+  node_of_cell : Array[Int32]
+  coords : Array[@picogkffi.Vec3]
+  disp : Array[@picogkffi.Vec3]
+  von_mises : Array[Double]
+  principal_dir : Array[@picogkffi.Vec3]
+  peak_von_mises_mpa : Double
+  anchored_count : Int32
+  loaded_count : Int32
+  pcg_iterations : Int32
+  pcg_residual : Double
+}
+
+// Type aliases
+
+// Traits

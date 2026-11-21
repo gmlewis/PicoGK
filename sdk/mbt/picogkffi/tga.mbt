@@ -11,7 +11,7 @@
 pub fn Viewer::screenshot_png(
   self : Viewer,
   path : String,
-  frames : Int,
+  frames : Int32,
 ) -> Bool {
   let result = picogk_screenshot_png(self.h, cstr(path), frames)
   result == 0
@@ -24,8 +24,8 @@ pub fn Viewer::screenshot_png(
 pub fn write_slice_png(
   path : String,
   sdf : Array[Double],
-  width : Int,
-  height : Int,
+  width : Int32,
+  height : Int32,
 ) -> Bool {
   // Convert Array[Double] to a flat float32 buffer for C
   let n = sdf.length()

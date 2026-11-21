@@ -8,7 +8,7 @@ pub struct Viewer {
 ///|
 /// Create a new viewer with title and window size.
 /// Requires a display + OpenGL context.
-pub fn new_viewer(title : String, width : Int, height : Int) -> Viewer {
+pub fn new_viewer(title : String, width : Int32, height : Int32) -> Viewer {
   let title_buf = cstr(title)
   let size_buf = FixedArray::make(8, 0L.to_byte())
   write_float_le(size_buf, 0, Float::from_int(width))
@@ -78,7 +78,7 @@ pub fn Viewer::load_light_setup(
 
 ///|
 /// Add a mesh to the viewer at the given group.
-pub fn Viewer::add_mesh(self : Viewer, group : Int, mesh : Mesh) -> Unit {
+pub fn Viewer::add_mesh(self : Viewer, group : Int32, mesh : Mesh) -> Unit {
   viewer_add_mesh(get_instance(), self.h, group, mesh.h)
 }
 
@@ -100,7 +100,7 @@ pub fn Viewer::set_mesh_matrix(
 
 ///|
 /// Add voxels to the viewer at the given group.
-pub fn Viewer::add_voxels(self : Viewer, group : Int, vox : Voxels) -> Unit {
+pub fn Viewer::add_voxels(self : Viewer, group : Int32, vox : Voxels) -> Unit {
   viewer_add_voxels(get_instance(), self.h, group, vox.h)
 }
 
@@ -122,7 +122,11 @@ pub fn Viewer::set_voxels_matrix(
 
 ///|
 /// Add a polyline to the viewer at the given group.
-pub fn Viewer::add_poly_line(self : Viewer, group : Int, pl : PolyLine) -> Unit {
+pub fn Viewer::add_poly_line(
+  self : Viewer,
+  group : Int32,
+  pl : PolyLine,
+) -> Unit {
   viewer_add_poly_line(get_instance(), self.h, group, pl.h)
 }
 
@@ -152,7 +156,7 @@ pub fn Viewer::remove_all_objects(self : Viewer) -> Unit {
 /// Set visibility of a group.
 pub fn Viewer::set_group_visible(
   self : Viewer,
-  group : Int,
+  group : Int32,
   visible : Bool,
 ) -> Unit {
   viewer_set_group_visible(self.h, group, visible)
@@ -162,7 +166,7 @@ pub fn Viewer::set_group_visible(
 /// Set PBR material for a group.
 pub fn Viewer::set_group_material(
   self : Viewer,
-  group : Int,
+  group : Int32,
   color : ColorFloat,
   metallic : Double,
   roughness : Double,
@@ -180,7 +184,7 @@ pub fn Viewer::set_group_material(
 /// Set transform matrix for a group.
 pub fn Viewer::set_group_matrix(
   self : Viewer,
-  group : Int,
+  group : Int32,
   matrix : FixedArray[Byte],
 ) -> Unit {
   viewer_set_group_matrix(self.h, group, matrix)
@@ -190,7 +194,7 @@ pub fn Viewer::set_group_matrix(
 /// Enable overhang warnings for a group.
 pub fn Viewer::enable_group_warn_overhang(
   self : Viewer,
-  group : Int,
+  group : Int32,
   max_angle : Double,
   min_length : Double,
 ) -> Unit {
@@ -204,7 +208,10 @@ pub fn Viewer::enable_group_warn_overhang(
 
 ///|
 /// Disable overhang warnings for a group.
-pub fn Viewer::disable_group_warn_overhang(self : Viewer, group : Int) -> Unit {
+pub fn Viewer::disable_group_warn_overhang(
+  self : Viewer,
+  group : Int32,
+) -> Unit {
   viewer_disable_group_warn_overhang(self.h, group)
 }
 
@@ -227,7 +234,7 @@ pub fn Viewer::run(self : Viewer) -> Unit {
 
 ///|
 /// Take a screenshot by polling frames.
-pub fn Viewer::screenshot(self : Viewer, path : String, frames : Int) -> Unit {
+pub fn Viewer::screenshot(self : Viewer, path : String, frames : Int32) -> Unit {
   self.request_screen_shot(path)
   for _ in 0..<frames {
     ignore(self.poll())
@@ -244,11 +251,11 @@ pub struct GpuTex {
 ///|
 pub fn new_gpu_tex(
   viewer : Viewer,
-  width : Int,
-  height : Int,
+  width : Int32,
+  height : Int32,
   name : String,
 ) -> GpuTex {
-  GpuTex::{ h: viewer_gpu_tex_h_create(viewer.h, width, height, cstr(name)) }
+  GpuTex::{ h: viewer_gpu_tex_h_create(viewer.h, width, height, cstr(name)), }
 }
 
 ///|
@@ -318,9 +325,9 @@ pub struct SideBar {
 pub fn new_sidebar(
   viewer : Viewer,
   right : Bool,
-  width : Int,
-  height : Int,
-  font_size : Int,
+  width : Int32,
+  height : Int32,
+  font_size : Int32,
   bg_color : ColorFloat,
   fg_color : ColorFloat,
 ) -> SideBar {
@@ -364,8 +371,8 @@ pub let default_elevation : Double = 25.0 * 3.14159265358979 / 180.0
 /// Requires a display + OpenGL context.
 pub fn new_viewer_ex(
   title : String,
-  width : Int,
-  height : Int,
+  width : Int32,
+  height : Int32,
   bg_r : Double,
   bg_g : Double,
   bg_b : Double,
@@ -431,13 +438,17 @@ pub fn ViewerEx::request_close(self : ViewerEx) -> Unit {
 
 ///|
 /// Add voxels to the viewer at the given group.
-pub fn ViewerEx::add_voxels(self : ViewerEx, group : Int, vox : Voxels) -> Unit {
+pub fn ViewerEx::add_voxels(
+  self : ViewerEx,
+  group : Int32,
+  vox : Voxels,
+) -> Unit {
   mbt_viewer_add_voxels(self.h, group, get_instance(), vox.h)
 }
 
 ///|
 /// Add a mesh to the viewer at the given group.
-pub fn ViewerEx::add_mesh(self : ViewerEx, group : Int, mesh : Mesh) -> Unit {
+pub fn ViewerEx::add_mesh(self : ViewerEx, group : Int32, mesh : Mesh) -> Unit {
   viewer_add_mesh(get_instance(), self.h, group, mesh.h)
 }
 
@@ -445,7 +456,7 @@ pub fn ViewerEx::add_mesh(self : ViewerEx, group : Int, mesh : Mesh) -> Unit {
 /// Set PBR material for a group.
 pub fn ViewerEx::set_group_material(
   self : ViewerEx,
-  group : Int,
+  group : Int32,
   color : ColorFloat,
   metallic : Double,
   roughness : Double,
@@ -466,7 +477,7 @@ pub fn ViewerEx::set_group_material(
 /// Set visibility of a group.
 pub fn ViewerEx::set_group_visible(
   self : ViewerEx,
-  group : Int,
+  group : Int32,
   visible : Bool,
 ) -> Unit {
   viewer_set_group_visible(self.h, group, visible)
@@ -492,7 +503,7 @@ pub fn ViewerEx::bounding_box(self : ViewerEx) -> BBox3 {
 pub fn ViewerEx::screenshot_png(
   self : ViewerEx,
   path : String,
-  frames : Int,
+  frames : Int32,
 ) -> Bool {
   let result = mbt_viewer_screenshot_png(self.h, cstr(path), frames)
   result == 0
@@ -504,10 +515,10 @@ pub fn ViewerEx::screenshot_png(
 pub fn ViewerEx::screenshot_png_keep_tga(
   self : ViewerEx,
   path : String,
-  frames : Int,
+  frames : Int32,
   keep_tga : Bool,
 ) -> Bool {
-  let kt : Int = if keep_tga { 1 } else { 0 }
+  let kt : Int32 = if keep_tga { 1 } else { 0 }
   let result = mbt_viewer_screenshot_png_keep_tga(
     self.h,
     cstr(path),
@@ -543,7 +554,7 @@ extern "C" fn mbt_viewer_close(viewer : Int64) -> Unit = "mbt_viewer_close"
 ///|
 extern "C" fn mbt_viewer_add_voxels(
   viewer : Int64,
-  group : Int,
+  group : Int32,
   instance : Int64,
   vox : Int64,
 ) -> Unit = "mbt_viewer_add_voxels"
@@ -551,7 +562,7 @@ extern "C" fn mbt_viewer_add_voxels(
 ///|
 extern "C" fn mbt_viewer_set_group_material(
   viewer : Int64,
-  group : Int,
+  group : Int32,
   r : Float,
   g : Float,
   b : Float,
@@ -565,14 +576,14 @@ extern "C" fn mbt_viewer_set_group_material(
 extern "C" fn mbt_viewer_screenshot_png(
   viewer : Int64,
   png_path : FixedArray[Byte],
-  frames : Int,
-) -> Int = "mbt_viewer_screenshot_png"
+  frames : Int32,
+) -> Int32 = "mbt_viewer_screenshot_png"
 
 ///|
 #borrow(png_path)
 extern "C" fn mbt_viewer_screenshot_png_keep_tga(
   viewer : Int64,
   png_path : FixedArray[Byte],
-  frames : Int,
-  keep_tga : Int,
-) -> Int = "mbt_viewer_screenshot_png_keep_tga"
+  frames : Int32,
+  keep_tga : Int32,
+) -> Int32 = "mbt_viewer_screenshot_png_keep_tga"

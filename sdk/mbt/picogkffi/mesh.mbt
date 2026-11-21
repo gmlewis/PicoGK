@@ -7,18 +7,18 @@ pub struct Mesh {
 
 ///|
 pub fn new_mesh() -> Mesh {
-  Mesh::{ h: mesh_h_create(get_instance()) }
+  Mesh::{ h: mesh_h_create(get_instance()), }
 }
 
 ///|
 pub fn mesh_from_voxels(v : Voxels) -> Mesh {
-  Mesh::{ h: mesh_h_create_from_voxels(get_instance(), v.h) }
+  Mesh::{ h: mesh_h_create_from_voxels(get_instance(), v.h), }
 }
 
 ///|
 pub fn mesh_from_arrays(
   vertices : Array[Double],
-  triangles : Array[Int],
+  triangles : Array[Int32],
 ) -> Mesh {
   let m = new_mesh()
   for i in 0..<(vertices.length() / 3) {
@@ -54,22 +54,27 @@ pub fn Mesh::mem_usage(self : Mesh) -> Int64 {
 }
 
 ///|
-pub fn Mesh::vertex_count(self : Mesh) -> Int {
+pub fn Mesh::vertex_count(self : Mesh) -> Int32 {
   mesh_n_vertex_count(get_instance(), self.h)
 }
 
 ///|
-pub fn Mesh::triangle_count(self : Mesh) -> Int {
+pub fn Mesh::triangle_count(self : Mesh) -> Int32 {
   mesh_n_triangle_count(get_instance(), self.h)
 }
 
 ///|
-pub fn Mesh::add_vertex(self : Mesh, pt : Vec3) -> Int {
+pub fn Mesh::add_vertex(self : Mesh, pt : Vec3) -> Int32 {
   mesh_n_add_vertex(get_instance(), self.h, pack_vec3(pt))
 }
 
 ///|
-pub fn Mesh::add_triangle(self : Mesh, a : Int, b : Int, c : Int) -> Int {
+pub fn Mesh::add_triangle(
+  self : Mesh,
+  a : Int32,
+  b : Int32,
+  c : Int32,
+) -> Int32 {
   let buf = FixedArray::make(12, 0L.to_byte())
   write_int32_le(buf, 0, a)
   write_int32_le(buf, 4, b)
@@ -78,14 +83,14 @@ pub fn Mesh::add_triangle(self : Mesh, a : Int, b : Int, c : Int) -> Int {
 }
 
 ///|
-pub fn Mesh::get_vertex(self : Mesh, index : Int) -> Vec3 {
+pub fn Mesh::get_vertex(self : Mesh, index : Int32) -> Vec3 {
   let out = FixedArray::make(12, 0L.to_byte())
   mesh_get_vertex(get_instance(), self.h, index, out)
   unpack_vec3(out)
 }
 
 ///|
-pub fn Mesh::get_triangle(self : Mesh, index : Int) -> Triangle {
+pub fn Mesh::get_triangle(self : Mesh, index : Int32) -> Triangle {
   let out = FixedArray::make(12, 0L.to_byte())
   mesh_get_triangle(get_instance(), self.h, index, out)
   Triangle::{
@@ -98,7 +103,7 @@ pub fn Mesh::get_triangle(self : Mesh, index : Int) -> Triangle {
 ///|
 pub fn Mesh::get_triangle_vertices(
   self : Mesh,
-  index : Int,
+  index : Int32,
 ) -> (Vec3, Vec3, Vec3) {
   let v0 = FixedArray::make(12, 0L.to_byte())
   let v1 = FixedArray::make(12, 0L.to_byte())
@@ -128,7 +133,7 @@ pub fn Mesh::vertices(self : Mesh) -> Array[Double] {
 }
 
 ///|
-pub fn Mesh::triangles(self : Mesh) -> Array[Int] {
+pub fn Mesh::triangles(self : Mesh) -> Array[Int32] {
   let n = self.triangle_count()
   let arr = Array::make(n * 3, 0)
   for i in 0..<n {

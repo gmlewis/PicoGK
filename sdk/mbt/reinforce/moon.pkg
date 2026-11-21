@@ -1,0 +1,10 @@
+import {
+  "gmlewis/picogkffi" @pk,
+}
+
+import {
+  "gmlewis/picogk-reinforce" @reinforce,
+  "gmlewis/picogkffi" @pk,
+} for "test"
+
+supported_targets = "+native"

@@ -7,12 +7,12 @@ pub struct VdbFile {
 
 ///|
 pub fn new_vdb_file() -> VdbFile {
-  VdbFile::{ h: vdb_file_h_create(get_instance()) }
+  VdbFile::{ h: vdb_file_h_create(get_instance()), }
 }
 
 ///|
 pub fn vdb_file_from_path(path : String) -> VdbFile {
-  VdbFile::{ h: vdb_file_h_create_from_file(get_instance(), cstr(path)) }
+  VdbFile::{ h: vdb_file_h_create_from_file(get_instance(), cstr(path)), }
 }
 
 ///|
@@ -36,13 +36,17 @@ pub fn VdbFile::save_to_file(self : VdbFile, path : String) -> Bool {
 }
 
 ///|
-pub fn VdbFile::add_voxels(self : VdbFile, name : String, vox : Voxels) -> Int {
+pub fn VdbFile::add_voxels(
+  self : VdbFile,
+  name : String,
+  vox : Voxels,
+) -> Int32 {
   vdb_file_n_add_voxels(get_instance(), self.h, cstr(name), vox.h)
 }
 
 ///|
-pub fn VdbFile::get_voxels(self : VdbFile, index : Int) -> Voxels {
-  Voxels::{ h: vdb_file_h_get_voxels(get_instance(), self.h, index) }
+pub fn VdbFile::get_voxels(self : VdbFile, index : Int32) -> Voxels {
+  Voxels::{ h: vdb_file_h_get_voxels(get_instance(), self.h, index), }
 }
 
 ///|
@@ -50,13 +54,15 @@ pub fn VdbFile::add_scalar_field(
   self : VdbFile,
   name : String,
   sf : ScalarField,
-) -> Int {
+) -> Int32 {
   vdb_file_n_add_scalar_field(get_instance(), self.h, cstr(name), sf.h)
 }
 
 ///|
-pub fn VdbFile::get_scalar_field(self : VdbFile, index : Int) -> ScalarField {
-  ScalarField::{ h: vdb_file_h_get_scalar_field(get_instance(), self.h, index) }
+pub fn VdbFile::get_scalar_field(self : VdbFile, index : Int32) -> ScalarField {
+  ScalarField::{
+    h: vdb_file_h_get_scalar_field(get_instance(), self.h, index),
+  }
 }
 
 ///|
@@ -64,28 +70,30 @@ pub fn VdbFile::add_vector_field(
   self : VdbFile,
   name : String,
   vf : VectorField,
-) -> Int {
+) -> Int32 {
   vdb_file_n_add_vector_field(get_instance(), self.h, cstr(name), vf.h)
 }
 
 ///|
-pub fn VdbFile::get_vector_field(self : VdbFile, index : Int) -> VectorField {
-  VectorField::{ h: vdb_file_h_get_vector_field(get_instance(), self.h, index) }
+pub fn VdbFile::get_vector_field(self : VdbFile, index : Int32) -> VectorField {
+  VectorField::{
+    h: vdb_file_h_get_vector_field(get_instance(), self.h, index),
+  }
 }
 
 ///|
-pub fn VdbFile::field_count(self : VdbFile) -> Int {
+pub fn VdbFile::field_count(self : VdbFile) -> Int32 {
   vdb_file_n_field_count(get_instance(), self.h)
 }
 
 ///|
-pub fn VdbFile::get_field_name(self : VdbFile, index : Int) -> String {
+pub fn VdbFile::get_field_name(self : VdbFile, index : Int32) -> String {
   let buf = FixedArray::make(256, 0L.to_byte())
   vdb_file_get_field_name(get_instance(), self.h, index, buf)
   bytes_to_string(buf)
 }
 
 ///|
-pub fn VdbFile::field_type(self : VdbFile, index : Int) -> Int {
+pub fn VdbFile::field_type(self : VdbFile, index : Int32) -> Int32 {
   vdb_file_n_field_type(get_instance(), self.h, index)
 }

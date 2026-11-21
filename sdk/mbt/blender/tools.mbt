@@ -192,9 +192,9 @@ pub async fn Client::get_python_api_docs(
 pub async fn Client::search_api_docs(
   self : Client,
   query : String,
-  maxResults : Int?,
-  context : Int?,
-  index : Int?,
+  maxResults : Int32?,
+  context : Int32?,
+  index : Int32?,
 ) -> String {
   let args : Map[String, Json] = Map([])
   args.set("query", Json::string(query))
@@ -222,7 +222,7 @@ pub async fn Client::search_api_docs(
 pub async fn Client::get_screenshot_of_area_as_image(
   self : Client,
   areaUiType : String,
-  sizeLimitInBytes : Int?,
+  sizeLimitInBytes : Int32?,
 ) -> String {
   let args : Map[String, Json] = Map([])
   args.set("area_ui_type", Json::string(areaUiType))
@@ -239,7 +239,7 @@ pub async fn Client::get_screenshot_of_area_as_image(
 ///
 pub async fn Client::get_screenshot_of_window_as_image(
   self : Client,
-  sizeLimitInBytes : Int?,
+  sizeLimitInBytes : Int32?,
 ) -> String {
   let args : Map[String, Json] = Map([])
   match sizeLimitInBytes {
@@ -366,9 +366,9 @@ pub async fn Client::render_viewport_to_path(
 pub async fn Client::search_manual_docs(
   self : Client,
   query : String,
-  maxResults : Int?,
-  context : Int?,
-  index : Int?,
+  maxResults : Int32?,
+  context : Int32?,
+  index : Int32?,
 ) -> String {
   let args : Map[String, Json] = Map([])
   args.set("query", Json::string(query))

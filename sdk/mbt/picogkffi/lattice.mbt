@@ -7,7 +7,7 @@ pub struct Lattice {
 
 ///|
 pub fn new_lattice() -> Lattice {
-  Lattice::{ h: lattice_h_create(get_instance()) }
+  Lattice::{ h: lattice_h_create(get_instance()), }
 }
 
 ///|

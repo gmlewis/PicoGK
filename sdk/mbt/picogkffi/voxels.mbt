@@ -7,7 +7,7 @@ pub struct Voxels {
 
 ///|
 pub fn new_voxels() -> Voxels {
-  Voxels::{ h: voxels_h_create(get_instance()) }
+  Voxels::{ h: voxels_h_create(get_instance()), }
 }
 
 ///|
@@ -66,7 +66,7 @@ pub fn from_lattice(lat : Lattice) -> Voxels {
 
 ///|
 pub fn Voxels::copy(self : Voxels) -> Voxels {
-  Voxels::{ h: voxels_h_create_copy(get_instance(), self.h) }
+  Voxels::{ h: voxels_h_create_copy(get_instance(), self.h), }
 }
 
 ///|
@@ -245,7 +245,7 @@ pub fn Voxels::ray_cast(self : Voxels, origin : Vec3, dir : Vec3) -> Vec3? {
 ///|
 pub fn Voxels::voxel_dimensions(
   self : Voxels,
-) -> (Int, Int, Int, Int, Int, Int) {
+) -> (Int32, Int32, Int32, Int32, Int32, Int32) {
   let ox = FixedArray::make(4, 0L.to_byte())
   let oy = FixedArray::make(4, 0L.to_byte())
   let oz = FixedArray::make(4, 0L.to_byte())
@@ -294,11 +294,11 @@ pub fn Voxels::bounding_box(self : Voxels) -> BBox3 {
 
 ///|
 pub fn Voxels::to_mesh(self : Voxels) -> Mesh {
-  Mesh::{ h: mesh_h_create_from_voxels(get_instance(), self.h) }
+  Mesh::{ h: mesh_h_create_from_voxels(get_instance(), self.h), }
 }
 
 ///|
-pub fn Voxels::get_x_slice(self : Voxels, x : Int) -> Array[Double] {
+pub fn Voxels::get_x_slice(self : Voxels, x : Int32) -> Array[Double] {
   let (_, _, _, _, sy, sz) = self.voxel_dimensions()
   let n = sy * sz
   if n <= 0 {
@@ -320,7 +320,7 @@ pub fn Voxels::get_x_slice(self : Voxels, x : Int) -> Array[Double] {
 }
 
 ///|
-pub fn Voxels::get_y_slice(self : Voxels, y : Int) -> Array[Double] {
+pub fn Voxels::get_y_slice(self : Voxels, y : Int32) -> Array[Double] {
   let (_, _, _, sx, _, sz) = self.voxel_dimensions()
   let n = sx * sz
   if n <= 0 {
@@ -342,7 +342,7 @@ pub fn Voxels::get_y_slice(self : Voxels, y : Int) -> Array[Double] {
 }
 
 ///|
-pub fn Voxels::get_z_slice(self : Voxels, z : Int) -> Array[Double] {
+pub fn Voxels::get_z_slice(self : Voxels, z : Int32) -> Array[Double] {
   let (_, _, _, sx, sy, _) = self.voxel_dimensions()
   let n = sx * sy
   if n <= 0 {

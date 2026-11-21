@@ -101,9 +101,12 @@ fn main {
 ## Linking
 
 When building, link against the PicoGK shared library. The loader
-(`picogk_loader.c`) uses `dlopen` to find the library at runtime, checking
-the `PICOGK_LIB` environment variable first, then falling back to a
-hardcoded path.
+(`runtime.mbt`) uses `dlopen` to find the library at runtime. It checks the
+`PICOGK_LIB` environment variable first, then searches paths relative to the
+working directory (for an in-repo build), then standard install locations
+(`/usr/local/lib`, `/opt/homebrew/lib`, `/usr/lib`, `$HOME/lib`), and finally
+bare library names resolved through the platform library search path
+(`DYLD_LIBRARY_PATH`, `LD_LIBRARY_PATH`).
 
 ```
 moon build --target native

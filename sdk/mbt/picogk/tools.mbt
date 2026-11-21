@@ -452,9 +452,9 @@ pub async fn Client::mesh_add_vertex(
 pub async fn Client::mesh_add_triangle(
   self : Client,
   meshId : String,
-  a : Int,
-  b : Int,
-  c : Int,
+  a : Int32,
+  b : Int32,
+  c : Int32,
 ) -> String {
   let args : Map[String, Json] = Map([])
   args.set("meshId", Json::string(meshId))
@@ -1279,8 +1279,8 @@ pub async fn Client::render_to_image(
   self : Client,
   objectId : String,
   path : String,
-  width : Int?,
-  height : Int?,
+  width : Int32?,
+  height : Int32?,
   backgroundColor : String?,
   objectColor : String?,
 ) -> String {
@@ -1694,7 +1694,7 @@ pub async fn Client::transform_voxels(
 pub async fn Client::circular_pattern(
   self : Client,
   objectId : String,
-  count : Int,
+  count : Int32,
   totalAngle : Double?,
   centerX : Double?,
   centerY : Double?,
