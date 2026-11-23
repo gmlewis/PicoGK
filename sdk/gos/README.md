@@ -15,12 +15,22 @@ Prerequisites: the PicoGK MCP server binary at `~/.local/bin/picogk-mcp/PicoGK.M
 
 ### PicoGK FFI Demo (native binding)
 
+From the PicoGK repository root:
+
 ```bash
-cd sdk/gos/examples/ffi-hello-picogk
-RUSTFLAGS="-Awarnings" gos run .
+RUSTFLAGS="-Awarnings" ./sdk/gos/run-ffi.sh sdk/gos/examples/ffi-hello-picogk
 ```
 
-Prerequisites: the PicoGK native library at `native/<platform>/` (included in the repo).
+`run-ffi.sh` adds the native library directory to the Rust linker's rpath
+(Cargo does not propagate a dependency's link args to the generated
+`gos_bindings` cdylib). The vendored `picogk.26` library and its oneTBB runtime
+are used as-is.
+
+Run any FFI example the same way from the PicoGK repository root:
+
+```bash
+RUSTFLAGS="-Awarnings" ./sdk/gos/run-ffi.sh sdk/gos/examples/ffi-fields-and-io
+```
 
 ### Blender Scene Example
 
@@ -36,6 +46,7 @@ Prerequisites: Blender running with the MCP addon enabled; `pip install blender-
 ```
 sdk/gos/
 ├── README.md                          # this file
+├── run-ffi.sh                         # runs an FFI example with the native Rust rpath
 ├── blender/                           # Blender MCP SDK
 │   ├── project.toml
 │   └── src/
@@ -47,10 +58,11 @@ sdk/gos/
 │       ├── lib.gos                    # Client struct, stdio transport
 │       └── tools.gos                  # 62 PicoGK MCP tool methods
 ├── picogkffi/                         # PicoGK FFI SDK (Rust binding crate)
+│   ├── build.sh                       # builds the binding with the native Rust rpath
 │   ├── project.toml
 │   ├── picogkffi/                     # Rust crate
 │   │   ├── Cargo.toml
-│   │   ├── build.rs                   # locates native libpicogk
+│   │   ├── build.rs                   # locates picogk.26
 │   │   ├── picogk_ffi.h               # C API header
 │   │   └── src/
 │   │       ├── lib.rs                 # register_module! with 100+ FFI functions

@@ -46,7 +46,7 @@ PicoGK/
    tool calls.
 
 2. **No viewer**: `Library.Go()` is never called. Instead, we instantiate `Library`
-   directly and manage its lifecycle. The native `picogk.26.2.dylib` is still loaded
+   directly and manage its lifecycle. The native `picogk.26.dylib` is still loaded
    via P/Invoke for the geometry kernel — only the viewer is bypassed.
 
 3. **Object registry**: All geometry objects (Voxels, Mesh, Lattice, PolyLine, etc.)
@@ -470,9 +470,9 @@ Server: ✓ Rendered to /output/preview.png
   source; the MCP server avoids this overload.
 
 - **Native library path**: When publishing as a self-contained binary, the MCP server binary must
-  reside in the same directory as `picogk.26.2.dylib` and its Boost dependencies. The config path
-  must point to `picogk-mcp/PicoGK.Mcp`, not just `PicoGK.Mcp`, otherwise `dlopen` fails to find
-  `libboost_iostreams.dylib`.
+  reside in the same directory as `picogk.26.dylib` and its oneTBB runtime
+  (`libtbb.12.dylib`). The config path must point to `picogk-mcp/PicoGK.Mcp`, not just
+  `PicoGK.Mcp`, otherwise `dlopen` fails to find the native library.
 
 ### Build Script
 

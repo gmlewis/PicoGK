@@ -59,8 +59,8 @@ public static class SessionTools
         catch (Exception ex)
         {
             return $"Error initializing PicoGK: {ex.Message}\n" +
-                   "Make sure the native library (picogk.26.2) and its dependencies " +
-                   "(libboost_iostreams, etc.) are in the same directory as PicoGK.Mcp.";
+                   "Make sure the native library (picogk.26) and the oneTBB runtime " +
+                   "(libtbb.12.dylib / tbb12.dll / libtbb.so.12) are in the same directory as PicoGK.Mcp.";
         }
     }
 

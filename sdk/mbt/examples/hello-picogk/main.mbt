@@ -12,7 +12,7 @@
 ///   - build a beam-and-node lattice and voxelize it
 ///   - export everything as STL
 ///
-/// Run:  moon run . --target native
+/// Run:  moon run .
 fn main {
   let outdir = "/tmp/mbt-picogk-hello"
 

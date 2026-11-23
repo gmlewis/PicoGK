@@ -48,8 +48,8 @@ fn try_load_library(vs : Double) -> Result[Unit, String] {
   // 3. Bare library names, which the platform loader resolves using its
   //    library search path (DYLD_LIBRARY_PATH, LD_LIBRARY_PATH, ...).
   let relative_paths = [
-    "native/osx-arm64/picogk.26.2.dylib",
-    "native/linux-x64/libpicogk.so",
+    "native/osx-arm64/picogk.26.dylib",
+    "native/linux-x64/picogk.26.so",
   ]
   let candidates : Array[String] = []
   for prefix in [
@@ -61,9 +61,12 @@ fn try_load_library(vs : Double) -> Result[Unit, String] {
   }
   let lib_names = [
     "picogk.dylib",
+    "picogk.26.dylib",
+    "picogk.26.so",
     "picogk.26.2.dylib",
     "picogk.26.2.0.dylib",
     "libpicogk.so",
+    "libpicogk.26.so",
     "libpicogk.26.2.so",
     "libpicogk.26.2.0.so",
   ]

@@ -2,7 +2,7 @@
 /// ShapeKernel example gallery — a MoonBit port of LEAP71_ShapeKernel/Examples.
 /// Uses the picogkshapes parametric shape library, matching the Go FFI gallery.
 ///
-/// Run:  moon run . --target native [-out DIR] [-voxel-size MM] [-no-viewer] [-scene NAME]
+/// Run:  moon run . [-out DIR] [-voxel-size MM] [-no-viewer] [-scene NAME]
 fn main {
   // Parse command-line arguments.
   let cmd = @argparse.Command(

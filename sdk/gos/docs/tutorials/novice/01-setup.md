@@ -21,8 +21,8 @@ curl -fsSL https://gossamer.run/install.sh | bash
 
 ```bash
 # From your PicoGK checkout:
-ls native/osx-arm64/picogk.26.2.dylib   # macOS
-ls native/linux-x64/libpicogk.so        # Linux
+ls native/osx-arm64/picogk.26.dylib   # macOS
+ls native/linux-x64/picogk.26.so      # Linux
 ```
 
 The `picogkffi` package loads the native library at runtime; you do not need
@@ -92,7 +92,11 @@ fn main() {
 
 ## Run it
 
+The FFI binding links `picogk.26`, whose install name is `@rpath/...`; give the
+Rust linker the native directory on its rpath (use `linux-x64` on Linux):
+
 ```bash
+export RUSTFLAGS="${RUSTFLAGS:-} -C link-arg=-Wl,-rpath,/path/to/PicoGK/native/osx-arm64"
 gos run .
 ```
 

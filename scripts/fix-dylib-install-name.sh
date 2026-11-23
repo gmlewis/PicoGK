@@ -2,14 +2,15 @@
 #
 # fix-dylib-install-name.sh
 #
-# Fixes the install_name of the picogk dylib on macOS so that Go programs
+# Fixes the install_name of a legacy picogk dylib on macOS so that Go programs
 # using the picogkffi cgo binding work with "go run .".
 #
-# The upstream picogk dylib is built with install_name set to
-# "@loader_path/picogk.XX.X.dylib", which only resolves correctly when the
-# compiled binary lives in the same directory as the dylib. Since "go run ."
-# places the binary in a Go build-cache temp directory, dyld cannot find the
-# library and the process is killed (SIGKILL).
+# The current picogk.26 dylib is built with install_name
+# "@rpath/picogk.26.dylib" and an "@loader_path" LC_RPATH, and the cgo
+# LDFLAGS add the native directory to the binary's rpath, so "go run ." works
+# without this script. Older dylibs built with
+# "@loader_path/picogk.XX.X.dylib" may still need the absolute-path rewrite
+# below.
 #
 # This script rewrites the install_name to an absolute path and applies an
 # ad-hoc code signature (required because install_name_tool invalidates the
@@ -19,10 +20,8 @@
 # Usage:
 #   ./scripts/fix-dylib-install-name.sh
 #
-# Run this after cloning the repo on macOS, and again whenever the native
-# libraries are updated. Only affects macOS; no-op on other platforms.
-#
-# This only needs to be run once per clone/update cycle.
+# Run this only if "go run ." fails to load a legacy dylib. Only affects
+# macOS; no-op on other platforms.
 
 set -euo pipefail
 
@@ -53,8 +52,12 @@ ABSOLUTE_PATH="${NATIVE_DIR}/${PICOGK_BASENAME}"
 
 echo "Fixing install_name for: ${PICOGK_DYLIB}"
 
-# Check current install_name — skip if already fixed.
+# Check current install_name — the current @rpath build needs no changes.
 CURRENT_NAME=$(otool -D "$PICOGK_DYLIB" 2>/dev/null | tail -1)
+if [[ "$CURRENT_NAME" == "@rpath/"* ]]; then
+    echo "  install_name is already @rpath-based; no fix needed."
+    exit 0
+fi
 if [[ "$CURRENT_NAME" == "$ABSOLUTE_PATH" ]]; then
     echo "  install_name is already set to absolute path — skipping."
 else

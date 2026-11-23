@@ -5,7 +5,7 @@
 /// the complete workflow: init -> primitives -> booleans -> transforms ->
 /// lattice -> mesh -> query -> I/O -> cleanup -> shutdown.
 ///
-/// Run:  moon run . --target native
+/// Run:  moon run .
 fn main {
   let outdir = "/tmp/mbt-picogk-full-api"
 

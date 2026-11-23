@@ -11,7 +11,7 @@
 ///   - exporting a mesh to STL
 ///   - re-voxelizing the mesh and offsetting it
 ///
-/// Run:  moon run . --target native
+/// Run:  moon run .
 fn main {
   let outdir = "/tmp/mbt-picogk-fields"
 

@@ -11,7 +11,7 @@
 ///   - `/tmp/mbt-picogk-reinforce/fissures_only.stl` (inspect internal channels)
 ///   - `/tmp/mbt-picogk-reinforce/modifier.stl` (OrcaSlicer/PrusaSlicer modifier mesh)
 ///
-/// Run: `moon run . --target native`
+/// Run: `moon run .`
 fn main {
   let outdir = "/tmp/mbt-picogk-reinforce"
   println("=== PicoGK Stress-Guided FDM Micro-Fissure Reinforcer ===")

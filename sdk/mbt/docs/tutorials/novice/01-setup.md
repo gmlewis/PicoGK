@@ -22,9 +22,12 @@ to it:
 
 ```bash
 # Example: point to the shared library
-export PICOGK_LIB=/path/to/picogk.26.2.dylib   # macOS
-export PICOGK_LIB=/path/to/libpicogk.26.2.so     # Linux
+export PICOGK_LIB=/path/to/picogk.26.dylib   # macOS
+export PICOGK_LIB=/path/to/picogk.26.so      # Linux
 ```
+
+Keep the matching oneTBB runtime (`libtbb.12.dylib` on macOS,
+`libtbb.so.12` on Linux) beside the library.
 
 ## Create a project
 
@@ -79,7 +82,7 @@ fn main {
 ## Run it
 
 ```bash
-moon run . --target native
+moon run .
 ```
 
 Expected output:

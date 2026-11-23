@@ -6,7 +6,7 @@
 /// Uses the picogkffi package for direct in-process FFI calls.
 /// The native OpenGL Viewer requires a display (works on macOS with XQuartz).
 ///
-/// Run:  moon run . --target native
+/// Run:  moon run .
 fn main {
   let outdir = "/tmp/mbt-picogk-viewer"
 

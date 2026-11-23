@@ -61,9 +61,10 @@ cp native/osx-arm64/*.dylib ~/.local/bin/picogk-mcp/
 
 Replace `osx-arm64` with your platform identifier:
 - macOS Apple Silicon: `osx-arm64`
-- macOS Intel: `osx-x64`
 - Windows: `win-x64`
-- Linux: `linux-x64`
+
+The native payload for the FFI SDKs also includes `linux-x64`, but the MCP
+installer currently supports macOS ARM64 and Windows.
 
 ## Available Tools (63)
 
@@ -267,7 +268,7 @@ defer mesh.Destroy()
 mesh.SaveSTL("/tmp/part.stl")
 ```
 
-> **macOS note:** After cloning, run `./scripts/fix-dylib-install-name.sh` to fix the native library for `go run .`.
+> **macOS note:** The bundled `picogk.26` dylib uses `@rpath`/`@loader_path` and the cgo build adds the native directory to the rpath, so `go run .` works without extra steps. `./scripts/fix-dylib-install-name.sh` is only needed for legacy dylibs.
 
 See `sdk/go/picogk/README.md` and `sdk/go/picogkffi/README.md` for full documentation.
 
@@ -376,22 +377,16 @@ In addition to the MCP-based SDKs above, PicoGK provides a direct C FFI binding
 for Go via the `picogkffi` package. This gives Go programs in-process access to
 the geometry kernel without going through a subprocess.
 
-## macOS: Fixing the native library for `go run .`
+## macOS: Native library load paths
 
-The `picogkffi` cgo package links directly against the native `picogk.*.dylib`.
-On macOS, the dylib is built with `install_name` set to
-`@loader_path/picogk.XX.X.dylib`. This works when the compiled binary lives in
-the same directory as the dylib, but `go run .` places the binary in a Go
-build-cache temp directory, causing dyld to fail with a "Library not loaded"
-error (SIGKILL).
+The `picogkffi` cgo package links directly against the native
+`native/osx-arm64/picogk.26.dylib`. The bundled dylib is built with
+`install_name` `@rpath/picogk.26.dylib` and an `@loader_path` LC_RPATH, and the
+cgo `LDFLAGS` add `native/osx-arm64` to the binary's rpath. Both `go run .` and
+built binaries therefore find the library and its oneTBB runtime
+(`libtbb.12.dylib`) without extra steps.
 
-**After cloning this repo on macOS, or after updating the native libraries, run:**
-
-```bash
-./scripts/fix-dylib-install-name.sh
-```
-
-This rewrites the dylib's `install_name` to an absolute path and re-signs it
-with an ad-hoc code signature (required because `install_name_tool` invalidates
-the existing signature, and macOS AMFI kills binaries that load tampered-with
-signed libraries).
+Older dylibs built with `@loader_path/picogk.XX.X.dylib` may still need
+`./scripts/fix-dylib-install-name.sh`, which rewrites the `install_name` to an
+absolute path and re-signs it with an ad-hoc code signature (required because
+`install_name_tool` invalidates the existing signature).

@@ -37,9 +37,9 @@ fi
 
 # Auto-detect native library
 HAS_NATIVE_LIB=false
-if [ -f "$REPO_ROOT/native/osx-arm64/picogk.26.2.dylib" ] || \
-   [ -f "$REPO_ROOT/native/linux-x64/libpicogk.so" ] || \
-   [ -f "$REPO_ROOT/native/win-x64/picogk.26.2.dll" ]; then
+if [ -f "$REPO_ROOT/native/osx-arm64/picogk.26.dylib" ] || \
+   [ -f "$REPO_ROOT/native/linux-x64/picogk.26.so" ] || \
+   [ -f "$REPO_ROOT/native/win-x64/picogk.26.dll" ]; then
     HAS_NATIVE_LIB=true
 fi
 
@@ -75,7 +75,7 @@ header "Go SDK Tests"
 echo -e "  ${DIM}sdk/go/picogk — no tests (MCP client SDK)${RESET}"
 echo -e "  ${DIM}sdk/go/blender — no tests (MCP client SDK)${RESET}"
 
-# Go FFI SDK (picogkffi) — requires cgo + libpicogk
+# Go FFI SDK (picogkffi) — requires cgo + picogk.26
 GO_FFI_DIR="$REPO_ROOT/sdk/go/picogkffi"
 if [ -d "$GO_FFI_DIR" ] && [ -f "$GO_FFI_DIR/ffi_test.go" ]; then
     if $QUICK; then
@@ -108,11 +108,11 @@ else
     MOB_BIT_DIR="$REPO_ROOT/sdk/mbt"
 
     # MoonBit type check (always runs — no native lib needed)
-    echo -e "  Running moon check --target native..."
-    if (cd "$MOB_BIT_DIR" && moon check --target native --deny-warn 2>&1); then
-        pass "moon check --target native"
+    echo -e "  Running moon check..."
+    if (cd "$MOB_BIT_DIR" && moon check --deny-warn 2>&1); then
+        pass "moon check"
     else
-        fail "moon check --target native"
+        fail "moon check"
     fi
 
     # MoonBit FFI tests — require native library
@@ -124,7 +124,7 @@ else
             skip "sdk/mbt/picogkffi/test — native library not found"
         else
             echo -e "  Running moon test in sdk/mbt/picogkffi/test..."
-            if (cd "$MBT_FFI_TEST" && moon test --target native --deny-warn 2>&1); then
+            if (cd "$MBT_FFI_TEST" && moon test --deny-warn 2>&1); then
                 pass "sdk/mbt/picogkffi/test"
             else
                 fail "sdk/mbt/picogkffi/test"
@@ -170,8 +170,22 @@ else
         fi
     fi
 
-    # Gossamer FFI SDK — no tests
-    echo -e "  ${DIM}sdk/gos/picogkffi — no tests${RESET}"
+    # Gossamer FFI binding — build and run an example with the native rpath.
+    GOS_FFI_EXAMPLE="$REPO_ROOT/sdk/gos/examples/ffi-hello-picogk"
+    if [ -d "$GOS_FFI_EXAMPLE" ] && [ -x "$REPO_ROOT/sdk/gos/run-ffi.sh" ]; then
+        if $QUICK; then
+            skip "sdk/gos/ffi-hello-picogk — skipped with --quick"
+        elif ! $HAS_NATIVE_LIB; then
+            skip "sdk/gos/ffi-hello-picogk — native library not found"
+        else
+            echo -e "  Running sdk/gos/examples/ffi-hello-picogk..."
+            if (cd "$REPO_ROOT" && ./sdk/gos/run-ffi.sh sdk/gos/examples/ffi-hello-picogk >/dev/null 2>&1); then
+                pass "sdk/gos/ffi-hello-picogk"
+            else
+                fail "sdk/gos/ffi-hello-picogk"
+            fi
+        fi
+    fi
 
     # Gossamer shapes SDK — no tests
     echo -e "  ${DIM}sdk/gos/picogkshapes — no tests${RESET}"

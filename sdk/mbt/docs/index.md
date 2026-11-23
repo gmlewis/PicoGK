@@ -116,5 +116,5 @@ PicoGK shared library. Run with:
 
 ```bash
 cd examples/hello-picogk
-moon run . --target native
+moon run .
 ```

@@ -24,9 +24,12 @@ brew install go
 
 ```bash
 # From your PicoGK checkout:
-ls native/darwin/libPicoGK.dylib   # macOS
-ls native/linux/libPicoGK.so       # Linux
+ls native/osx-arm64/picogk.26.dylib   # macOS
+ls native/linux-x64/picogk.26.so      # Linux
 ```
+
+The oneTBB runtime (`libtbb.12.dylib` on macOS, `libtbb.so.12` on Linux) sits
+beside it and is loaded from the same directory.
 
 The `picogkffi` cgo build tags select the right platform directory
 automatically; you do not need to set `LD_LIBRARY_PATH` or copy the dylib

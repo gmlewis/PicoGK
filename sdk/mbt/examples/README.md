@@ -7,11 +7,11 @@ Run an example from its directory:
 
 ```bash
 cd examples/hello-picogk
-moon run . --target native
+moon run .
 ```
 
 Many examples accept command-line options (for example `-out DIR`); run
-`moon run . --target native -- --help` where available.
+`moon run . -- --help` where available.
 
 | Example | Description |
 |---------|-------------|

@@ -11,8 +11,8 @@ On Windows, run with:
     python scripts/build-mcp-and-install.py
 
 Supported platforms (those shipped with native libraries in this repo):
-    - macOS Apple Silicon  -> osx-arm64   (native/osx-arm64/*.dylib)
-    - Windows x64          -> win-x64     (native/win-x64/*.dll)
+    - macOS Apple Silicon  -> osx-arm64   (picogk.26.dylib + libtbb.12.dylib)
+    - Windows x64          -> win-x64     (picogk.26.dll + tbb12.dll)
 
 Usage:
     build-mcp-and-install.py [--install-dir DIR] [--skip-test] [--verbose]
@@ -216,7 +216,7 @@ def check_repo_layout(rid: str) -> Path:
         die(f"No native libraries for platform '{rid}' in:\n    {native_dir}\n"
             f"This repo ships native libraries for: {sorted(SUPPORTED_RIDS)}.\n"
             f"To add support for '{rid}', place the compiled native libraries\n"
-            f"    (picogk.26.2 and its dependencies) into native/{rid}/.")
+            f"    (picogk.26 and its oneTBB runtime) into native/{rid}/.")
 
     native_files = [p for p in native_dir.iterdir() if p.is_file()]
     if not native_files:
@@ -284,11 +284,11 @@ def verify_install(install_dir: Path, exe_name: str) -> Path:
 
     # Look for the core picogk native library.
     found_core = any(
-        p.name.startswith("picogk.26.2") for p in install_dir.iterdir()
+        p.name.startswith("picogk.26") for p in install_dir.iterdir()
         if p.is_file()
     )
     if not found_core:
-        die(f"Core native library 'picogk.26.2' not found in {install_dir}")
+        die(f"Core native library 'picogk.26' not found in {install_dir}")
 
     ok(f"Executable: {exe}")
     ok(f"Native libs present in install dir")

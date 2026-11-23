@@ -9,8 +9,9 @@ Unlike the `picogk` MCP client package (which communicates with the PicoGK
 server over JSON-RPC), `picogkffi` calls the native PicoGK C library
 directly via MoonBit's `extern "C"` FFI declarations.
 
-This requires linking against `libpicogk` at build time. The library is
-loaded at runtime via `dlopen` (see `picogk_loader.c`).
+The library (`picogk.26`) is located and loaded at runtime via `dlopen`
+(see `picogk_loader.c`). Keep the matching oneTBB runtime
+(`libtbb.12.dylib` / `libtbb.so.12` / `tbb12.dll`) in the same directory.
 
 ## Package Structure
 
@@ -100,14 +101,13 @@ fn main {
 
 ## Linking
 
-When building, link against the PicoGK shared library. The loader
-(`runtime.mbt`) uses `dlopen` to find the library at runtime. It checks the
-`PICOGK_LIB` environment variable first, then searches paths relative to the
-working directory (for an in-repo build), then standard install locations
-(`/usr/local/lib`, `/opt/homebrew/lib`, `/usr/lib`, `$HOME/lib`), and finally
-bare library names resolved through the platform library search path
-(`DYLD_LIBRARY_PATH`, `LD_LIBRARY_PATH`).
+The loader (`runtime.mbt`) uses `dlopen` to find the `picogk.26` library at
+runtime. It checks the `PICOGK_LIB` environment variable first, then searches
+paths relative to the working directory (for an in-repo build), then standard
+install locations (`/usr/local/lib`, `/opt/homebrew/lib`, `/usr/lib`,
+`$HOME/lib`), and finally bare library names resolved through the platform
+library search path (`DYLD_LIBRARY_PATH`, `LD_LIBRARY_PATH`).
 
 ```
-moon build --target native
+moon build
 ```

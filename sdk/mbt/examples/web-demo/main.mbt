@@ -9,7 +9,7 @@
 /// file with an embedded three.js viewer that loads geometry from inline JSON
 /// (no external STL files needed).
 ///
-/// Run:  moon run . --target native [--output FILE] [--no-open]
+/// Run:  moon run . [--output FILE] [--no-open]
 fn main {
   // Parse command-line arguments.
   let cmd = @argparse.Command(

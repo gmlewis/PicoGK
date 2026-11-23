@@ -10,7 +10,7 @@
 ///   - extracting a Z-slice cross-section and writing it to PNG
 ///   - rendering a 3D mesh to STL and PNG via the native ViewerEx
 ///
-/// Run:  moon run . --target native
+/// Run:  moon run .
 fn main {
   let outdir = "/tmp/mbt-picogk-visualize"
 

@@ -15,7 +15,7 @@ The `web-demo` example demonstrates this pattern.
 
 ```bash
 cd examples/web-demo
-moon run . --target native    # writes STLs to /tmp/mbt-picogk-web
+moon run .    # writes STLs to /tmp/mbt-picogk-web
 ```
 
 ## How it works

@@ -284,11 +284,11 @@ def main():
 
         # Set PICOGK_LIB so the MoonBit runtime can find the native library.
         mbt_env = os.environ.copy()
-        mbt_env["PICOGK_LIB"] = str(REPO_ROOT / "native" / "osx-arm64" / "picogk.26.2.dylib")
+        mbt_env["PICOGK_LIB"] = str(REPO_ROOT / "native" / "osx-arm64" / "picogk.26.dylib")
 
         # Run the MoonBit shapekernel-gallery
         ok = run(
-            ["moon", "run", ".", "--target", "native", "--"] + extra,
+            ["moon", "run", ".", "--"] + extra,
             cwd=MBT_GALLERY_DIR,
             label="MoonBit: shapekernel-gallery (16 scenes)",
             timeout=600,
@@ -301,7 +301,7 @@ def main():
 
         # Run the MoonBit viewer-demo
         ok = run(
-            ["moon", "run", ".", "--target", "native", "--"] + extra,
+            ["moon", "run", ".", "--"] + extra,
             cwd=MBT_VIEWER_DIR,
             label="MoonBit: viewer-demo",
             timeout=120,
@@ -314,7 +314,7 @@ def main():
 
         # Run the MoonBit visualize
         ok = run(
-            ["moon", "run", ".", "--target", "native", "--"] + extra,
+            ["moon", "run", ".", "--"] + extra,
             cwd=MBT_VISUALIZE_DIR,
             label="MoonBit: visualize",
             timeout=120,

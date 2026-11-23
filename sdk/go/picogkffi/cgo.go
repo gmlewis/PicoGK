@@ -7,8 +7,8 @@ package picogkffi
 
 /*
 #cgo CFLAGS: -I${SRCDIR}
-#cgo darwin LDFLAGS: ${SRCDIR}/../../../native/osx-arm64/picogk.26.2.dylib -Wl,-rpath,${SRCDIR}/../../../native/osx-arm64
-#cgo linux LDFLAGS: -L${SRCDIR}/../../../native/linux-x64 -lpicogk.26.2 -Wl,-rpath,${SRCDIR}/../../../native/linux-x64
+#cgo darwin LDFLAGS: ${SRCDIR}/../../../native/osx-arm64/picogk.26.dylib -Wl,-rpath,${SRCDIR}/../../../native/osx-arm64
+#cgo linux LDFLAGS: ${SRCDIR}/../../../native/linux-x64/picogk.26.so -Wl,-rpath,${SRCDIR}/../../../native/linux-x64
 
 #include <stdlib.h>
 #include "picogk_ffi.h"
