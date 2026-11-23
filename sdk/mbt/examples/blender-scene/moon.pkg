@@ -3,7 +3,6 @@
 
 import {
   "gmlewis/blender",
-  "moonbitlang/async",
 }
 
 pkgtype(kind: "executable")

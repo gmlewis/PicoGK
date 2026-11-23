@@ -109,7 +109,7 @@ else
 
     # MoonBit type check (always runs — no native lib needed)
     echo -e "  Running moon check --target native..."
-    if (cd "$MOB_BIT_DIR" && moon check --target native 2>&1); then
+    if (cd "$MOB_BIT_DIR" && moon check --target native --deny-warn 2>&1); then
         pass "moon check --target native"
     else
         fail "moon check --target native"
@@ -124,7 +124,7 @@ else
             skip "sdk/mbt/picogkffi/test — native library not found"
         else
             echo -e "  Running moon test in sdk/mbt/picogkffi/test..."
-            if (cd "$MBT_FFI_TEST" && moon test --target native 2>&1); then
+            if (cd "$MBT_FFI_TEST" && moon test --target native --deny-warn 2>&1); then
                 pass "sdk/mbt/picogkffi/test"
             else
                 fail "sdk/mbt/picogkffi/test"
