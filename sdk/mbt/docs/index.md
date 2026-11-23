@@ -34,6 +34,9 @@ scalar/vector fields, and metadata.
 - **ScalarField / VectorField / Metadata**: full access (FFI-only)
 - **Parametric shapes**: `@gmlewis/picogkshapes` package provides Sphere, Box,
   Cylinder, Ring, Lens, Pipe, PipeSegment, LatticePipe, LatticeManifold, and more
+- **Stress-guided reinforcement**: `@gmlewis/picogk-reinforce` package provides
+  voxel-FEM load-case solving, principal-stress streamlines, micro-fissure
+  channels, and slicer modifier meshes
 
 ## Quick start (FFI SDK)
 

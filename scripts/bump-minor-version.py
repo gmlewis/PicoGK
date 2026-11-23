@@ -55,6 +55,7 @@ VERSION_FILES = [
     REPO_ROOT / "sdk" / "mbt" / "picogkffi" / "moon.mod",
     REPO_ROOT / "sdk" / "mbt" / "picogkshapes" / "moon.mod",
     REPO_ROOT / "sdk" / "mbt" / "blender" / "moon.mod",
+    REPO_ROOT / "sdk" / "mbt" / "reinforce" / "moon.mod",
     REPO_ROOT / "sdk" / "mbt" / "picogkffi" / "test" / "moon.mod",
     
     # MoonBit SDKs - client.mbt files
@@ -70,6 +71,7 @@ VERSION_FILES = [
     REPO_ROOT / "sdk" / "mbt" / "examples" / "shapekernel-gallery" / "moon.mod",
     REPO_ROOT / "sdk" / "mbt" / "examples" / "full-api" / "moon.mod",
     REPO_ROOT / "sdk" / "mbt" / "examples" / "blender-scene" / "moon.mod",
+    REPO_ROOT / "sdk" / "mbt" / "examples" / "micro-fissure-reinforce" / "moon.mod",
     
     # MCP Server
     REPO_ROOT / "PicoGK.Mcp" / "Tools" / "SessionTools.cs",
@@ -96,6 +98,7 @@ VERSION_PATTERNS = [
     (r'("gmlewis/picogkshapes@)([\d]+\.[\d]+\.[\d]+)(")', 'mbt_import_picogkshapes'),
     (r'("gmlewis/blender@)([\d]+\.[\d]+\.[\d]+)(")', 'mbt_import_blender'),
     (r'("gmlewis/picogk@)([\d]+\.[\d]+\.[\d]+)(")', 'mbt_import_picogk'),
+    (r'("gmlewis/picogk-reinforce@)([\d]+\.[\d]+\.[\d]+)(")', 'mbt_import_picogk_reinforce'),
 ]
 
 

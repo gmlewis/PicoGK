@@ -227,6 +227,7 @@ PicoGK provides SDKs for three languages: **Go**, **MoonBit**, and **Gossamer**.
 - **FFI SDK** (Go and MoonBit only) — binds directly to the native C++ runtime (no server needed)
 - **Blender SDK** — MCP client for Blender integration
 - **picogkshapes** — Higher-level shape construction helpers
+- **picogk-reinforce** — Stress-guided FDM micro-fissure and slicer-modifier reinforcer
 
 All packages share a single semver version (e.g., `0.2.0`). See [Versioning](#versioning) below.
 
@@ -278,6 +279,7 @@ See `sdk/go/picogk/README.md` and `sdk/go/picogkffi/README.md` for full document
 | [`picogkffi`](sdk/mbt/picogkffi/) | FFI binding via native FFI | Native library |
 | [`blender`](sdk/mbt/blender/) | MCP client for Blender | Blender MCP server |
 | [`picogkshapes`](sdk/mbt/picogkshapes/) | Higher-level shape helpers | picogkffi |
+| [`picogk-reinforce`](sdk/mbt/reinforce/) | Stress-guided FDM micro-fissure and slicer-modifier reinforcer | picogkffi |
 
 ### Quick Start (MoonBit MCP SDK)
 
@@ -300,7 +302,8 @@ let mesh = body.to_mesh()
 mesh.save_stl("/tmp/part.stl")
 ```
 
-See `sdk/mbt/picogk/README.md` and `sdk/mbt/picogkffi/README.md` for full documentation.
+See `sdk/mbt/picogk/README.md`, `sdk/mbt/picogkffi/README.md`, and
+`sdk/mbt/reinforce/README.md` for full documentation.
 
 ## Gossamer SDKs
 
@@ -362,6 +365,8 @@ This updates version constants across all SDKs:
 | Cargo | `Cargo.toml` |
 
 MoonBit import versions (e.g., `gmlewis/picogkffi@0.2.0`) are also updated automatically. Third-party dependencies (e.g., `moonbitlang/async@0.22.9`) are not modified.
+
+MoonBit packages are released from `sdk/mbt` with `./publish-all.sh`, which syncs every `moon.mod` to the release version, checks for compiler warnings, and tags the repository `vX.Y.Z` when publishing.
 
 ---
 

@@ -11,6 +11,7 @@ server.
 | [`picogk`](picogk/) | PicoGK MCP SDK — typed MoonBit client for all 62 PicoGK MCP tools (async, JSON-RPC over stdio) | [README](picogk/README.md) |
 | [`picogkffi`](picogkffi/) | PicoGK FFI SDK — direct `extern "C"` binding to the native C++ runtime (no MCP server needed) | [README](picogkffi/README.md) |
 | [`picogkshapes`](picogkshapes/) | Parametric shape library — shape construction helpers built on `picogkffi` | [README](picogkshapes/README.md) |
+| [`picogk-reinforce`](reinforce/) | Stress-guided FDM micro-fissure and slicer-modifier reinforcer built on `picogkffi` | [README](reinforce/README.md) |
 | [`blender`](blender/) | Blender MCP SDK — typed MoonBit client for all 26 Blender MCP tools (async, JSON-RPC over stdio) | [README](blender/README.md) |
 
 ## Two PicoGK SDK flavors
@@ -37,8 +38,28 @@ directory (all `moon.mod` files set `preferred_target = "native"`).
 
 ```bash
 cd sdk/mbt/examples/hello-picogk
-moon run .
+moon run . --target native
 ```
+
+## Releasing
+
+All MoonBit packages share one version. From this directory:
+
+```bash
+../../scripts/bump-minor-version.py 0.2.5   # set the shared version across all SDKs
+# or ./bump-all-versions.sh for a MoonBit-only patch bump
+./publish-all.sh -n                         # optional: preview
+./publish-all.sh
+```
+
+`publish-all.sh` syncs every `moon.mod` (SDK packages, examples, and
+`picogk-reinforce`) to the release version, refuses to reuse a published
+version, runs `moon check --deny-warn`, commits `sdk/mbt`, tags the repository
+`vX.Y.Z`, pushes the commit and tag, and publishes `picogk`, `picogkffi`,
+`picogkshapes`, `blender`, and `picogk-reinforce`.
+
+Run `./update-all.sh` to test every published package with warnings treated as
+errors.
 
 ## Toolchain
 
