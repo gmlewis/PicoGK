@@ -2,7 +2,7 @@
 
 name = "gmlewis/picogk-reinforce"
 
-version = "0.2.3"
+version = "0.2.4"
 
 license = "Apache-2.0"
 
@@ -13,5 +13,5 @@ preferred_target = "native"
 supported_targets = "+native"
 
 import {
-  "gmlewis/picogkffi@0.2.3",
+  "gmlewis/picogkffi@0.2.4",
 }

@@ -2,7 +2,7 @@
 
 name = "gmlewis/blender-scene-example"
 
-version = "0.2.3"
+version = "0.2.4"
 
 license = "Apache-2.0"
 
@@ -13,6 +13,6 @@ preferred_target = "native"
 supported_targets = "+native"
 
 import {
-  "gmlewis/blender@0.2.3",
+  "gmlewis/blender@0.2.4",
   "moonbitlang/async@0.22.9",
 }

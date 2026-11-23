@@ -5,5 +5,5 @@ preferred_target = "native"
 supported_targets = "+native"
 
 import {
-  "gmlewis/picogkffi@0.2.3",
+  "gmlewis/picogkffi@0.2.4",
 }
