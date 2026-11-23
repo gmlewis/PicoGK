@@ -36,7 +36,6 @@
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
   </PropertyGroup>
 
-
   <ItemGroup>
     <EmbeddedResource Include="assets/ViewerEnvironment.zip">
       <LogicalName>PicoGK.Resources.Environment.zip</LogicalName>
